@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Seleccionar obra{% endblock %}
+
+{% block content %}
+<div style="min-height:calc(100vh - var(--ni-topbar-h)); display:flex; align-items:center; justify-content:center; padding:24px;">
+  <div style="width:100%; max-width:480px;">
+
+    <div style="margin-bottom:24px;">
+      <h1 style="font-size:20px; font-weight:600; color:var(--ni-dark); margin-bottom:4px;">Selecciona tu obra</h1>
+      <p style="font-size:13px; color:var(--ni-text-sub);">Elige la obra en la que vas a trabajar hoy.</p>
+    </div>
+
+    {% if site_memberships %}
+      <form method="post">
+        {% csrf_token %}
+        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+          {% for membership in site_memberships %}
+            <label style="cursor:pointer;">
+              <input type="radio" name="site_membership_id" value="{{ membership.id }}" style="display:none;" class="site-radio">
+              <div class="site-card" style="background:var(--ni-white); border:1.5px solid var(--ni-border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; align-items:center; gap:14px; transition:border-color 0.15s;">
+                <div style="width:42px; height:42px; border-radius:10px; background:var(--ni-blue-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <i class="ti ti-building" style="font-size:20px; color:var(--ni-blue);" aria-hidden="true"></i>
+                </div>
+                <div style="flex:1;">
+                  <div style="font-size:15px; font-weight:500; color:var(--ni-dark);">{{ membership.site.name }}</div>
+                  <div style="font-size:12px; color:var(--ni-text-sub); margin-top:2px;">
+                    {{ membership.site.company.name }}
+                    &nbsp;&middot;&nbsp;
+                    <span style="font-family:var(--font-mono); font-size:11px;">{{ membership.site.code }}</span>
+                  </div>
+                </div>
+                <div style="text-align:right; flex-shrink:0;">
+                  <span style="font-size:11px; background:var(--ni-blue-soft); color:var(--ni-blue); border-radius:20px; padding:2px 10px; font-family:var(--font-mono);">{{ membership.role.name }}</span>
+                </div>
+              </div>
+            </label>
+          {% endfor %}
+        </div>
+        <button type="submit" class="ni-btn ni-btn-primary" id="submit-btn" disabled>
+          <i class="ti ti-arrow-right" aria-hidden="true"></i>
+          Ingresar a la obra
+        </button>
+      </form>
+
+      <script>
+        const radios = document.querySelectorAll('.site-radio');
+        const cards = document.querySelectorAll('.site-card');
+        const submitBtn = document.getElementById('submit-btn');
+
+        radios.forEach((radio, index) => {
+          radio.addEventListener('change', () => {
+            cards.forEach(c => {
+              c.style.borderColor = 'var(--ni-border)';
+              c.style.background = 'var(--ni-white)';
+            });
+            cards[index].style.borderColor = 'var(--ni-blue)';
+            cards[index].style.background = 'var(--ni-blue-soft)';
+            submitBtn.disabled = false;
+          });
+        });
+      </script>
+
+    {% else %}
+      <div class="ni-alert ni-alert-warn">
+        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+        <div>
+          <div style="font-weight:500; margin-bottom:2px;">Sin obras asignadas</div>
+          <div style="font-size:12px;">No tienes obras activas asignadas. Contacta al administrador del sistema.</div>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

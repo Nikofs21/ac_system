@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Confirmar asignacion{% endblock %}
+{% block nav_assign %}active{% endblock %}
+
+{% block content %}
+<div class="ni-timeline">
+  <div class="ni-t-step done">
+    <div class="ni-t-num done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
+    <span class="ni-t-label done">Partida seleccionada</span>
+  </div>
+  <div class="ni-t-step done">
+    <div class="ni-t-num done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
+    <span class="ni-t-label done">Trabajadores escaneados</span>
+  </div>
+  <div class="ni-t-step active">
+    <div class="ni-t-num active">3</div>
+    <span class="ni-t-label active">Confirmar e iniciar</span>
+  </div>
+</div>
+
+<div style="padding:24px; max-width:520px;">
+
+  {% if no_on_site_workers %}
+    <div class="ni-alert ni-alert-warn" style="margin-bottom:16px;">
+      <i class="ti ti-alert-triangle" style="flex-shrink:0;" aria-hidden="true"></i>
+      <div>
+        <div style="font-weight:500; margin-bottom:4px;">Trabajadores con marca No en obra</div>
+        {% for item in no_on_site_workers %}
+          <div style="font-size:12px;">{{ item.worker.display_name }} — {{ item.reason }}</div>
+        {% endfor %}
+        <div style="font-size:12px; margin-top:4px;">Si confirmas, se iniciara sesion de todas formas.</div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- RESUMEN -->
+  <div class="ni-card" style="margin-bottom:16px;">
+    <div class="ni-card-header">
+      <span class="ni-card-title">Resumen de asignacion</span>
+    </div>
+    <div style="padding:0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
+        <span style="font-size:13px; color:var(--ni-text-sub);">Etapa</span>
+        <span style="font-size:13px; font-weight:500;">{{ stage.name }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
+        <span style="font-size:13px; color:var(--ni-text-sub);">Partida</span>
+        <span style="font-size:13px; font-weight:500;">{{ task.name }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
+        <span style="font-size:13px; color:var(--ni-text-sub);">Riesgo</span>
+        {% if task.risk_level == 'HIGH_RISK' %}
+          <span class="ni-badge" style="background:#fce8e8; color:#c0392b;">Alto riesgo</span>
+        {% else %}
+          <span class="ni-badge ni-badge-green">Normal</span>
+        {% endif %}
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
+        <span style="font-size:13px; color:var(--ni-text-sub);">Trabajadores</span>
+        <span style="font-size:13px; font-weight:500;">{{ workers|length }} personas</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px;">
+        <span style="font-size:13px; color:var(--ni-text-sub);">Hora de inicio</span>
+        <span style="font-size:13px; font-weight:500; font-family:var(--font-mono);">{{ now|time:"H:i" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LISTA TRABAJADORES -->
+  <div class="ni-card" style="margin-bottom:20px;">
+    <div class="ni-card-header">
+      <span class="ni-card-title">Trabajadores</span>
+    </div>
+    <div style="padding:12px; display:flex; flex-direction:column; gap:6px;">
+      {% for worker in workers %}
+        {% with is_nos=False %}
+        {% for item in no_on_site_workers %}{% if item.worker.id == worker.id %}
+          <div style="display:flex; align-items:center; gap:9px; border:0.5px solid var(--ni-warn-bdr); border-radius:var(--radius); padding:8px 10px; background:var(--ni-warn-bg);">
+            <div style="width:30px; height:30px; border-radius:50%; background:#fef3e2; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:var(--ni-warn); flex-shrink:0;">
+              {{ worker.display_name|slice:":1" }}
+            </div>
+            <div>
+              <p style="font-size:12px; font-weight:500;">{{ worker.display_name }}</p>
+              <p style="font-family:var(--font-mono); font-size:10px; color:var(--ni-warn);">{{ worker.job_title.name|default:"Sin cargo" }} · No en obra</p>
+            </div>
+          </div>
+        {% endif %}{% endfor %}
+        {% endwith %}
+        <div style="display:flex; align-items:center; gap:9px; border:0.5px solid var(--ni-border); border-radius:var(--radius); padding:8px 10px; background:#fafafa;">
+          <div style="width:30px; height:30px; border-radius:50%; background:var(--ni-blue-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:var(--ni-blue); flex-shrink:0;">
+            {{ worker.display_name|slice:":1" }}
+          </div>
+          <div>
+            <p style="font-size:12px; font-weight:500;">{{ worker.display_name }}</p>
+            <p style="font-family:var(--font-mono); font-size:10px; color:var(--ni-text-sub);">{{ worker.job_title.name|default:"Sin cargo" }}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" name="start" class="ni-btn ni-btn-primary">
+      <i class="ti ti-player-play" aria-hidden="true"></i>
+      Confirmar e iniciar {{ workers|length }} sesiones
+    </button>
+    <a href="{% url 'work:assignment_scan' %}" class="ni-btn ni-btn-secondary" style="margin-top:10px; text-align:center; display:block;">
+      <i class="ti ti-arrow-left" aria-hidden="true"></i>
+      Volver a editar grupo
+    </a>
+  </form>
+
+</div>
+{% endblock %}

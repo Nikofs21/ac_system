@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}A&C{% endblock %} — Novus Imperium</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Roboto+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    :root {
+      --ni-blue:      #0025ec;
+      --ni-dark:      #131d47;
+      --ni-light:     #f5f5f5c5;
+      --ni-white:     #ffffff;
+      --ni-border:    #e0e0e0;
+      --ni-text:      #111111;
+      --ni-text-sub:  #666666;
+      --ni-success:   #3B6D11;
+      --ni-warn:      #854F0B;
+      --ni-warn-bg:   #fef9e8;
+      --ni-warn-bdr:  #f0d080;
+      --ni-blue-soft: #e6eaff;
+      --ni-sidebar-w: 220px;
+      --ni-topbar-h:  52px;
+      --font-main:    'Inter', sans-serif;
+      --font-brand:   'Poppins', sans-serif;
+      --font-mono:    'Roboto Mono', monospace;
+      --radius:       8px;
+      --radius-lg:    12px;
+    }
+    body { font-family: var(--font-main); background: var(--ni-light); color: var(--ni-text); font-size: 14px; line-height: 1.5; }
+
+    /* TOPBAR */
+    .ni-topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--ni-topbar-h); background: var(--ni-dark); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 100; }
+    .ni-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .ni-brand-name { font-family: var(--font-brand); font-weight: 800; font-size: 15px; color: var(--ni-white); line-height: 1; }
+    .ni-brand-sub { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); }
+    .ni-topbar-right { display: flex; align-items: center; gap: 12px; }
+    .ni-obra-tag { background: rgba(0,37,236,0.35); color: #a0b0ff; font-family: var(--font-mono); font-size: 11px; border-radius: 5px; padding: 3px 10px; }
+    .ni-user-name { color: var(--ni-white); font-size: 13px; text-align: right; }
+    .ni-user-role { color: rgba(255,255,255,0.4); font-size: 10px; text-align: right; }
+    .ni-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--ni-blue); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--ni-white); flex-shrink: 0; }
+
+    /* SIDEBAR */
+    .ni-sidebar { position: fixed; top: var(--ni-topbar-h); left: 0; bottom: 0; width: var(--ni-sidebar-w); background: var(--ni-light); border-right: 1px solid var(--ni-border); display: flex; flex-direction: column; padding: 18px 12px; gap: 2px; z-index: 90; }
+    .ni-sb-section { font-size: 9px; color: #999; font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 8px 10px; }
+    .ni-sb-item { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: var(--radius); cursor: pointer; text-decoration: none; }
+    .ni-sb-item:hover { background: #e8e8e8; }
+    .ni-sb-item.active { background: var(--ni-blue-soft); }
+    .ni-sb-item i { font-size: 19px; color: #aaa; flex-shrink: 0; }
+    .ni-sb-item.active i { color: var(--ni-blue); }
+    .ni-sb-item span { font-size: 13px; color: #888; }
+    .ni-sb-item.active span { color: var(--ni-dark); font-weight: 500; }
+    .ni-sb-div { height: 0.5px; background: var(--ni-border); margin: 10px 8px; }
+
+    /* MAIN CONTENT */
+    .ni-content { margin-top: var(--ni-topbar-h); margin-left: var(--ni-sidebar-w); min-height: calc(100vh - var(--ni-topbar-h)); }
+
+    /* PAGE HEADER */
+    .ni-page-header { background: var(--ni-white); border-bottom: 0.5px solid var(--ni-border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .ni-page-title { font-size: 16px; font-weight: 600; color: var(--ni-text); }
+    .ni-page-sub { font-size: 12px; color: var(--ni-text-sub); margin-top: 1px; }
+
+    /* CARDS */
+    .ni-card { background: var(--ni-white); border: 0.5px solid var(--ni-border); border-radius: var(--radius-lg); overflow: hidden; }
+    .ni-card-header { padding: 12px 16px; border-bottom: 0.5px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+    .ni-card-title { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--ni-text-sub); text-transform: uppercase; letter-spacing: 0.06em; }
+    .ni-card-body { padding: 16px; }
+
+    /* BUTTONS */
+    .ni-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: none; border-radius: var(--radius); font-family: var(--font-brand); font-weight: 700; cursor: pointer; transition: opacity 0.15s; text-decoration: none; width: 100%; padding: 12px 16px; font-size: 14px; }
+    .ni-btn:hover { opacity: 0.88; }
+    .ni-btn-primary { background: var(--ni-blue); color: var(--ni-white); }
+    .ni-btn-secondary { background: var(--ni-white); color: var(--ni-dark); border: 1.5px solid var(--ni-border); font-family: var(--font-main); font-weight: 500; }
+    .ni-btn-danger { background: #c0392b; color: var(--ni-white); }
+    .ni-btn-sm { padding: 8px 14px; font-size: 13px; }
+
+    /* FORM FIELDS */
+    .ni-field { margin-bottom: 14px; }
+    .ni-label { display: block; font-size: 12px; font-weight: 500; color: var(--ni-text-sub); margin-bottom: 5px; }
+    .ni-input, .ni-select { width: 100%; border: 1.5px solid var(--ni-border); border-radius: var(--radius); padding: 10px 12px; font-size: 14px; font-family: var(--font-main); background: var(--ni-white); color: var(--ni-text); outline: none; transition: border-color 0.15s; }
+    .ni-input:focus, .ni-select:focus { border-color: var(--ni-blue); }
+
+    /* BADGES */
+    .ni-badge { display: inline-flex; align-items: center; border-radius: 20px; font-family: var(--font-mono); font-size: 10px; padding: 2px 9px; font-weight: 500; }
+    .ni-badge-blue { background: var(--ni-blue); color: var(--ni-white); }
+    .ni-badge-green { background: #e8f5ee; color: var(--ni-success); }
+    .ni-badge-warn { background: var(--ni-warn-bg); color: var(--ni-warn); }
+    .ni-badge-gray { background: #f0f0f0; color: #888; }
+
+    /* WORKER CHIP */
+    .ni-chip { display: flex; align-items: center; gap: 9px; border: 0.5px solid var(--ni-border); border-radius: var(--radius); padding: 9px 10px; background: #fafafa; }
+    .ni-chip.warn { background: var(--ni-warn-bg); border-color: var(--ni-warn-bdr); }
+    .ni-chip-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--ni-blue-soft); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--ni-blue); flex-shrink: 0; }
+    .ni-chip-avatar.warn { background: #fef3e2; color: var(--ni-warn); }
+    .ni-chip-name { font-size: 13px; font-weight: 500; }
+    .ni-chip-sub { font-family: var(--font-mono); font-size: 10px; color: var(--ni-text-sub); }
+    .ni-chip-sub.warn { color: var(--ni-warn); }
+    .ni-chip-remove { margin-left: auto; color: #ccc; font-size: 15px; cursor: pointer; flex-shrink: 0; background: none; border: none; }
+    .ni-chip-remove.warn { color: var(--ni-warn-bdr); }
+
+    /* ALERTS */
+    .ni-alert { display: flex; align-items: flex-start; gap: 10px; border-radius: var(--radius); padding: 12px 14px; font-size: 13px; }
+    .ni-alert-warn { background: #fef3e2; border: 0.5px solid var(--ni-warn-bdr); color: var(--ni-warn); }
+    .ni-alert-info { background: var(--ni-blue-soft); border: 0.5px solid #b0c0ff; color: var(--ni-dark); }
+
+    /* TIMELINE STEPS */
+    .ni-timeline { background: var(--ni-white); border-bottom: 1px solid var(--ni-border); display: flex; align-items: stretch; }
+    .ni-t-step { display: flex; align-items: center; gap: 8px; padding: 12px 20px 10px; border-bottom: 3px solid transparent; }
+    .ni-t-step.done { border-bottom-color: var(--ni-success); }
+    .ni-t-step.active { border-bottom-color: var(--ni-blue); }
+    .ni-t-num { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; }
+    .ni-t-num.done { background: var(--ni-success); color: #fff; }
+    .ni-t-num.active { background: var(--ni-blue); color: #fff; }
+    .ni-t-num.pending { background: #e8e8e8; color: #999; }
+    .ni-t-label { font-size: 12px; }
+    .ni-t-label.done { color: var(--ni-success); font-weight: 500; }
+    .ni-t-label.active { color: var(--ni-dark); font-weight: 600; }
+    .ni-t-label.pending { color: #aaa; }
+
+    /* MESSAGES */
+    .ni-messages { padding: 0 24px; margin-top: 12px; }
+    .ni-msg { padding: 10px 14px; border-radius: var(--radius); margin-bottom: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .ni-msg-success { background: #e8f5ee; color: var(--ni-success); }
+    .ni-msg-error { background: #fce8e8; color: #c0392b; }
+    .ni-msg-info { background: var(--ni-blue-soft); color: var(--ni-dark); }
+
+    .ni-divider { height: 0.5px; background: var(--ni-border); margin: 12px 0; }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      :root { --ni-sidebar-w: 0px; }
+      .ni-sidebar { display: none; }
+      .ni-content { margin-left: 0; }
+      .ni-topbar { padding: 0 16px; }
+    }
+
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline-block; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+{% if user.is_authenticated %}
+  <header class="ni-topbar">
+    <a href="{% url 'dashboard' %}" class="ni-brand">
+      <svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="4" y="4" width="28" height="4" rx="2" fill="#4a6fff"/>
+        <rect x="6" y="10" width="3" height="18" rx="1.5" fill="#4a6fff"/>
+        <rect x="11" y="10" width="3" height="18" rx="1.5" fill="#4a6fff"/>
+        <rect x="16" y="10" width="3" height="18" rx="1.5" fill="#4a6fff"/>
+        <rect x="21" y="10" width="3" height="18" rx="1.5" fill="#4a6fff"/>
+        <rect x="26" y="10" width="3" height="18" rx="1.5" fill="#4a6fff"/>
+        <rect x="2" y="28" width="32" height="4" rx="2" fill="#4a6fff"/>
+      </svg>
+      <div>
+        <div class="ni-brand-name">NOVUS IMPERIUM</div>
+        <div class="ni-brand-sub">Control de Partidas A&C</div>
+      </div>
+    </a>
+    <div class="ni-topbar-right">
+      {% if active_site %}
+        <a href="{% url 'change_site' %}" style="text-decoration:none;">
+          <span class="ni-obra-tag" style="display:flex; align-items:center; gap:6px; padding:5px 12px;">
+            <i class="ti ti-building" style="font-size:13px;"></i>
+            <span>
+              <span style="font-weight:600; font-size:12px;">{{ active_site.name }}</span>
+              <span style="opacity:0.6; font-size:10px; margin-left:5px;">{{ active_site.code }}</span>
+            </span>
+            <i class="ti ti-chevron-down" style="font-size:10px; opacity:0.7;"></i>
+          </span>
+        </a>
+      {% endif %}
+      <div style="text-align:right">
+        <div class="ni-user-name">{{ user.get_full_name }}</div>
+        <div class="ni-user-role">{% if active_site_membership %}{{ active_site_membership.role.name }}{% endif %}</div>
+      </div>
+      <div class="ni-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+    </div>
+  </header>
+
+  <nav class="ni-sidebar" aria-label="Navegacion principal">
+    <div class="ni-sb-section">Operacion</div>
+    <a href="{% url 'work:assignment_new' %}" class="ni-sb-item {% block nav_assign %}{% endblock %}">
+      <i class="ti ti-plus" aria-hidden="true"></i>
+      <span>Nueva asignacion</span>
+    </a>
+    <a href="{% url 'work:active_workers' %}" class="ni-sb-item {% block nav_active %}{% endblock %}">
+      <i class="ti ti-users" aria-hidden="true"></i>
+      <span>Trabajadores activos</span>
+    </a>
+    <a href="{% url 'resources:worker_list' %}" class="ni-sb-item {% block nav_list %}{% endblock %}">
+      <i class="ti ti-list-search" aria-hidden="true"></i>
+      <span>Listado trabajadores</span>
+    </a>
+    <a href="{% url 'tracking:no_on_site' %}" class="ni-sb-item {% block nav_noonsite %}{% endblock %}">
+      <i class="ti ti-circle-minus" aria-hidden="true"></i>
+      <span>No en obra</span>
+    </a>
+    <div class="ni-sb-div"></div>
+    <form method="post" action="{% url 'logout' %}" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="ni-sb-item" style="width:100%;background:none;border:none;cursor:pointer;text-align:left;">
+        <i class="ti ti-logout" aria-hidden="true"></i>
+        <span>Cerrar sesion</span>
+      </button>
+    </form>
+  </nav>
+
+  <main class="ni-content">
+    {% if messages %}
+      <div class="ni-messages">
+        {% for message in messages %}
+          <div class="ni-msg ni-msg-{{ message.tags }}">
+            <i class="ti ti-info-circle" aria-hidden="true"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+{% else %}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

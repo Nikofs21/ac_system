@@ -1,0 +1,25 @@
+# Entorno virtual
+venv/
+
+# Variables de entorno - NUNCA subir al repositorio
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+desktop.ini

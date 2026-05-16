@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Trabajadores activos{% endblock %}
+{% block nav_active %}active{% endblock %}
+
+{% block content %}
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">Trabajadores activos</h1>
+    <p class="ni-page-sub">Sesiones abiertas hoy — {{ site.name }}</p>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <a href="{% url 'work:assignment_new' %}" class="ni-btn ni-btn-primary" style="width:auto; padding:9px 16px; font-size:13px;">
+      <i class="ti ti-plus" aria-hidden="true"></i> Nueva asignacion
+    </a>
+    {% if open_sessions %}
+      <form method="post" action="{% url 'work:mass_close' %}" onsubmit="return confirm('Cerrar todas las sesiones abiertas?')">
+        {% csrf_token %}
+        <button type="submit" class="ni-btn ni-btn-secondary" style="width:auto; padding:9px 16px; font-size:13px;">
+          <i class="ti ti-player-stop" aria-hidden="true"></i> Cierre masivo
+        </button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- STATS -->
+<div style="padding:16px 24px; display:flex; gap:12px; flex-wrap:wrap;">
+  <div class="ni-card" style="flex:1; min-width:140px;">
+    <div style="padding:14px 16px;">
+      <p style="font-size:11px; color:var(--ni-text-sub); margin-bottom:4px;">Activos ahora</p>
+      <p style="font-size:24px; font-weight:500; color:var(--ni-blue);">{{ active_count }}</p>
+    </div>
+  </div>
+  <div class="ni-card" style="flex:1; min-width:140px;">
+    <div style="padding:14px 16px;">
+      <p style="font-size:11px; color:var(--ni-text-sub); margin-bottom:4px;">Sin asignar</p>
+      <p style="font-size:24px; font-weight:500; color:{% if unassigned_count > 0 %}#c0392b{% else %}var(--ni-success){% endif %};">{{ unassigned_count }}</p>
+    </div>
+  </div>
+  <div class="ni-card" style="flex:1; min-width:140px;">
+    <div style="padding:14px 16px;">
+      <p style="font-size:11px; color:var(--ni-text-sub); margin-bottom:4px;">Cerrados hoy</p>
+      <p style="font-size:24px; font-weight:500; color:var(--ni-success);">{{ closed_today }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- TABLA DE SESIONES -->
+<div style="padding:0 24px 24px;">
+  {% if open_sessions %}
+    <div class="ni-card">
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="background:#f9f9f9; border-bottom:0.5px solid var(--ni-border);">
+              <th style="padding:10px 16px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--ni-text-sub); font-weight:500; text-transform:uppercase; letter-spacing:0.05em;">Trabajador</th>
+              <th style="padding:10px 16px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--ni-text-sub); font-weight:500; text-transform:uppercase; letter-spacing:0.05em;">Partida</th>
+              <th style="padding:10px 16px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--ni-text-sub); font-weight:500; text-transform:uppercase; letter-spacing:0.05em;">Inicio</th>
+              <th style="padding:10px 16px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--ni-text-sub); font-weight:500; text-transform:uppercase; letter-spacing:0.05em;">Estado</th>
+              <th style="padding:10px 16px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for session in open_sessions %}
+              <tr style="border-bottom:0.5px solid #f5f5f5;" id="row-{{ session.id }}">
+                <td style="padding:11px 16px;">
+                  <div style="font-size:14px; font-weight:500;">{{ session.resource.display_name }}</div>
+                  <div style="font-size:11px; color:var(--ni-text-sub); font-family:var(--font-mono);">{{ session.resource.job_title.name|default:"" }}</div>
+                </td>
+                <td style="padding:11px 16px;">
+                  <div style="font-size:13px;">{{ session.task_name_snapshot }}</div>
+                  <div style="font-size:11px; color:var(--ni-text-sub);">{{ session.stage_name_snapshot }}</div>
+                </td>
+                <td style="padding:11px 16px; font-family:var(--font-mono); font-size:13px; color:var(--ni-text-sub);">
+                  {{ session.started_at|time:"H:i" }}
+                </td>
+                <td style="padding:11px 16px;">
+                  <span class="ni-badge ni-badge-green">Activo</span>
+                </td>
+                <td style="padding:11px 16px; text-align:right;">
+                  <form method="post" action="{% url 'work:close_session' session.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="ni-btn ni-btn-secondary ni-btn-sm" style="width:auto; padding:6px 12px; font-size:12px;" onclick="return confirm('Cerrar sesion de {{ session.resource.display_name }}?')">
+                      <i class="ti ti-player-stop" aria-hidden="true"></i> Cerrar
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="ni-card">
+      <div style="padding:40px; text-align:center;">
+        <i class="ti ti-users" style="font-size:40px; color:#ddd; margin-bottom:12px; display:block;" aria-hidden="true"></i>
+        <p style="font-size:15px; font-weight:500; color:var(--ni-text-sub); margin-bottom:4px;">No hay sesiones abiertas</p>
+        <p style="font-size:13px; color:#aaa;">Usa "Nueva asignacion" para comenzar a registrar trabajo.</p>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
