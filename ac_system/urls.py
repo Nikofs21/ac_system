@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
@@ -11,5 +12,7 @@ urlpatterns = [
     path('work/', include('work.urls')),
     path('resources/', include('resources.urls')),
     path('tracking/', include('tracking.urls')),
+    # Ruta publica del QR — corta y memorable para imprimir en credenciales
+    path('r/<str:uid>/', include('resources.urls_qr')),
     path('', lambda request: redirect('dashboard'), name='home'),
 ]

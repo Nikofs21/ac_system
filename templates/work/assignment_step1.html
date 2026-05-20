@@ -24,6 +24,19 @@
     <p style="font-size:13px; color:var(--ni-text-sub); margin-top:4px;">{{ site.name }}</p>
   </div>
 
+  {% if preloaded_name %}
+    <div class="ni-alert ni-alert-info" style="margin-bottom:20px;">
+      <i class="ti ti-user-check" aria-hidden="true"></i>
+      <div>
+        <div style="font-weight:500; margin-bottom:2px;">Trabajador pre-cargado</div>
+        <div style="font-size:12px;">
+          <strong>{{ preloaded_name }}</strong> se agregara automaticamente al grupo en el paso 2.
+          Selecciona la etapa y partida para continuar.
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
   <form method="post">
     {% csrf_token %}
 
@@ -69,7 +82,11 @@
 
     <button type="submit" class="ni-btn ni-btn-primary">
       <i class="ti ti-arrow-right" aria-hidden="true"></i>
-      Continuar - escanear trabajadores
+      {% if preloaded_name %}
+        Continuar con {{ preloaded_name }}
+      {% else %}
+        Continuar - escanear trabajadores
+      {% endif %}
     </button>
   </form>
 </div>

@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% block title %}{{ resource.display_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .qr-page { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+  /* Ficha trabajador */
+  .worker-card {
+    background: var(--ni-white);
+    border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 16px;
+  }
+  .worker-card-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--ni-blue-soft);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 600; color: var(--ni-blue);
+    flex-shrink: 0;
+  }
+  .worker-card-name  { font-size: 17px; font-weight: 600; color: var(--ni-dark); }
+  .worker-card-meta  { font-size: 12px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 2px; }
+  .worker-card-site  { font-size: 11px; color: var(--ni-text-sub); margin-top: 2px; }
+
+  /* Bloque de sesion abierta */
+  .session-block {
+    background: var(--ni-white);
+    border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .session-block-header {
+    padding: 12px 16px;
+    border-bottom: 0.5px solid #f0f0f0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .session-block-body { padding: 14px 16px; }
+  .session-task  { font-size: 15px; font-weight: 500; color: var(--ni-dark); }
+  .session-stage { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
+  .session-time  { font-size: 11px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 6px; }
+  .session-block-footer { padding: 0 16px 16px; }
+
+  /* Bloque post-cierre */
+  .post-close-block {
+    display: none;
+    background: #e8f5ee;
+    border: 0.5px solid #b8dfc8;
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .post-close-block.visible { display: block; }
+  .post-close-msg {
+    font-size: 14px; font-weight: 500; color: var(--ni-success);
+    margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  /* Bloque iniciar sesion */
+  .start-block {
+    background: var(--ni-white);
+    border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  /* No en obra */
+  .nos-block {
+    background: var(--ni-warn-bg);
+    border: 0.5px solid var(--ni-warn-bdr);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    display: flex; gap: 10px;
+    font-size: 13px; color: var(--ni-warn);
+    margin-bottom: 16px;
+  }
+
+  /* Botones */
+  .btn-terminate {
+    width: 100%; height: 46px;
+    background: #c0392b; color: var(--ni-white);
+    border: none; border-radius: var(--radius);
+    font-family: var(--font-brand); font-weight: 700; font-size: 14px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: opacity 0.15s;
+  }
+  .btn-terminate:hover { opacity: 0.88; }
+  .btn-terminate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-assign {
+    width: 100%; height: 46px;
+    background: var(--ni-blue); color: var(--ni-white);
+    border: none; border-radius: var(--radius);
+    font-family: var(--font-brand); font-weight: 700; font-size: 14px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    text-decoration: none; transition: opacity 0.15s;
+  }
+  .btn-assign:hover { opacity: 0.88; }
+
+  .back-link {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--ni-text-sub); font-size: 13px;
+    text-decoration: none; padding: 8px 0;
+  }
+  .back-link:hover { color: var(--ni-blue); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="qr-page">
+
+  <!-- FICHA TRABAJADOR -->
+  <div class="worker-card">
+    <div class="worker-card-avatar">
+      {{ resource.display_name|slice:":1" }}{{ resource.display_name.split|last|slice:":1" }}
+    </div>
+    <div>
+      <div class="worker-card-name">{{ resource.display_name }}</div>
+      <div class="worker-card-meta">
+        {{ resource.job_title.name|default:"Sin cargo" }}
+        {% if resource.person_rut %}&nbsp;·&nbsp; {{ resource.person_rut }}{% endif %}
+      </div>
+      <div class="worker-card-site">{{ site.name }}</div>
+    </div>
+  </div>
+
+  <!-- MARCA NO EN OBRA -->
+  {% if nos_event %}
+    <div class="nos-block">
+      <i class="ti ti-circle-minus" style="flex-shrink:0; font-size:18px;" aria-hidden="true"></i>
+      <div>
+        <div style="font-weight:500;">Marcado como No en obra</div>
+        <div style="font-size:12px;">{{ nos_event.get_reason_code_display }}
+          {% if nos_event.detail %} — {{ nos_event.detail }}{% endif %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- SESION ABIERTA -->
+  {% if open_session %}
+    <div class="session-block" id="session-block">
+      <div class="session-block-header">
+        <span style="font-family:var(--font-mono); font-size:11px; color:var(--ni-text-sub); text-transform:uppercase; letter-spacing:0.06em;">Sesion activa</span>
+        <span class="ni-badge ni-badge-green">Abierta</span>
+      </div>
+      <div class="session-block-body">
+        <div class="session-task">{{ open_session.task_name_snapshot }}</div>
+        <div class="session-stage">{{ open_session.stage_name_snapshot }}</div>
+        <div class="session-time">Inicio: {{ open_session.started_at|time:"H:i" }}</div>
+      </div>
+
+      {% if perms_ctx.can_start_people or perms_ctx.can_start_machines %}
+        <div class="session-block-footer">
+          <button
+            class="btn-terminate"
+            id="btn-terminate"
+            onclick="terminateSession({{ open_session.id }}, {{ resource.id }})"
+          >
+            <i class="ti ti-player-stop" aria-hidden="true"></i>
+            Terminar sesion
+          </button>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- BLOQUE POST-CIERRE (oculto hasta que se termina la sesion) -->
+    <div class="post-close-block" id="post-close-block">
+      <div class="post-close-msg">
+        <i class="ti ti-circle-check" aria-hidden="true"></i>
+        Sesion terminada correctamente
+      </div>
+      <a href="{% url 'work:assignment_preload' resource.id %}" class="btn-assign">
+        <i class="ti ti-plus" aria-hidden="true"></i>
+        Asignar a nueva partida
+      </a>
+    </div>
+
+  {% else %}
+    <!-- SIN SESION ABIERTA — INICIAR -->
+    {% if perms_ctx.can_start_people or perms_ctx.can_start_machines %}
+      <div class="start-block">
+        <div style="padding:14px 16px; border-bottom:0.5px solid #f0f0f0;">
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--ni-text-sub); text-transform:uppercase; letter-spacing:0.06em;">Iniciar sesion</span>
+        </div>
+        <div style="padding:14px 16px;">
+          <p style="font-size:13px; color:var(--ni-text-sub); margin-bottom:14px; line-height:1.5;">
+            Sin sesion activa. Selecciona etapa y partida para iniciar.
+          </p>
+          <a href="{% url 'work:assignment_preload' resource.id %}" class="btn-assign">
+            <i class="ti ti-plus" aria-hidden="true"></i>
+            Iniciar sesion
+          </a>
+        </div>
+      </div>
+    {% else %}
+      <div class="ni-alert ni-alert-info">
+        <i class="ti ti-info-circle" aria-hidden="true"></i>
+        Sin sesion activa.
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <a href="{% url 'work:active_workers' %}" class="back-link">
+    <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver a trabajadores activos
+  </a>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const CLOSE_URL = "{% url 'work:close_session' 0 %}".replace('/0/', '/');
+  const CSRF      = "{{ csrf_token }}";
+
+  function terminateSession(sessionId, resourceId) {
+    const btn = document.getElementById('btn-terminate');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-loader" aria-hidden="true"></i> Terminando...';
+
+    fetch(CLOSE_URL + sessionId + '/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': CSRF,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    })
+    .then(r => {
+      if (r.ok || r.status === 204) {
+        // Ocultar bloque de sesion, mostrar bloque post-cierre
+        document.getElementById('session-block').style.display    = 'none';
+        document.getElementById('post-close-block').classList.add('visible');
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-player-stop"></i> Terminar sesion';
+        alert('Error al terminar la sesion. Intenta nuevamente.');
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-player-stop"></i> Terminar sesion';
+      alert('Error de conexion.');
+    });
+  }
+</script>
+{% endblock %}

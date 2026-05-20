@@ -47,7 +47,7 @@
     .ni-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--ni-blue); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--ni-white); flex-shrink: 0; }
 
     /* SIDEBAR */
-    .ni-sidebar { position: fixed; top: var(--ni-topbar-h); left: 0; bottom: 0; width: var(--ni-sidebar-w); background: var(--ni-light); border-right: 1px solid var(--ni-border); display: flex; flex-direction: column; padding: 18px 12px; gap: 2px; z-index: 90; }
+    .ni-sidebar { position: fixed; top: var(--ni-topbar-h); left: 0; bottom: 0; width: var(--ni-sidebar-w); background: var(--ni-light); border-right: 1px solid var(--ni-border); display: flex; flex-direction: column; padding: 18px 12px; gap: 2px; z-index: 90; overflow-y: auto; }
     .ni-sb-section { font-size: 9px; color: #999; font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 8px 10px; }
     .ni-sb-item { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: var(--radius); cursor: pointer; text-decoration: none; }
     .ni-sb-item:hover { background: #e8e8e8; }
@@ -186,24 +186,80 @@
   </header>
 
   <nav class="ni-sidebar" aria-label="Navegacion principal">
-    <div class="ni-sb-section">Operacion</div>
-    <a href="{% url 'work:assignment_new' %}" class="ni-sb-item {% block nav_assign %}{% endblock %}">
-      <i class="ti ti-plus" aria-hidden="true"></i>
-      <span>Nueva asignacion</span>
-    </a>
-    <a href="{% url 'work:active_workers' %}" class="ni-sb-item {% block nav_active %}{% endblock %}">
-      <i class="ti ti-users" aria-hidden="true"></i>
-      <span>Trabajadores activos</span>
-    </a>
-    <a href="{% url 'resources:worker_list' %}" class="ni-sb-item {% block nav_list %}{% endblock %}">
-      <i class="ti ti-list-search" aria-hidden="true"></i>
-      <span>Listado trabajadores</span>
-    </a>
-    <a href="{% url 'tracking:no_on_site' %}" class="ni-sb-item {% block nav_noonsite %}{% endblock %}">
-      <i class="ti ti-circle-minus" aria-hidden="true"></i>
-      <span>No en obra</span>
-    </a>
+
+    {% if perms_ctx.can_start_people or perms_ctx.can_start_machines %}
+      <div class="ni-sb-section">Operacion</div>
+
+      <a href="{% url 'work:assignment_new' %}" class="ni-sb-item {% block nav_assign %}{% endblock %}">
+        <i class="ti ti-plus" aria-hidden="true"></i>
+        <span>Nueva asignacion</span>
+      </a>
+
+      <a href="{% url 'work:active_workers' %}" class="ni-sb-item {% block nav_active %}{% endblock %}">
+        <i class="ti ti-users" aria-hidden="true"></i>
+        <span>Trabajadores activos</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_view_resources %}
+      {% if not perms_ctx.can_start_people and not perms_ctx.can_start_machines %}
+        <div class="ni-sb-section">Recursos</div>
+      {% endif %}
+
+      <a href="{% url 'resources:worker_list' %}" class="ni-sb-item {% block nav_list %}{% endblock %}">
+        <i class="ti ti-list-search" aria-hidden="true"></i>
+        <span>Listado trabajadores</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_manage_nos and features.no_on_site %}
+      <a href="{% url 'tracking:no_on_site' %}" class="ni-sb-item {% block nav_noonsite %}{% endblock %}">
+        <i class="ti ti-circle-minus" aria-hidden="true"></i>
+        <span>No en obra</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_review_sessions %}
+      <div class="ni-sb-section">Control</div>
+       <a href="{% url 'work:session_review' %}" class="ni-sb-item {% block nav_review %}{% endblock %}">
+        <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+        <span>Revision de partidas</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_view_progress and features.planning %}
+      <div class="ni-sb-section">Planificacion</div>
+      <a href="#" class="ni-sb-item {% block nav_progress %}{% endblock %}">
+        <i class="ti ti-chart-bar" aria-hidden="true"></i>
+        <span>Avance semanal</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_view_orgchart and features.orgchart %}
+      <a href="#" class="ni-sb-item {% block nav_orgchart %}{% endblock %}">
+        <i class="ti ti-sitemap" aria-hidden="true"></i>
+        <span>Organigrama</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_view_moi %}
+      <div class="ni-sb-section">Administracion</div>
+      <a href="#" class="ni-sb-item {% block nav_moi %}{% endblock %}">
+        <i class="ti ti-id-badge" aria-hidden="true"></i>
+        <span>Mano de obra indirecta</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_manage_companies %}
+      <div class="ni-sb-section">Sistema</div>
+      <a href="#" class="ni-sb-item {% block nav_companies %}{% endblock %}">
+        <i class="ti ti-building-factory" aria-hidden="true"></i>
+        <span>Empresas y obras</span>
+      </a>
+    {% endif %}
+
     <div class="ni-sb-div"></div>
+
     <form method="post" action="{% url 'logout' %}" style="margin:0;">
       {% csrf_token %}
       <button type="submit" class="ni-sb-item" style="width:100%;background:none;border:none;cursor:pointer;text-align:left;">

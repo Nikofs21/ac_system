@@ -1,0 +1,766 @@
+{% extends 'base.html' %}
+{% block title %}Revision de partidas{% endblock %}
+{% block nav_review %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── FILTROS ── */
+  .review-filters {
+    padding: 10px 16px;
+    background: var(--ni-white);
+    border-bottom: 0.5px solid var(--ni-border);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: var(--ni-topbar-h);
+    z-index: 10;
+  }
+  .review-filters input[type="date"],
+  .review-filters input[type="text"] {
+    height: 36px;
+    border: 1.5px solid var(--ni-border);
+    border-radius: var(--radius);
+    padding: 0 10px;
+    font-size: 13px;
+    font-family: var(--font-main);
+    background: var(--ni-light);
+    color: var(--ni-text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .review-filters input:focus { border-color: var(--ni-blue); background: var(--ni-white); }
+  .review-filters input[type="date"] { width: 140px; flex-shrink: 0; }
+  .review-filters input[type="text"] { flex: 1; min-width: 120px; }
+  .search-wrap-r { position: relative; flex: 1; min-width: 120px; }
+  .search-wrap-r input { width: 100%; padding-left: 32px; }
+  .search-icon-r { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--ni-text-sub); pointer-events: none; }
+
+  /* ── STATS ── */
+  .stats-bar {
+    display: flex; gap: 8px; padding: 8px 16px;
+    background: var(--ni-white);
+    border-bottom: 0.5px solid var(--ni-border);
+    flex-wrap: wrap;
+  }
+  .stat-pill {
+    font-size: 11px; border-radius: 20px; padding: 3px 10px;
+    font-family: var(--font-mono);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .pill-total   { background: #f0f0f0; color: #888; }
+  .pill-session { background: #e8f5ee; color: var(--ni-success); }
+  .pill-warn    { background: #fef3e2; color: var(--ni-warn); }
+  .pill-blue    { background: var(--ni-blue-soft); color: var(--ni-blue); }
+
+  /* ── TABS ── */
+  .review-tabs {
+    display: flex;
+    border-bottom: 0.5px solid var(--ni-border);
+    background: var(--ni-white);
+    padding: 0 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .review-tabs::-webkit-scrollbar { display: none; }
+  .review-tab {
+    padding: 10px 14px;
+    font-size: 12px; font-weight: 500;
+    color: var(--ni-text-sub);
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    background: none; border-top: none; border-left: none; border-right: none;
+    cursor: pointer; font-family: var(--font-main);
+  }
+  .review-tab.active { color: var(--ni-blue); border-bottom-color: var(--ni-blue); }
+
+  /* ── WORKER ROWS (accordion) ── */
+  .worker-section { margin: 0; }
+
+  .worker-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 0.5px solid var(--ni-border);
+    cursor: pointer;
+    background: var(--ni-white);
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s;
+    user-select: none;
+  }
+  .worker-header:active { background: var(--ni-light); }
+  .worker-header.expanded { background: #f8f9ff; }
+
+  .wh-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .av-open   { background: #e8f5ee; color: var(--ni-success); }
+  .av-closed { background: var(--ni-blue-soft); color: var(--ni-blue); }
+  .av-none   { background: #f0f0f0; color: #aaa; }
+  .av-nos    { background: #fef3e2; color: var(--ni-warn); }
+
+  .wh-info { flex: 1; min-width: 0; }
+  .wh-name {
+    font-size: 14px; font-weight: 500; color: var(--ni-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .wh-meta {
+    font-size: 11px; color: var(--ni-text-sub);
+    font-family: var(--font-mono); margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .wh-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+  .w-badge {
+    font-size: 10px; border-radius: 20px; padding: 2px 8px;
+    font-family: var(--font-mono); white-space: nowrap;
+  }
+  .badge-open   { background: #e8f5ee; color: var(--ni-success); }
+  .badge-closed { background: #f0f0f0; color: #888; }
+  .badge-warn   { background: #fef3e2; color: var(--ni-warn); }
+  .badge-none   { background: #f0f0f0; color: #bbb; }
+
+  .chevron-icon { font-size: 16px; color: #ccc; transition: transform 0.2s; }
+  .chevron-icon.open { transform: rotate(90deg); }
+
+  /* ── DETALLE DE SESIONES ── */
+  .worker-detail {
+    display: none;
+    background: #f8f9ff;
+    border-bottom: 0.5px solid var(--ni-border);
+    padding: 0 16px 12px;
+  }
+  .worker-detail.visible { display: block; }
+
+  .session-card {
+    background: var(--ni-white);
+    border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius);
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .session-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px;
+    border-bottom: 0.5px solid #f0f0f0;
+  }
+  .sc-task  { font-size: 13px; font-weight: 500; color: var(--ni-dark); }
+  .sc-stage { font-size: 11px; color: var(--ni-text-sub); margin-top: 1px; }
+  .session-card-body {
+    display: flex; gap: 0;
+    font-size: 11px;
+  }
+  .sc-stat {
+    flex: 1; padding: 8px 12px;
+    border-right: 0.5px solid #f0f0f0;
+    display: flex; flex-direction: column; gap: 1px;
+  }
+  .sc-stat:last-child { border-right: none; }
+  .sc-stat-label { color: var(--ni-text-sub); font-size: 10px; font-family: var(--font-mono); }
+  .sc-stat-value { color: var(--ni-text); font-weight: 500; font-family: var(--font-mono); }
+  .session-card-footer { padding: 8px 12px; border-top: 0.5px solid #f0f0f0; display: flex; justify-content: flex-end; }
+
+  .btn-edit-session {
+    font-size: 12px;
+    border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    background: var(--ni-white);
+    color: var(--ni-text);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    font-family: var(--font-main);
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .btn-edit-session:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); color: var(--ni-blue); }
+
+  /* ── SECCION SIN SESION ── */
+  .section-divider {
+    padding: 8px 16px;
+    background: #f5f5f5;
+    border-bottom: 0.5px solid var(--ni-border);
+    font-size: 11px; font-weight: 500;
+    color: var(--ni-text-sub);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  /* ── MODAL EDICION ── */
+  .edit-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1000;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .edit-overlay.visible { display: flex; }
+
+  .edit-sheet {
+    background: var(--ni-white);
+    border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 520px;
+    max-height: 90vh; overflow-y: auto;
+    animation: slideUp 0.2s ease;
+  }
+  @media (min-width: 600px) {
+    .edit-overlay { align-items: center; padding: 16px; }
+    .edit-sheet { border-radius: var(--radius-lg); }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .edit-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--ni-border); margin: 10px auto 0; }
+  @media (min-width: 600px) { .edit-handle { display: none; } }
+
+  .edit-header { padding: 16px; border-bottom: 0.5px solid var(--ni-border); }
+  .edit-title  { font-size: 15px; font-weight: 600; color: var(--ni-dark); }
+  .edit-sub    { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
+  .edit-body   { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .edit-footer { padding: 12px 16px; border-top: 0.5px solid var(--ni-border); display: flex; gap: 8px; }
+
+  .btn-confirm-edit {
+    flex: 1; height: 44px; border: none; border-radius: var(--radius);
+    background: var(--ni-blue); color: var(--ni-white);
+    font-family: var(--font-brand); font-weight: 700; font-size: 14px;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-confirm-edit:hover { opacity: 0.88; }
+  .btn-confirm-edit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-cancel-edit {
+    height: 44px; border: 1.5px solid var(--ni-border); border-radius: var(--radius);
+    background: var(--ni-white); color: var(--ni-dark);
+    font-family: var(--font-main); font-weight: 500; font-size: 14px;
+    cursor: pointer; padding: 0 16px;
+  }
+
+  /* ── DESKTOP: dos columnas ── */
+  @media (min-width: 900px) {
+    .review-layout { display: grid; grid-template-columns: 280px 1fr; min-height: 500px; align-items: start; }
+    .review-left { border-right: 0.5px solid var(--ni-border); position: sticky; top: calc(var(--ni-topbar-h) + 120px); max-height: calc(100vh - 200px); overflow-y: auto; }
+    .review-right { padding: 16px; }
+    .worker-detail { display: none !important; }
+    .worker-header { border-bottom: 0.5px solid var(--ni-border); }
+    .worker-header.selected { background: var(--ni-blue-soft) !important; }
+    .desktop-detail { display: block; }
+    .chevron-icon  { display: none; }
+  }
+  @media (max-width: 899px) {
+    .review-layout { display: block; }
+    .review-right  { display: none; }
+    .desktop-detail { display: none; }
+  }
+
+  /* Toast */
+  #review-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ni-dark); color: var(--ni-white);
+    border-radius: var(--radius); padding: 10px 18px;
+    font-size: 13px; z-index: 2000;
+    display: none; align-items: center; gap: 8px;
+    max-width: 90vw; text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  #review-toast.visible { display: flex; }
+
+  .empty-state { padding: 40px; text-align: center; color: var(--ni-text-sub); }
+  .empty-state i { font-size: 36px; color: #ddd; display: block; margin-bottom: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- PAGE HEADER -->
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">Revision de partidas</h1>
+    <p class="ni-page-sub">
+      {{ site.name }}
+      {% if not is_today %}&nbsp;·&nbsp; {{ selected_date|date:"d/m/Y" }}{% else %}&nbsp;·&nbsp; Hoy{% endif %}
+    </p>
+  </div>
+</div>
+
+<!-- FILTROS -->
+<form method="get" class="review-filters">
+  <input
+    type="date"
+    name="fecha"
+    value="{{ selected_date|date:'Y-m-d' }}"
+    max="{{ today|date:'Y-m-d' }}"
+    onchange="this.form.submit()"
+  >
+  <div class="search-wrap-r">
+    <i class="ti ti-search search-icon-r" aria-hidden="true"></i>
+    <input
+      type="text"
+      name="q"
+      value="{{ query }}"
+      placeholder="Nombre o RUT..."
+      autocomplete="off"
+    >
+  </div>
+  <button type="submit" class="ni-btn ni-btn-primary" style="width:auto; padding:0 14px; height:36px; font-size:13px;">
+    <i class="ti ti-search" aria-hidden="true"></i>
+  </button>
+</form>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <span class="stat-pill pill-total">
+    <i class="ti ti-users" aria-hidden="true"></i>{{ total }} total
+  </span>
+  <span class="stat-pill pill-session">
+    <i class="ti ti-circle-check" aria-hidden="true"></i>{{ con_sesion }} con sesion
+  </span>
+  {% if sin_sesion > 0 %}
+  <span class="stat-pill pill-warn">
+    <i class="ti ti-circle-x" aria-hidden="true"></i>{{ sin_sesion }} sin sesion
+  </span>
+  {% endif %}
+  {% if not is_today %}
+  <span class="stat-pill" style="background:#f0f0f0; color:#888;">
+    <i class="ti ti-history" aria-hidden="true"></i>Historico
+  </span>
+  {% endif %}
+</div>
+
+<!-- LAYOUT RESPONSIVE -->
+<div class="review-layout">
+
+  <!-- COLUMNA IZQUIERDA / LISTA MÓVIL -->
+  <div class="review-left" id="review-left">
+    <div class="ni-card" style="border-radius:0; border-left:none; border-right:none; border-top:none;">
+
+      {% if workers_with_sessions %}
+        {% for item in workers_with_sessions %}
+          <div class="worker-section" id="ws-{{ item.resource.id }}">
+            <div
+              class="worker-header"
+              id="wh-{{ item.resource.id }}"
+              onclick="toggleWorker({{ item.resource.id }})"
+              data-resource-id="{{ item.resource.id }}"
+            >
+              <div class="wh-avatar av-{{ item.estado }}">
+                {{ item.resource.display_name|slice:":1" }}{{ item.resource.display_name.split|last|slice:":1" }}
+              </div>
+              <div class="wh-info">
+                <div class="wh-name">{{ item.resource.display_name }}</div>
+                <div class="wh-meta">
+                  {{ item.resource.job_title.name|default:"Sin cargo" }}
+                  &nbsp;·&nbsp; {{ item.sessions|length }} sesion{% if item.sessions|length != 1 %}es{% endif %}
+                </div>
+              </div>
+              <div class="wh-right">
+                {% if item.estado == 'open' %}
+                  <span class="w-badge badge-open">Abierta</span>
+                {% else %}
+                  <span class="w-badge badge-closed">Cerrada</span>
+                {% endif %}
+                {% if item.nos_event %}
+                  <span class="w-badge badge-warn">No en obra</span>
+                {% endif %}
+                <i class="ti ti-chevron-right chevron-icon" id="chev-{{ item.resource.id }}" aria-hidden="true"></i>
+              </div>
+            </div>
+
+            <!-- Detalle (solo móvil / tablet) -->
+            <div class="worker-detail" id="wd-{{ item.resource.id }}">
+              {% for session in item.sessions %}
+                <div class="session-card" id="sc-{{ session.id }}">
+                  <div class="session-card-header">
+                    <div>
+                      <div class="sc-task" id="sc-task-{{ session.id }}">{{ session.task_name_snapshot }}</div>
+                      <div class="sc-stage" id="sc-stage-{{ session.id }}">{{ session.stage_name_snapshot }}</div>
+                    </div>
+                    {% if session.status == 'OPEN' %}
+                      <span class="w-badge badge-open">Abierta</span>
+                    {% else %}
+                      <span class="w-badge badge-closed">Cerrada</span>
+                    {% endif %}
+                  </div>
+                  <div class="session-card-body">
+                    <div class="sc-stat">
+                      <span class="sc-stat-label">Inicio</span>
+                      <span class="sc-stat-value">{{ session.started_at|time:"H:i" }}</span>
+                    </div>
+                    <div class="sc-stat">
+                      <span class="sc-stat-label">Duracion</span>
+                      <span class="sc-stat-value" id="sc-dur-{{ session.id }}">
+                        {% if session.duration_minutes %}
+                          {{ session.duration_minutes }} min
+                        {% elif session.status == 'OPEN' %}
+                          En curso
+                        {% else %}
+                          —
+                        {% endif %}
+                      </span>
+                    </div>
+                    <div class="sc-stat">
+                      <span class="sc-stat-label">Supervisor</span>
+                      <span class="sc-stat-value" style="font-size:10px; font-family:var(--font-main);">
+                        {{ session.responsible_supervisor.first_name|default:"—" }}
+                      </span>
+                    </div>
+                  </div>
+                  {% if can_edit %}
+                    <div class="session-card-footer">
+                      <button
+                        class="btn-edit-session"
+                        onclick="openEditModal({{ session.id }})"
+                      >
+                        <i class="ti ti-pencil" aria-hidden="true"></i> Editar etapa/partida
+                      </button>
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+
+      {% else %}
+        <div class="empty-state">
+          <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+          <p style="font-size:14px; font-weight:500; margin-bottom:4px;">Sin sesiones</p>
+          <p style="font-size:13px;">No hay sesiones registradas para esta fecha.</p>
+        </div>
+      {% endif %}
+
+      <!-- Sin sesion -->
+      {% if workers_without_sessions %}
+        <div class="section-divider">
+          Sin sesion hoy
+          <span class="stat-pill pill-warn" style="font-size:10px; padding:2px 8px;">{{ sin_sesion }}</span>
+        </div>
+        {% for item in workers_without_sessions %}
+          <div class="worker-header" style="cursor:default;">
+            <div class="wh-avatar {% if item.nos_event %}av-nos{% else %}av-none{% endif %}">
+              {{ item.resource.display_name|slice:":1" }}{{ item.resource.display_name.split|last|slice:":1" }}
+            </div>
+            <div class="wh-info">
+              <div class="wh-name">{{ item.resource.display_name }}</div>
+              <div class="wh-meta">{{ item.resource.job_title.name|default:"Sin cargo" }}</div>
+            </div>
+            <div class="wh-right">
+              {% if item.nos_event %}
+                <span class="w-badge badge-warn">No en obra</span>
+              {% else %}
+                <span class="w-badge badge-none">Sin sesion</span>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- COLUMNA DERECHA (solo desktop) -->
+  <div class="review-right desktop-detail" id="review-right">
+    <div id="desktop-detail-content">
+      <div class="empty-state">
+        <i class="ti ti-hand-finger" aria-hidden="true"></i>
+        <p style="font-size:14px; font-weight:500; margin-bottom:4px;">Selecciona un trabajador</p>
+        <p style="font-size:13px;">Toca un nombre de la lista para ver sus sesiones.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MODAL DE EDICION -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="edit-overlay" id="edit-overlay" onclick="handleEditOverlay(event)">
+  <div class="edit-sheet" id="edit-sheet">
+    <div class="edit-handle"></div>
+
+    <div id="edit-loading" style="padding:32px; text-align:center; color:var(--ni-text-sub);">
+      <i class="ti ti-loader" style="font-size:28px; display:block; margin-bottom:8px;" aria-hidden="true"></i>
+      Cargando...
+    </div>
+
+    <div id="edit-content" style="display:none;">
+      <div class="edit-header">
+        <div class="edit-title">Editar etapa / partida</div>
+        <div class="edit-sub" id="edit-worker-info"></div>
+      </div>
+      <div class="edit-body">
+        <div class="ni-alert ni-alert-info" style="font-size:12px;">
+          <i class="ti ti-info-circle" aria-hidden="true"></i>
+          <span>Solo se puede cambiar etapa y partida. No se modifica el horario ni el supervisor.</span>
+        </div>
+        <div class="ni-field">
+          <label class="ni-label" for="edit-stage">Etapa</label>
+          <select class="ni-select" id="edit-stage" onchange="filterEditTasks()">
+            <option value="">Selecciona una etapa...</option>
+          </select>
+        </div>
+        <div class="ni-field">
+          <label class="ni-label" for="edit-task">Partida</label>
+          <select class="ni-select" id="edit-task" disabled>
+            <option value="">Primero selecciona una etapa...</option>
+          </select>
+        </div>
+        <div class="ni-field" style="margin-bottom:0;">
+          <label class="ni-label" for="edit-reason">Motivo de la correccion (opcional)</label>
+          <input class="ni-input" type="text" id="edit-reason" placeholder="Ej: etapa incorrecta al inicio" maxlength="200">
+        </div>
+      </div>
+      <div class="edit-footer">
+        <button class="btn-cancel-edit" onclick="closeEditModal()">Cancelar</button>
+        <button class="btn-confirm-edit" id="btn-confirm-edit" onclick="confirmEdit()">
+          <i class="ti ti-check" aria-hidden="true"></i> Guardar cambio
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="review-toast">
+  <i class="ti ti-check" aria-hidden="true"></i>
+  <span id="toast-msg"></span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const EDIT_URL_BASE = "{% url 'work:session_edit' 0 %}".replace('/0/', '/');
+  const CSRF = "{{ csrf_token }}";
+  const CAN_EDIT = {{ can_edit|yesno:"true,false" }};
+  const IS_TODAY = {{ is_today|yesno:"true,false" }};
+
+  let currentSessionId = null;
+  let editEtapasData   = [];
+  let selectedWorkerId = null;
+
+  // ── ACCORDION MOVIL ────────────────────────────────────────
+
+  function toggleWorker(resourceId) {
+    const detail  = document.getElementById('wd-' + resourceId);
+    const chevron = document.getElementById('chev-' + resourceId);
+    const header  = document.getElementById('wh-' + resourceId);
+
+    if (!detail) return;
+
+    const isOpen = detail.classList.contains('visible');
+
+    // En desktop, seleccionar en vez de expandir
+    if (window.innerWidth >= 900) {
+      selectWorkerDesktop(resourceId);
+      return;
+    }
+
+    if (isOpen) {
+      detail.classList.remove('visible');
+      chevron && chevron.classList.remove('open');
+      header.classList.remove('expanded');
+    } else {
+      detail.classList.add('visible');
+      chevron && chevron.classList.add('open');
+      header.classList.add('expanded');
+    }
+  }
+
+  // ── DESKTOP: seleccionar trabajador ────────────────────────
+
+  function selectWorkerDesktop(resourceId) {
+    // Quitar seleccion anterior
+    document.querySelectorAll('.worker-header').forEach(h => h.classList.remove('selected'));
+    document.getElementById('wh-' + resourceId)?.classList.add('selected');
+    selectedWorkerId = resourceId;
+
+    // Construir detalle en columna derecha
+    const section = document.getElementById('ws-' + resourceId);
+    if (!section) return;
+
+    const nameEl  = section.querySelector('.wh-name');
+    const metaEl  = section.querySelector('.wh-meta');
+    const details = section.querySelector('.worker-detail');
+
+    if (!details) {
+      document.getElementById('desktop-detail-content').innerHTML = `
+        <div style="padding:24px; text-align:center; color:var(--ni-text-sub); font-size:13px;">
+          Sin sesiones para este trabajador.
+        </div>`;
+      return;
+    }
+
+    // Clonar el detalle al panel derecho
+    const clone = details.cloneNode(true);
+    clone.classList.remove('worker-detail'); // evita que display:none !important del media query oculte el clon
+    clone.style.display = 'block';
+    clone.style.background = 'transparent';
+    clone.style.padding = '0';
+    clone.style.borderBottom = 'none';
+
+    const headerHtml = `
+      <div style="margin-bottom:16px; padding-bottom:12px; border-bottom:0.5px solid var(--ni-border);">
+        <div style="font-size:16px; font-weight:600; color:var(--ni-dark);">${nameEl?.textContent?.trim() || ''}</div>
+        <div style="font-size:12px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:2px;">${metaEl?.textContent?.trim() || ''}</div>
+      </div>`;
+
+    document.getElementById('desktop-detail-content').innerHTML = headerHtml;
+    document.getElementById('desktop-detail-content').appendChild(clone);
+  }
+
+  // Re-seleccionar al resize
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 900 && selectedWorkerId) {
+      selectWorkerDesktop(selectedWorkerId);
+    }
+  });
+
+  // ── MODAL DE EDICION ────────────────────────────────────────
+
+  function openEditModal(sessionId) {
+    currentSessionId = sessionId;
+    document.getElementById('edit-loading').style.display = 'block';
+    document.getElementById('edit-content').style.display = 'none';
+    document.getElementById('edit-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+
+    fetch(EDIT_URL_BASE + sessionId + '/', {
+      headers: { 'X-CSRFToken': CSRF }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { closeEditModal(); showToast(data.error, 'error'); return; }
+      populateEditModal(data);
+    })
+    .catch(() => { closeEditModal(); showToast('Error de conexion.', 'error'); });
+  }
+
+  function populateEditModal(data) {
+    editEtapasData = data.etapas;
+
+    document.getElementById('edit-worker-info').textContent =
+      data.worker_name + ' · ' + data.started_at + ' · ' +
+      (data.status === 'OPEN' ? 'Sesion abierta' : 'Sesion cerrada');
+
+    // Poblar selector de etapas
+    const stageSelect = document.getElementById('edit-stage');
+    stageSelect.innerHTML = '<option value="">Selecciona una etapa...</option>';
+    data.etapas.forEach(etapa => {
+      const opt = document.createElement('option');
+      opt.value = etapa.id;
+      opt.textContent = etapa.name;
+      if (etapa.id === data.current_stage_id) opt.selected = true;
+      stageSelect.appendChild(opt);
+    });
+
+    // Filtrar partidas segun etapa actual
+    filterEditTasks(data.current_task_id);
+
+    document.getElementById('edit-reason').value = '';
+
+    document.getElementById('edit-loading').style.display = 'none';
+    document.getElementById('edit-content').style.display  = 'block';
+  }
+
+  function filterEditTasks(preselectedTaskId) {
+    const stageId   = parseInt(document.getElementById('edit-stage').value);
+    const taskSelect = document.getElementById('edit-task');
+
+    taskSelect.innerHTML = '<option value="">Selecciona una partida...</option>';
+    taskSelect.disabled = !stageId;
+
+    if (!stageId) return;
+
+    const etapa = editEtapasData.find(e => e.id === stageId);
+    if (!etapa) return;
+
+    etapa.tasks.forEach(task => {
+      const opt = document.createElement('option');
+      opt.value = task.id;
+      opt.textContent = task.name + (task.risk_level === 'HIGH_RISK' ? ' ⚠' : '');
+      if (task.id === preselectedTaskId) opt.selected = true;
+      taskSelect.appendChild(opt);
+    });
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+    currentSessionId = null;
+  }
+
+  function handleEditOverlay(e) {
+    if (e.target === document.getElementById('edit-overlay')) closeEditModal();
+  }
+
+  function confirmEdit() {
+    const stageId = document.getElementById('edit-stage').value;
+    const taskId  = document.getElementById('edit-task').value;
+    const reason  = document.getElementById('edit-reason').value.trim();
+
+    if (!stageId || !taskId) {
+      showToast('Selecciona etapa y partida.', 'warn');
+      return;
+    }
+
+    const btn = document.getElementById('btn-confirm-edit');
+    btn.disabled = true;
+
+    const body = new URLSearchParams({ stage_id: stageId, task_id: taskId, reason });
+
+    fetch(EDIT_URL_BASE + currentSessionId + '/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      if (data.status === 'ok') {
+        // Actualizar en pantalla sin recargar
+        const taskEl  = document.getElementById('sc-task-'  + currentSessionId);
+        const stageEl = document.getElementById('sc-stage-' + currentSessionId);
+        if (taskEl)  taskEl.textContent  = data.new_task_name;
+        if (stageEl) stageEl.textContent = data.new_stage_name;
+
+        closeEditModal();
+        showToast('Sesion actualizada correctamente.', 'ok');
+
+        // Si estamos en desktop, re-renderizar el detalle
+        if (window.innerWidth >= 900 && selectedWorkerId) {
+          selectWorkerDesktop(selectedWorkerId);
+        }
+      } else {
+        showToast(data.error || 'Error al guardar.', 'error');
+      }
+    })
+    .catch(() => { btn.disabled = false; showToast('Error de conexion.', 'error'); });
+  }
+
+  // Swipe down para cerrar en mobile
+  let touchStartY = 0;
+  document.getElementById('edit-sheet').addEventListener('touchstart', e => {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.getElementById('edit-sheet').addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientY - touchStartY > 80) closeEditModal();
+  }, { passive: true });
+
+  // ── TOAST ────────────────────────────────────────────────────
+
+  let toastTimer = null;
+  function showToast(msg, type) {
+    const toast = document.getElementById('review-toast');
+    const icon  = toast.querySelector('i');
+    document.getElementById('toast-msg').textContent = msg;
+    icon.className = 'ti ti-' + (type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x');
+    toast.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('visible'), 3000);
+  }
+</script>
+{% endblock %}

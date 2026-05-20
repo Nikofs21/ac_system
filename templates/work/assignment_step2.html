@@ -17,6 +17,33 @@
   .feedback-ok { background:#e8f5ee; color:var(--ni-success); display:flex !important; align-items:center; gap:8px; }
   .feedback-warn { background:var(--ni-warn-bg); color:var(--ni-warn); display:flex !important; align-items:center; gap:8px; }
   .feedback-error { background:#fce8e8; color:#c0392b; display:flex !important; align-items:center; gap:8px; }
+  .search-input-row { display:flex; gap:8px; }
+  #search-input { flex:1; }
+  #search-dropdown {
+    display:none;
+    position:fixed;
+    background:var(--ni-white);
+    border:1.5px solid var(--ni-blue);
+    border-radius:var(--radius);
+    box-shadow:0 4px 20px rgba(0,37,236,0.13);
+    z-index:9999;
+    overflow-y:auto;
+    max-height:320px;
+  }
+  #search-dropdown.visible { display:block; }
+  .dropdown-item { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; transition:background 0.1s; border-bottom:0.5px solid #f5f5f5; }
+  .dropdown-item:last-child { border-bottom:none; }
+  .dropdown-item:hover, .dropdown-item.focused { background:var(--ni-blue-soft); }
+  .dropdown-avatar { width:30px; height:30px; border-radius:50%; background:var(--ni-blue-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:var(--ni-blue); flex-shrink:0; }
+  .dropdown-name { font-size:13px; font-weight:500; }
+  .dropdown-meta { font-family:var(--font-mono); font-size:10px; color:var(--ni-text-sub); }
+  .dropdown-rut { margin-left:auto; font-family:var(--font-mono); font-size:11px; color:#bbb; flex-shrink:0; padding-left:8px; }
+  .dropdown-empty { padding:12px; text-align:center; font-size:13px; color:var(--ni-text-sub); }
+  .dropdown-loading { padding:12px; text-align:center; font-size:13px; color:var(--ni-text-sub); }
+  .uid-toggle-btn { background:none; border:none; cursor:pointer; font-size:11px; color:var(--ni-text-sub); font-family:var(--font-mono); display:flex; align-items:center; gap:5px; padding:0; margin-top:10px; }
+  .uid-toggle-btn:hover { color:var(--ni-blue); }
+  .uid-section { display:none; margin-top:8px; }
+  .uid-section.visible { display:block; }
 </style>
 {% endblock %}
 
@@ -36,7 +63,6 @@
   </div>
 </div>
 
-<!-- CONTEXT BAR -->
 <div style="background:var(--ni-white); border-bottom:0.5px solid var(--ni-border); padding:10px 24px; display:flex; align-items:center; justify-content:space-between;">
   <a href="{% url 'work:assignment_new' %}" style="display:flex; align-items:center; gap:6px; color:var(--ni-text-sub); font-size:13px; text-decoration:none;">
     <i class="ti ti-arrow-left" aria-hidden="true"></i> Cambiar partida
@@ -51,39 +77,61 @@
   </div>
 </div>
 
-<!-- LAYOUT DESKTOP: dos columnas / MOBILE: apilado -->
 <div style="padding:20px 24px; display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
 
-  <!-- CAMARA QR -->
   <div class="ni-card" style="flex:1; min-width:280px;">
     <div class="ni-card-header">
       <span class="ni-card-title">Camara QR</span>
     </div>
     <div style="background:var(--ni-dark); padding:24px; text-align:center; position:relative; min-height:200px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-      <div id="scan-line" style="position:absolute; left:40px; right:40px; height:2px; background:var(--ni-blue); opacity:0.9; animation:scanline 2s ease-in-out infinite;"></div>
+      <div style="position:absolute; left:40px; right:40px; height:2px; background:var(--ni-blue); opacity:0.9; animation:scanline 2s ease-in-out infinite;"></div>
       <i class="ti ti-qrcode" style="font-size:52px; color:var(--ni-blue); margin-bottom:12px;" aria-hidden="true"></i>
       <p style="color:#fff; font-size:15px; font-weight:500; margin-bottom:4px;">Camara activa</p>
       <p style="color:rgba(255,255,255,0.45); font-size:12px;">Apunta al QR del trabajador</p>
-      <div id="qr-reader" style="width:100%; margin-top:12px; display:none;"></div>
     </div>
     <div style="padding:10px 14px; background:#fafafa; border-top:0.5px solid #f0f0f0; display:flex; align-items:center; gap:8px;">
       <i class="ti ti-scan" style="color:var(--ni-blue); font-size:16px;" aria-hidden="true"></i>
       <span style="font-size:12px; color:var(--ni-text-sub);">Cada escaneo agrega al trabajador automaticamente</span>
     </div>
 
-    <!-- INPUT MANUAL para pruebas (se puede ocultar en produccion) -->
-    <div style="padding:12px 14px; border-top:0.5px solid var(--ni-border);">
-      <p style="font-size:11px; color:var(--ni-text-sub); margin-bottom:6px; font-family:var(--font-mono);">INGRESAR UID MANUAL (pruebas)</p>
-      <div style="display:flex; gap:8px;">
-        <input type="text" id="manual-uid" class="ni-input" placeholder="Pega el UID del trabajador" style="flex:1; font-size:13px; padding:8px 10px;">
-        <button onclick="processUID()" class="ni-btn ni-btn-primary ni-btn-sm" style="width:auto; padding:8px 14px; white-space:nowrap;">
+    <div style="padding:14px; border-top:0.5px solid var(--ni-border);">
+      <p style="font-size:11px; color:var(--ni-text-sub); margin-bottom:8px; font-family:var(--font-mono);">BUSCAR SIN QR — NOMBRE O RUT</p>
+      <div class="search-input-row">
+        <input
+          type="text"
+          id="search-input"
+          class="ni-input"
+          placeholder="Nombre o RUT del trabajador..."
+          autocomplete="off"
+          spellcheck="false"
+          style="font-size:13px; padding:9px 12px;"
+        >
+        <button
+          id="search-add-btn"
+          onclick="addFromSearch()"
+          class="ni-btn ni-btn-primary ni-btn-sm"
+          style="width:auto; padding:9px 14px; white-space:nowrap; opacity:0.4; pointer-events:none;"
+          disabled
+        >
           <i class="ti ti-plus" aria-hidden="true"></i> Agregar
         </button>
+      </div>
+
+      <button class="uid-toggle-btn" onclick="toggleUID()" type="button">
+        <i class="ti ti-chevron-right" id="uid-chevron" style="font-size:11px; transition:transform 0.2s;" aria-hidden="true"></i>
+        Ingresar UID directamente
+      </button>
+      <div class="uid-section" id="uid-section">
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="manual-uid" class="ni-input" placeholder="Pega el UID del trabajador" style="flex:1; font-size:13px; padding:8px 10px;">
+          <button onclick="processUID()" class="ni-btn ni-btn-secondary ni-btn-sm" style="width:auto; padding:8px 14px; white-space:nowrap; font-size:12px;">
+            Agregar
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- GRUPO ACTUAL -->
   <div class="ni-card" style="width:280px; flex-shrink:0; min-width:260px;">
     <div class="ni-card-header">
       <span class="ni-card-title">Grupo actual</span>
@@ -103,7 +151,7 @@
         </div>
       {% empty %}
         <p style="font-size:13px; color:var(--ni-text-sub); text-align:center; padding:16px 0;" id="empty-msg">
-          Escanea el QR de un trabajador para agregarlo al grupo.
+          Escanea el QR o busca un trabajador para agregarlo al grupo.
         </p>
       {% endfor %}
     </div>
@@ -125,6 +173,17 @@
 
 </div>
 
+<!-- DROPDOWN fuera de los cards para escapar overflow:hidden -->
+<div id="search-dropdown">
+  <div class="dropdown-loading" id="dropdown-loading" style="display:none;">
+    <span style="font-size:12px;">Buscando...</span>
+  </div>
+  <div id="dropdown-list"></div>
+  <div class="dropdown-empty" id="dropdown-empty" style="display:none;">
+    Sin resultados para "<span id="empty-query"></span>"
+  </div>
+</div>
+
 <style>
   @keyframes scanline { 0%,100%{top:20%} 50%{top:75%} }
 </style>
@@ -133,14 +192,176 @@
 <script>
   const SCAN_URL = "{% url 'work:scan_qr' %}";
   const REMOVE_URL = "{% url 'work:remove_from_group' %}";
+  const SEARCH_URL = "{% url 'work:search_resources' %}";
   const CSRF = "{{ csrf_token }}";
+
   let workerCount = {{ workers_in_group|length }};
+  let selectedResource = null;
+  let searchDebounceTimer = null;
+  let focusedIndex = -1;
+  let currentResults = [];
+
+  const searchInput = document.getElementById('search-input');
+  const dropdown = document.getElementById('search-dropdown');
+  const dropdownList = document.getElementById('dropdown-list');
+  const dropdownEmpty = document.getElementById('dropdown-empty');
+  const dropdownLoading = document.getElementById('dropdown-loading');
+  const addBtn = document.getElementById('search-add-btn');
+
+  // Posiciona el dropdown justo bajo el input usando coordenadas del viewport
+  function positionDropdown() {
+    const rect = searchInput.getBoundingClientRect();
+    dropdown.style.top = (rect.bottom + 4) + 'px';
+    dropdown.style.left = rect.left + 'px';
+    dropdown.style.width = rect.width + 'px';
+  }
+
+  window.addEventListener('scroll', function() {
+    if (dropdown.classList.contains('visible')) positionDropdown();
+  }, { passive: true });
+
+  window.addEventListener('resize', function() {
+    if (dropdown.classList.contains('visible')) positionDropdown();
+  });
+
+  searchInput.addEventListener('input', function() {
+    const q = this.value.trim();
+    selectedResource = null;
+    setAddBtnState(false);
+    focusedIndex = -1;
+    if (q.length < 2) { closeDropdown(); return; }
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => fetchSearch(q), 200);
+  });
+
+  function fetchSearch(q) {
+    showDropdownLoading();
+    positionDropdown();
+    fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), { headers: { 'X-CSRFToken': CSRF } })
+      .then(r => r.json())
+      .then(data => { currentResults = data.results; renderDropdown(data.results, q); })
+      .catch(() => closeDropdown());
+  }
+
+  function renderDropdown(results, q) {
+    dropdownLoading.style.display = 'none';
+    dropdownList.innerHTML = '';
+    focusedIndex = -1;
+    if (results.length === 0) {
+      dropdownEmpty.style.display = 'block';
+      document.getElementById('empty-query').textContent = q;
+      dropdown.classList.add('visible');
+      return;
+    }
+    dropdownEmpty.style.display = 'none';
+    results.forEach((r, i) => {
+      const item = document.createElement('div');
+      item.className = 'dropdown-item';
+      item.innerHTML = `
+        <div class="dropdown-avatar">${r.initials}</div>
+        <div style="flex:1; min-width:0;">
+          <div class="dropdown-name">${highlightMatch(r.name, q)}</div>
+          <div class="dropdown-meta">${r.cargo || 'Sin cargo'}</div>
+        </div>
+        ${r.rut ? '<div class="dropdown-rut">' + r.rut + '</div>' : ''}
+      `;
+      item.addEventListener('mousedown', (e) => { e.preventDefault(); selectResource(r); });
+      dropdownList.appendChild(item);
+    });
+    dropdown.classList.add('visible');
+    if (results.length === 1) { focusedIndex = 0; updateFocus(); }
+  }
+
+  function highlightMatch(text, query) {
+    const idx = text.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return text;
+    return text.slice(0, idx) + '<strong style="color:var(--ni-blue);">' + text.slice(idx, idx + query.length) + '</strong>' + text.slice(idx + query.length);
+  }
+
+  function selectResource(resource) {
+    selectedResource = resource;
+    searchInput.value = resource.name;
+    closeDropdown();
+    setAddBtnState(true);
+    searchInput.focus();
+  }
+
+  function setAddBtnState(enabled) {
+    addBtn.disabled = !enabled;
+    addBtn.style.opacity = enabled ? '1' : '0.4';
+    addBtn.style.pointerEvents = enabled ? 'auto' : 'none';
+  }
+
+  function showDropdownLoading() {
+    dropdownList.innerHTML = '';
+    dropdownEmpty.style.display = 'none';
+    dropdownLoading.style.display = 'block';
+    dropdown.classList.add('visible');
+  }
+
+  function closeDropdown() {
+    dropdown.classList.remove('visible');
+    dropdownLoading.style.display = 'none';
+    dropdownEmpty.style.display = 'none';
+    focusedIndex = -1;
+    currentResults = [];
+  }
+
+  document.addEventListener('mousedown', function(e) {
+    if (!dropdown.contains(e.target) && e.target !== searchInput) closeDropdown();
+  });
+
+  searchInput.addEventListener('keydown', function(e) {
+    if (!dropdown.classList.contains('visible')) return;
+    const items = dropdownList.querySelectorAll('.dropdown-item');
+    if (e.key === 'ArrowDown') { e.preventDefault(); focusedIndex = Math.min(focusedIndex + 1, items.length - 1); updateFocus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); focusedIndex = Math.max(focusedIndex - 1, 0); updateFocus(); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (focusedIndex >= 0 && currentResults[focusedIndex]) { selectResource(currentResults[focusedIndex]); } else if (selectedResource) { addFromSearch(); } }
+    else if (e.key === 'Escape') { closeDropdown(); }
+  });
+
+  function updateFocus() {
+    dropdownList.querySelectorAll('.dropdown-item').forEach((item, i) => item.classList.toggle('focused', i === focusedIndex));
+    if (focusedIndex >= 0 && currentResults[focusedIndex]) { selectedResource = currentResults[focusedIndex]; setAddBtnState(true); }
+  }
+
+  function addFromSearch() {
+    if (!selectedResource) return;
+    fetch(SCAN_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'uid=' + encodeURIComponent(selectedResource.uid)
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        addWorkerChip(data.worker, data.warning || null);
+        showFeedback(data.warning ? data.worker.name + ' agregado. Advertencia: ' + data.warning.message : data.worker.name + ' agregado al grupo.', data.warning ? 'warn' : 'ok');
+        searchInput.value = ''; selectedResource = null; setAddBtnState(false); closeDropdown(); searchInput.focus();
+      } else if (data.status === 'already_in_group') {
+        showFeedback(data.message, 'warn');
+        searchInput.value = ''; selectedResource = null; setAddBtnState(false); closeDropdown();
+      } else {
+        showFeedback(data.message || 'Error al agregar el trabajador.', 'error');
+      }
+    })
+    .catch(() => showFeedback('Error de conexion.', 'error'));
+  }
+
+  function toggleUID() {
+    const section = document.getElementById('uid-section');
+    const chevron = document.getElementById('uid-chevron');
+    const visible = section.classList.toggle('visible');
+    chevron.style.transform = visible ? 'rotate(90deg)' : 'rotate(0deg)';
+  }
 
   function showFeedback(message, type) {
     const fb = document.getElementById('scan-feedback');
     fb.className = 'feedback-' + type;
-    fb.innerHTML = `<i class="ti ti-${type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x'}" aria-hidden="true"></i> ${message}`;
-    setTimeout(() => { fb.style.display = 'none'; }, 3000);
+    const icon = type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x';
+    fb.innerHTML = '<i class="ti ti-' + icon + '" aria-hidden="true"></i> ' + message;
+    clearTimeout(fb._timer);
+    fb._timer = setTimeout(() => { fb.style.display = 'none'; }, 3500);
   }
 
   function getInitials(name) {
@@ -151,21 +372,11 @@
   function addWorkerChip(worker, warning) {
     const emptyMsg = document.getElementById('empty-msg');
     if (emptyMsg) emptyMsg.remove();
-
     const isWarn = warning && warning.type === 'no_on_site';
     const chip = document.createElement('div');
     chip.className = 'worker-chip' + (isWarn ? ' warn' : '');
     chip.id = 'chip-' + worker.id;
-    chip.innerHTML = `
-      <div class="chip-avatar${isWarn ? ' warn' : ''}">${getInitials(worker.name)}</div>
-      <div>
-        <p class="chip-name">${worker.name}</p>
-        <p class="chip-cargo${isWarn ? ' warn' : ''}">${worker.cargo || 'Sin cargo'}${isWarn ? ' · No en obra (' + warning.message.split(':')[1].trim() + ')' : ''}</p>
-      </div>
-      <button class="chip-remove${isWarn ? ' warn' : ''}" onclick="removeWorker(${worker.id}, this)" title="Quitar del grupo">
-        <i class="ti ti-x" aria-hidden="true"></i>
-      </button>
-    `;
+    chip.innerHTML = '<div class="chip-avatar' + (isWarn ? ' warn' : '') + '">' + getInitials(worker.name) + '</div><div><p class="chip-name">' + worker.name + '</p><p class="chip-cargo' + (isWarn ? ' warn' : '') + '">' + (worker.cargo || 'Sin cargo') + (isWarn ? ' · No en obra' : '') + '</p></div><button class="chip-remove' + (isWarn ? ' warn' : '') + '" onclick="removeWorker(' + worker.id + ', this)" title="Quitar del grupo"><i class="ti ti-x" aria-hidden="true"></i></button>';
     document.getElementById('workers-list').appendChild(chip);
     updateCount(++workerCount);
   }
@@ -178,50 +389,28 @@
   }
 
   function removeWorker(workerId, btn) {
-    fetch(REMOVE_URL, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'worker_id=' + workerId
-    })
-    .then(r => r.json())
-    .then(data => {
-      const chip = document.getElementById('chip-' + workerId);
-      if (chip) chip.remove();
-      updateCount(data.count);
-      if (data.count === 0) {
-        const list = document.getElementById('workers-list');
-        list.innerHTML = '<p style="font-size:13px; color:var(--ni-text-sub); text-align:center; padding:16px 0;" id="empty-msg">Escanea el QR de un trabajador para agregarlo al grupo.</p>';
-      }
-    });
+    fetch(REMOVE_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'worker_id=' + workerId })
+      .then(r => r.json())
+      .then(data => {
+        const chip = document.getElementById('chip-' + workerId);
+        if (chip) chip.remove();
+        updateCount(data.count);
+        if (data.count === 0) document.getElementById('workers-list').innerHTML = '<p style="font-size:13px; color:var(--ni-text-sub); text-align:center; padding:16px 0;" id="empty-msg">Escanea el QR o busca un trabajador para agregarlo al grupo.</p>';
+      });
   }
 
   function processUID() {
     const input = document.getElementById('manual-uid');
     const uid = input.value.trim();
     if (!uid) return;
-
-    fetch(SCAN_URL, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'uid=' + encodeURIComponent(uid)
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.status === 'ok') {
-        addWorkerChip(data.worker, data.warning || null);
-        if (data.warning) {
-          showFeedback(data.worker.name + ' agregado. Advertencia: ' + data.warning.message, 'warn');
-        } else {
-          showFeedback(data.worker.name + ' agregado al grupo.', 'ok');
-        }
-        input.value = '';
-      } else if (data.status === 'already_in_group') {
-        showFeedback(data.message, 'warn');
-      } else {
-        showFeedback(data.message || 'Error al procesar el QR.', 'error');
-      }
-    })
-    .catch(() => showFeedback('Error de conexion.', 'error'));
+    fetch(SCAN_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'uid=' + encodeURIComponent(uid) })
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 'ok') { addWorkerChip(data.worker, data.warning || null); showFeedback(data.worker.name + ' agregado al grupo.', 'ok'); input.value = ''; }
+        else if (data.status === 'already_in_group') { showFeedback(data.message, 'warn'); }
+        else { showFeedback(data.message || 'Error al procesar el UID.', 'error'); }
+      })
+      .catch(() => showFeedback('Error de conexion.', 'error'));
   }
 
   document.getElementById('manual-uid').addEventListener('keydown', function(e) {

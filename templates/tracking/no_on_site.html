@@ -1,0 +1,661 @@
+{% extends 'base.html' %}
+{% block title %}No en obra{% endblock %}
+{% block nav_noonsite %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── LISTA DE TRABAJADORES ── */
+  .worker-list { display:flex; flex-direction:column; }
+
+  .worker-row {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 16px;
+    border-bottom:0.5px solid var(--ni-border);
+    cursor:pointer;
+    transition:background 0.12s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .worker-row:last-child { border-bottom:none; }
+  .worker-row:active { background:var(--ni-blue-soft); }
+
+  .worker-avatar {
+    width:38px; height:38px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:600; flex-shrink:0;
+  }
+  .av-free    { background:var(--ni-blue-soft); color:var(--ni-blue); }
+  .av-session { background:#e8f5ee; color:var(--ni-success); }
+  .av-nos     { background:#fef3e2; color:var(--ni-warn); }
+
+  .worker-info { flex:1; min-width:0; }
+  .worker-name { font-size:14px; font-weight:500; color:var(--ni-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .worker-meta { font-size:11px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .worker-badge {
+    font-size:10px; border-radius:20px; padding:3px 9px;
+    font-family:var(--font-mono); white-space:nowrap; flex-shrink:0;
+  }
+  .badge-free    { background:#f0f0f0; color:#888; }
+  .badge-session { background:#e8f5ee; color:var(--ni-success); }
+  .badge-nos     { background:#fef3e2; color:var(--ni-warn); }
+
+  /* ── SEARCH BAR ── */
+  .search-bar {
+    padding:10px 16px;
+    background:var(--ni-white);
+    border-bottom:0.5px solid var(--ni-border);
+    position:sticky; top:var(--ni-topbar-h); z-index:10;
+  }
+  .search-bar input {
+    width:100%;
+    border:1.5px solid var(--ni-border);
+    border-radius:var(--radius);
+    padding:9px 12px 9px 36px;
+    font-size:14px;
+    font-family:var(--font-main);
+    background:var(--ni-light);
+    color:var(--ni-text);
+    outline:none;
+    transition:border-color 0.15s;
+  }
+  .search-bar input:focus { border-color:var(--ni-blue); background:var(--ni-white); }
+  .search-icon {
+    position:absolute; left:28px; top:50%; transform:translateY(-50%);
+    font-size:16px; color:var(--ni-text-sub); pointer-events:none;
+  }
+  .search-wrap { position:relative; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    padding:48px 24px;
+    text-align:center;
+    color:var(--ni-text-sub);
+  }
+  .empty-state i { font-size:40px; color:#ddd; display:block; margin-bottom:12px; }
+
+  /* ── MODAL OVERLAY ── */
+  .modal-overlay {
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.45);
+    z-index:1000;
+    align-items:flex-end;
+    justify-content:center;
+    padding:0;
+  }
+  .modal-overlay.visible { display:flex; }
+
+  /* Bottom sheet en mobile, centrado en desktop */
+  .modal-sheet {
+    background:var(--ni-white);
+    border-radius:16px 16px 0 0;
+    width:100%;
+    max-width:520px;
+    max-height:90vh;
+    overflow-y:auto;
+    animation:slideUp 0.2s ease;
+  }
+  @media (min-width:600px) {
+    .modal-overlay { align-items:center; padding:16px; }
+    .modal-sheet { border-radius:var(--radius-lg); max-height:80vh; }
+  }
+  @keyframes slideUp {
+    from { transform:translateY(40px); opacity:0; }
+    to   { transform:translateY(0);    opacity:1; }
+  }
+
+  .modal-handle {
+    width:36px; height:4px; border-radius:2px;
+    background:var(--ni-border);
+    margin:10px auto 0;
+  }
+  @media (min-width:600px) { .modal-handle { display:none; } }
+
+  .modal-header { padding:16px 16px 12px; border-bottom:0.5px solid var(--ni-border); }
+  .modal-title  { font-size:15px; font-weight:600; color:var(--ni-dark); }
+  .modal-sub    { font-size:12px; color:var(--ni-text-sub); margin-top:2px; }
+
+  .modal-body   { padding:16px; display:flex; flex-direction:column; gap:14px; }
+  .modal-footer { padding:12px 16px; border-top:0.5px solid var(--ni-border); display:flex; gap:8px; }
+
+  /* Alerta sesion abierta */
+  .session-alert {
+    background:var(--ni-warn-bg);
+    border:0.5px solid var(--ni-warn-bdr);
+    border-radius:var(--radius);
+    padding:10px 12px;
+    display:flex; gap:10px;
+    font-size:13px; color:var(--ni-warn); line-height:1.5;
+  }
+  .session-alert i { font-size:18px; flex-shrink:0; margin-top:1px; }
+
+  /* Vista de registro existente */
+  .nos-detail-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 0; border-bottom:0.5px solid #f5f5f5; font-size:13px;
+  }
+  .nos-detail-row:last-child { border-bottom:none; }
+  .nos-detail-label { color:var(--ni-text-sub); }
+  .nos-detail-value { font-weight:500; }
+
+  /* Botones modal */
+  .btn-confirm-nos {
+    flex:1; height:44px; border:none; border-radius:var(--radius);
+    background:var(--ni-blue); color:var(--ni-white);
+    font-family:var(--font-brand); font-weight:700; font-size:14px;
+    cursor:pointer; transition:opacity 0.15s;
+  }
+  .btn-confirm-nos:hover { opacity:0.88; }
+  .btn-confirm-nos.warn-action { background:var(--ni-warn); }
+  .btn-confirm-nos.danger-action { background:#c0392b; }
+
+  .btn-cancel-modal {
+    height:44px; border:1.5px solid var(--ni-border); border-radius:var(--radius);
+    background:var(--ni-white); color:var(--ni-dark);
+    font-family:var(--font-main); font-weight:500; font-size:14px;
+    cursor:pointer; padding:0 16px; transition:opacity 0.15s;
+  }
+  .btn-cancel-modal:hover { opacity:0.8; }
+
+  /* Stats bar */
+  .stats-bar {
+    display:flex; gap:8px; padding:10px 16px;
+    background:var(--ni-white); border-bottom:0.5px solid var(--ni-border);
+  }
+  .stat-pill {
+    font-size:11px; border-radius:20px; padding:4px 12px;
+    font-family:var(--font-mono); display:flex; align-items:center; gap:5px;
+  }
+  .stat-total   { background:#f0f0f0; color:#888; }
+  .stat-nos     { background:#fef3e2; color:var(--ni-warn); }
+  .stat-session { background:#e8f5ee; color:var(--ni-success); }
+
+  /* Feedback toast */
+  #nos-toast {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--ni-dark); color:var(--ni-white);
+    border-radius:var(--radius); padding:10px 18px;
+    font-size:13px; z-index:2000;
+    display:none; align-items:center; gap:8px;
+    max-width:90vw; text-align:center;
+    box-shadow:0 4px 16px rgba(0,0,0,0.2);
+  }
+  #nos-toast.visible { display:flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- PAGE HEADER -->
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">No en obra</h1>
+    <p class="ni-page-sub">{{ site.name }} &middot; {{ today|date:"l d \d\e F" }}</p>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <span class="stat-pill stat-total">
+    <i class="ti ti-users" aria-hidden="true"></i>
+    {{ total_count }} total
+  </span>
+  {% if nos_count > 0 %}
+  <span class="stat-pill stat-nos">
+    <i class="ti ti-circle-minus" aria-hidden="true"></i>
+    {{ nos_count }} marcado{{ nos_count|pluralize }}
+  </span>
+  {% endif %}
+</div>
+
+<!-- SEARCH -->
+<div class="search-bar">
+  <div class="search-wrap">
+    <i class="ti ti-search search-icon" aria-hidden="true"></i>
+    <input
+      type="text"
+      id="worker-search"
+      placeholder="Buscar trabajador..."
+      autocomplete="off"
+      oninput="filterWorkers(this.value)"
+    >
+  </div>
+</div>
+
+<!-- LISTA -->
+<div class="ni-card" style="margin:12px 16px; margin-bottom:24px;">
+  {% if workers %}
+    <div class="worker-list" id="worker-list">
+      {% for item in workers %}
+        <div
+          class="worker-row"
+          id="worker-row-{{ item.resource.id }}"
+          data-name="{{ item.resource.display_name|lower }}"
+          data-cargo="{{ item.resource.job_title.name|lower|default:'' }}"
+          onclick="openModal({{ item.resource.id }})"
+          role="button"
+          aria-label="Ver detalle de {{ item.resource.display_name }}"
+        >
+          <div class="worker-avatar av-{{ item.estado }}">
+            {{ item.resource.display_name|slice:":1" }}{{ item.resource.display_name.split|last|slice:":1" }}
+          </div>
+          <div class="worker-info">
+            <div class="worker-name">{{ item.resource.display_name }}</div>
+            <div class="worker-meta">
+              {{ item.resource.job_title.name|default:"Sin cargo" }}
+              {% if item.estado == 'session' %}
+                &nbsp;·&nbsp; sesion: {{ item.open_session.task_name_snapshot }}
+              {% elif item.estado == 'nos' %}
+                &nbsp;·&nbsp; {{ item.nos_event.get_reason_code_display }}
+              {% endif %}
+            </div>
+          </div>
+          <span class="worker-badge badge-{{ item.estado }}">
+            {% if item.estado == 'session' %}Con sesion
+            {% elif item.estado == 'nos' %}No en obra
+            {% else %}Sin sesion
+            {% endif %}
+          </span>
+          <i class="ti ti-chevron-right" style="font-size:16px; color:#ccc;" aria-hidden="true"></i>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <i class="ti ti-users" aria-hidden="true"></i>
+      <p style="font-size:15px; font-weight:500; margin-bottom:4px;">Sin trabajadores asignados</p>
+      <p style="font-size:13px;">No hay trabajadores activos en esta obra.</p>
+    </div>
+  {% endif %}
+
+  <div id="no-results" style="display:none;" class="empty-state">
+    <i class="ti ti-search" aria-hidden="true"></i>
+    <p style="font-size:14px;">Sin coincidencias</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MODAL -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet" id="modal-sheet">
+    <div class="modal-handle"></div>
+
+    <!-- ESTADO: cargando -->
+    <div id="modal-loading" style="padding:32px; text-align:center; color:var(--ni-text-sub);">
+      <i class="ti ti-loader" style="font-size:28px; display:block; margin-bottom:8px;" aria-hidden="true"></i>
+      Cargando...
+    </div>
+
+    <!-- ESTADO: marcar (sin sesion abierta) -->
+    <div id="modal-mark" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title">Marcar como No en obra</div>
+        <div class="modal-sub" id="mark-worker-name"></div>
+      </div>
+      <div class="modal-body">
+        <div class="ni-field">
+          <label class="ni-label" for="mark-reason">Motivo</label>
+          <select class="ni-select" id="mark-reason">
+            <option value="">Seleccionar...</option>
+            <option value="PERMISO">Permiso</option>
+            <option value="LICENCIA">Licencia medica</option>
+            <option value="AUSENTE">Ausente sin aviso</option>
+            <option value="VACACIONES">Vacaciones</option>
+            <option value="OTRO">Otro</option>
+          </select>
+        </div>
+        <div class="ni-field" style="margin-bottom:0;">
+          <label class="ni-label" for="mark-detail">Detalle (opcional)</label>
+          <input class="ni-input" type="text" id="mark-detail" placeholder="Ej: permiso medico, se fue a las 15:00..." maxlength="200">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel-modal" onclick="closeModal()">Cancelar</button>
+        <button class="btn-confirm-nos" id="btn-confirm-mark" onclick="confirmMark()">
+          <i class="ti ti-circle-minus" aria-hidden="true"></i> Confirmar
+        </button>
+      </div>
+    </div>
+
+    <!-- ESTADO: marcar con sesion abierta -->
+    <div id="modal-mark-session" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title">Marcar como No en obra</div>
+        <div class="modal-sub" id="mark-session-worker-name"></div>
+      </div>
+      <div class="modal-body">
+        <div class="session-alert">
+          <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+          <div>
+            Tiene sesion abierta en <strong id="alert-session-info"></strong>.
+            Al confirmar, esa sesion se cerrara automaticamente.
+          </div>
+        </div>
+        <div class="ni-field">
+          <label class="ni-label" for="mark-session-reason">Motivo</label>
+          <select class="ni-select" id="mark-session-reason">
+            <option value="">Seleccionar...</option>
+            <option value="PERMISO">Permiso</option>
+            <option value="LICENCIA">Licencia medica</option>
+            <option value="AUSENTE">Ausente sin aviso</option>
+            <option value="VACACIONES">Vacaciones</option>
+            <option value="OTRO">Otro</option>
+          </select>
+        </div>
+        <div class="ni-field" style="margin-bottom:0;">
+          <label class="ni-label" for="mark-session-detail">Detalle (opcional)</label>
+          <input class="ni-input" type="text" id="mark-session-detail" placeholder="Ej: se fue a las 15:00..." maxlength="200">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel-modal" onclick="closeModal()">Cancelar</button>
+        <button class="btn-confirm-nos warn-action" id="btn-confirm-mark-session" onclick="confirmMark()">
+          <i class="ti ti-alert-triangle" aria-hidden="true"></i> Confirmar y cerrar sesion
+        </button>
+      </div>
+    </div>
+
+    <!-- ESTADO: ya marcado (ver / anular) -->
+    <div id="modal-nos-detail" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title">No en obra registrado</div>
+        <div class="modal-sub" id="detail-worker-name"></div>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="nos-detail-row">
+            <span class="nos-detail-label">Motivo</span>
+            <span class="nos-detail-value" id="detail-reason"></span>
+          </div>
+          <div class="nos-detail-row" id="detail-row-detail" style="display:none;">
+            <span class="nos-detail-label">Detalle</span>
+            <span class="nos-detail-value" id="detail-text" style="font-style:italic; font-weight:400;"></span>
+          </div>
+          <div class="nos-detail-row">
+            <span class="nos-detail-label">Registrado por</span>
+            <span class="nos-detail-value" id="detail-marked-by"></span>
+          </div>
+          <div class="nos-detail-row">
+            <span class="nos-detail-label">Hora</span>
+            <span class="nos-detail-value" id="detail-time" style="font-family:var(--font-mono);"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel-modal" onclick="closeModal()">Cerrar</button>
+        <button class="btn-confirm-nos danger-action" onclick="confirmVoid()">
+          <i class="ti ti-trash" aria-hidden="true"></i> Anular registro
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="nos-toast">
+  <i class="ti ti-check" aria-hidden="true"></i>
+  <span id="toast-msg"></span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const DETAIL_URL_BASE = "{% url 'tracking:no_on_site_detail' 0 %}".replace('/0/', '/');
+  const MARK_URL  = "{% url 'tracking:no_on_site_mark' %}";
+  const VOID_URL  = "{% url 'tracking:no_on_site_void' %}";
+  const CSRF      = "{{ csrf_token }}";
+
+  let currentResourceId = null;
+  let currentNosEventId = null;
+  let currentState      = null; // 'mark' | 'mark-session' | 'nos-detail'
+
+  // ── FILTRO DE BUSQUEDA ──────────────────────────────────────
+
+  function filterWorkers(query) {
+    const q = query.toLowerCase().trim();
+    const rows = document.querySelectorAll('.worker-row');
+    let visible = 0;
+
+    rows.forEach(row => {
+      const name  = row.dataset.name  || '';
+      const cargo = row.dataset.cargo || '';
+      const match = !q || name.includes(q) || cargo.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+
+    document.getElementById('no-results').style.display = (q && visible === 0) ? 'block' : 'none';
+  }
+
+  // ── MODAL ───────────────────────────────────────────────────
+
+  function openModal(resourceId) {
+    currentResourceId = resourceId;
+    currentNosEventId = null;
+    currentState      = null;
+
+    showState('loading');
+    document.getElementById('modal-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+
+    fetch(DETAIL_URL_BASE + resourceId + '/', {
+      headers: { 'X-CSRFToken': CSRF }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { closeModal(); showToast(data.error, 'error'); return; }
+      populateModal(data);
+    })
+    .catch(() => { closeModal(); showToast('Error de conexion.', 'error'); });
+  }
+
+  function populateModal(data) {
+    if (data.nos_event) {
+      // Ya tiene marca activa — mostrar detalle
+      currentNosEventId = data.nos_event.id;
+      currentState = 'nos-detail';
+      document.getElementById('detail-worker-name').textContent = data.name + ' · ' + (data.cargo || 'Sin cargo');
+      document.getElementById('detail-reason').textContent     = data.nos_event.reason_display;
+      document.getElementById('detail-marked-by').textContent  = data.nos_event.marked_by;
+      document.getElementById('detail-time').textContent       = data.nos_event.created_at;
+
+      const detailRow = document.getElementById('detail-row-detail');
+      if (data.nos_event.detail) {
+        document.getElementById('detail-text').textContent = data.nos_event.detail;
+        detailRow.style.display = '';
+      } else {
+        detailRow.style.display = 'none';
+      }
+      showState('nos-detail');
+
+    } else if (data.open_session) {
+      // Tiene sesion abierta — mostrar alerta
+      currentState = 'mark-session';
+      document.getElementById('mark-session-worker-name').textContent = data.name + ' · ' + (data.cargo || 'Sin cargo');
+      document.getElementById('alert-session-info').textContent =
+        data.open_session.task_name + ' · ' + data.open_session.stage_name +
+        ' (desde ' + data.open_session.started_at + ')';
+      document.getElementById('mark-session-reason').value = '';
+      document.getElementById('mark-session-detail').value = '';
+      showState('mark-session');
+
+    } else {
+      // Sin marca ni sesion — formulario simple
+      currentState = 'mark';
+      document.getElementById('mark-worker-name').textContent = data.name + ' · ' + (data.cargo || 'Sin cargo');
+      document.getElementById('mark-reason').value = '';
+      document.getElementById('mark-detail').value = '';
+      showState('mark');
+    }
+  }
+
+  function showState(state) {
+    ['loading', 'mark', 'mark-session', 'nos-detail'].forEach(s => {
+      const el = document.getElementById('modal-' + s);
+      if (el) el.style.display = (s === state) ? 'block' : 'none';
+    });
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+    currentResourceId = null;
+    currentNosEventId = null;
+    currentState      = null;
+  }
+
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  }
+
+  // ── CONFIRMAR MARCA ─────────────────────────────────────────
+
+  function confirmMark() {
+    const isSession = (currentState === 'mark-session');
+    const reason = document.getElementById(isSession ? 'mark-session-reason' : 'mark-reason').value;
+    const detail = document.getElementById(isSession ? 'mark-session-detail' : 'mark-detail').value.trim();
+
+    if (!reason) {
+      showToast('Selecciona un motivo.', 'warn');
+      return;
+    }
+
+    const btn = document.getElementById(isSession ? 'btn-confirm-mark-session' : 'btn-confirm-mark');
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+
+    const body = new URLSearchParams({
+      resource_id: currentResourceId,
+      reason_code: reason,
+      detail: detail,
+    });
+
+    fetch(MARK_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+
+      if (data.status === 'ok') {
+        closeModal();
+        updateRowState(data.resource_id, 'nos', data.reason_display);
+        const msg = data.session_closed
+          ? 'Marcado como No en obra. Sesion cerrada.'
+          : 'Marcado como No en obra.';
+        showToast(msg, 'ok');
+      } else {
+        showToast(data.error || 'Error al registrar.', 'error');
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      showToast('Error de conexion.', 'error');
+    });
+  }
+
+  // ── ANULAR REGISTRO ─────────────────────────────────────────
+
+  function confirmVoid() {
+    if (!currentNosEventId) return;
+
+    const body = new URLSearchParams({
+      event_id: currentNosEventId,
+      voided_reason: 'Anulado por supervisor',
+    });
+
+    fetch(VOID_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        closeModal();
+        updateRowState(data.resource_id, 'free', '');
+        showToast('Registro anulado.', 'ok');
+      } else {
+        showToast(data.error || 'Error al anular.', 'error');
+      }
+    })
+    .catch(() => showToast('Error de conexion.', 'error'));
+  }
+
+  // ── ACTUALIZAR FILA SIN RECARGAR PAGINA ─────────────────────
+
+  function updateRowState(resourceId, newState, reasonDisplay) {
+    const row = document.getElementById('worker-row-' + resourceId);
+    if (!row) return;
+
+    // Avatar
+    const avatar = row.querySelector('.worker-avatar');
+    avatar.className = 'worker-avatar av-' + newState;
+
+    // Badge
+    const badge = row.querySelector('.worker-badge');
+    badge.className = 'worker-badge badge-' + newState;
+    badge.textContent = newState === 'nos' ? 'No en obra' : newState === 'session' ? 'Con sesion' : 'Sin sesion';
+
+    // Meta
+    const meta = row.querySelector('.worker-meta');
+    const cargo = meta.textContent.split('\u00b7')[0].trim();
+    if (newState === 'nos' && reasonDisplay) {
+      meta.textContent = cargo + ' \u00b7 ' + reasonDisplay;
+    } else {
+      meta.textContent = cargo;
+    }
+
+    // Actualizar contador
+    updateNosCounter();
+  }
+
+  function updateNosCounter() {
+    const nosCount = document.querySelectorAll('.badge-nos').length;
+    const pill = document.querySelector('.stat-nos');
+    if (pill) {
+      if (nosCount > 0) {
+        pill.style.display = '';
+        pill.querySelector('i').nextSibling.textContent = ' ' + nosCount + ' marcado' + (nosCount !== 1 ? 's' : '');
+      } else {
+        pill.style.display = 'none';
+      }
+    }
+  }
+
+  // ── TOAST ───────────────────────────────────────────────────
+
+  let toastTimer = null;
+  function showToast(msg, type) {
+    const toast = document.getElementById('nos-toast');
+    const icon  = toast.querySelector('i');
+    document.getElementById('toast-msg').textContent = msg;
+    icon.className = 'ti ti-' + (type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x');
+    toast.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('visible'), 3000);
+  }
+
+  // ── CERRAR MODAL CON SWIPE DOWN (mobile) ────────────────────
+  let touchStartY = 0;
+  const sheet = document.getElementById('modal-sheet');
+
+  sheet.addEventListener('touchstart', e => {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  sheet.addEventListener('touchend', e => {
+    const diff = e.changedTouches[0].clientY - touchStartY;
+    if (diff > 80) closeModal();
+  }, { passive: true });
+</script>
+{% endblock %}

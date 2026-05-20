@@ -1,11 +1,10 @@
+# -*- coding: utf-8 -*-
 from django.urls import path
-from django.shortcuts import render
+from . import views
 
 app_name = 'resources'
 
-def placeholder(request):
-    return render(request, 'dashboard.html')
-
 urlpatterns = [
-    path('trabajadores/', placeholder, name='worker_list'),
+    path('trabajadores/', views.worker_list, name='worker_list'),
+    path('qr/<int:resource_id>/', views.resource_qr_view, name='resource_qr'),
 ]

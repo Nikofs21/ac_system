@@ -1,0 +1,565 @@
+{% extends 'base.html' %}
+{% block title %}Trabajadores{% endblock %}
+{% block nav_list %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+  .search-bar {
+    padding: 10px 16px;
+    background: var(--ni-white);
+    border-bottom: 0.5px solid var(--ni-border);
+    position: sticky;
+    top: var(--ni-topbar-h);
+    z-index: 10;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .search-wrap { position: relative; flex: 1; }
+  .search-wrap input {
+    width: 100%;
+    border: 1.5px solid var(--ni-border);
+    border-radius: var(--radius);
+    padding: 9px 12px 9px 36px;
+    font-size: 14px;
+    font-family: var(--font-main);
+    background: var(--ni-light);
+    color: var(--ni-text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-wrap input:focus { border-color: var(--ni-blue); background: var(--ni-white); }
+  .search-icon {
+    position: absolute; left: 10px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px; color: var(--ni-text-sub); pointer-events: none;
+  }
+
+  .stats-bar {
+    display: flex; gap: 8px; padding: 10px 16px;
+    background: var(--ni-white);
+    border-bottom: 0.5px solid var(--ni-border);
+    flex-wrap: wrap;
+  }
+  .stat-pill {
+    font-size: 11px; border-radius: 20px; padding: 4px 12px;
+    font-family: var(--font-mono);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .stat-total   { background: #f0f0f0; color: #888; }
+  .stat-active  { background: var(--ni-blue-soft); color: var(--ni-blue); }
+
+  .filter-tabs {
+    display: flex;
+    border-bottom: 0.5px solid var(--ni-border);
+    background: var(--ni-white);
+    padding: 0 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-tabs::-webkit-scrollbar { display: none; }
+  .filter-tab {
+    padding: 10px 14px; font-size: 12px; font-weight: 500;
+    color: var(--ni-text-sub); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap; background: none;
+    border-top: none; border-left: none; border-right: none;
+    font-family: var(--font-main);
+    transition: color 0.15s;
+  }
+  .filter-tab.active { color: var(--ni-blue); border-bottom-color: var(--ni-blue); }
+  .filter-tab:hover  { color: var(--ni-dark); }
+
+  .worker-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 0.5px solid var(--ni-border);
+    transition: background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .worker-row:last-child { border-bottom: none; }
+  .worker-row.inactive-row { opacity: 0.55; }
+
+  .worker-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; flex-shrink: 0;
+  }
+  .av-free     { background: var(--ni-blue-soft); color: var(--ni-blue); }
+  .av-session  { background: #e8f5ee; color: var(--ni-success); }
+  .av-nos      { background: #fef3e2; color: var(--ni-warn); }
+  .av-inactive { background: #f0f0f0; color: #aaa; }
+
+  .worker-info { flex: 1; min-width: 0; }
+  .worker-name {
+    font-size: 14px; font-weight: 500; color: var(--ni-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .worker-meta {
+    font-size: 11px; color: var(--ni-text-sub);
+    font-family: var(--font-mono); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .worker-badge {
+    font-size: 10px; border-radius: 20px; padding: 3px 9px;
+    font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;
+  }
+  .badge-free     { background: #f0f0f0; color: #888; }
+  .badge-session  { background: #e8f5ee; color: var(--ni-success); }
+  .badge-nos      { background: #fef3e2; color: var(--ni-warn); }
+  .badge-inactive { background: #f0f0f0; color: #bbb; }
+
+  .row-action {
+    flex-shrink: 0;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-row {
+    height: 32px; border-radius: var(--radius);
+    border: 0.5px solid var(--ni-border);
+    background: var(--ni-white);
+    font-size: 12px; color: var(--ni-text-sub);
+    cursor: pointer; padding: 0 10px;
+    display: flex; align-items: center; gap: 5px;
+    text-decoration: none; white-space: nowrap;
+    font-family: var(--font-main);
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .btn-row:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); color: var(--ni-blue); }
+  .btn-row-primary { background: var(--ni-blue); border-color: var(--ni-blue); color: var(--ni-white); }
+  .btn-row-primary:hover { opacity: 0.88; background: var(--ni-blue); color: var(--ni-white); }
+  .row-chevron { font-size: 16px; color: #ccc; flex-shrink: 0; }
+
+  .empty-state { padding: 48px 24px; text-align: center; color: var(--ni-text-sub); }
+  .empty-state i { font-size: 40px; color: #ddd; display: block; margin-bottom: 12px; }
+
+  /* ── MODAL QR ── */
+  .qr-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .qr-overlay.visible { display: flex; }
+
+  .qr-sheet {
+    background: var(--ni-white);
+    border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 420px;
+    padding: 0 0 32px;
+    animation: slideUp 0.2s ease;
+  }
+  @media (min-width: 600px) {
+    .qr-overlay { align-items: center; padding: 16px; }
+    .qr-sheet { border-radius: var(--radius-lg); }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .qr-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--ni-border); margin: 10px auto 16px;
+  }
+  @media (min-width: 600px) { .qr-handle { display: none; } }
+
+  .qr-header {
+    padding: 0 20px 16px;
+    border-bottom: 0.5px solid var(--ni-border);
+    text-align: center;
+  }
+  .qr-name  { font-size: 16px; font-weight: 600; color: var(--ni-dark); }
+  .qr-cargo { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
+  .qr-rut   { font-size: 11px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 2px; }
+
+  .qr-body {
+    padding: 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+
+  /* Contenedor del QR con borde de marca */
+  .qr-container {
+    background: var(--ni-white);
+    border: 1.5px solid var(--ni-border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    width: 100%;
+  }
+  #qr-code-display { display: flex; justify-content: center; }
+  #qr-code-display canvas, #qr-code-display img { border-radius: 4px; }
+
+  .qr-uid {
+    font-family: var(--font-mono); font-size: 10px;
+    color: #bbb; text-align: center; word-break: break-all;
+  }
+
+  /* Branding bajo el QR */
+  .qr-brand {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-brand); font-weight: 800;
+    font-size: 11px; color: var(--ni-dark);
+  }
+
+  .qr-footer {
+    padding: 0 20px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .qr-loading {
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; color: var(--ni-text-sub); font-size: 13px; gap: 8px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">Trabajadores</h1>
+    <p class="ni-page-sub">{{ site.name }}</p>
+  </div>
+  {% if perms_ctx.can_crud_people %}
+    <a href="#" class="ni-btn ni-btn-primary" style="width:auto; padding:9px 16px; font-size:13px;">
+      <i class="ti ti-plus" aria-hidden="true"></i> Agregar
+    </a>
+  {% endif %}
+</div>
+
+<div class="stats-bar">
+  <span class="stat-pill stat-total">
+    <i class="ti ti-users" aria-hidden="true"></i>
+    {{ total }} total
+  </span>
+  <span class="stat-pill stat-active">
+    <i class="ti ti-circle-check" aria-hidden="true"></i>
+    {{ active_count }} activos
+  </span>
+</div>
+
+<div class="filter-tabs">
+  <button class="filter-tab active" onclick="setFilter('all', this)">Todos</button>
+  <button class="filter-tab" onclick="setFilter('active', this)">Activos</button>
+  <button class="filter-tab" onclick="setFilter('session', this)">Con sesion</button>
+  <button class="filter-tab" onclick="setFilter('free', this)">Sin sesion</button>
+  <button class="filter-tab" onclick="setFilter('inactive', this)">Inactivos</button>
+</div>
+
+<div class="search-bar">
+  <div class="search-wrap">
+    <i class="ti ti-search search-icon" aria-hidden="true"></i>
+    <input
+      type="text"
+      id="worker-search"
+      placeholder="Buscar por nombre, RUT o cargo..."
+      autocomplete="off"
+      oninput="filterWorkers()"
+    >
+  </div>
+</div>
+
+<div class="ni-card" style="margin: 12px 16px 24px;">
+  {% if workers %}
+    <div id="worker-list">
+      {% for item in workers %}
+        <div
+          class="worker-row {% if item.estado == 'inactive' %}inactive-row{% endif %}"
+          id="wrow-{{ item.resource.id }}"
+          data-name="{{ item.resource.display_name|lower }}"
+          data-rut="{{ item.resource.person_rut|default:''|lower }}"
+          data-cargo="{{ item.resource.job_title.name|lower|default:'' }}"
+          data-estado="{{ item.estado }}"
+          data-active="{% if item.is_assigned %}1{% else %}0{% endif %}"
+        >
+          <div class="worker-avatar av-{{ item.estado }}">
+            {{ item.resource.display_name|slice:":1" }}{{ item.resource.display_name.split|last|slice:":1" }}
+          </div>
+
+          <div class="worker-info">
+            <div class="worker-name">{{ item.resource.display_name }}</div>
+            <div class="worker-meta">
+              {{ item.resource.job_title.name|default:"Sin cargo" }}
+              {% if item.resource.person_rut %}&nbsp;·&nbsp; {{ item.resource.person_rut }}{% endif %}
+              {% if item.estado == 'session' %}&nbsp;·&nbsp; {{ item.open_session.task_name_snapshot }}
+              {% elif item.estado == 'nos' %}&nbsp;·&nbsp; No en obra
+              {% elif item.estado == 'inactive' %}&nbsp;·&nbsp; Inactivo
+              {% endif %}
+            </div>
+          </div>
+
+          <span class="worker-badge badge-{{ item.estado }}">
+            {% if item.estado == 'session' %}Con sesion
+            {% elif item.estado == 'nos' %}No en obra
+            {% elif item.estado == 'inactive' %}Inactivo
+            {% else %}Activo{% endif %}
+          </span>
+
+          <div class="row-action">
+            {% if item.is_assigned %}
+              {% if perms_ctx.can_start_people or perms_ctx.can_start_machines %}
+                {% if item.estado == 'free' %}
+                  <a href="{% url 'work:assignment_preload' item.resource.id %}" class="btn-row btn-row-primary">
+                    <i class="ti ti-plus" aria-hidden="true"></i> Asignar
+                  </a>
+                {% elif item.estado == 'session' %}
+                  <span class="btn-row" style="cursor:default; opacity:0.5;">
+                    <i class="ti ti-player-play" aria-hidden="true"></i> En partida
+                  </span>
+                {% endif %}
+              {% endif %}
+
+              {% if perms_ctx.can_view_qr %}
+                <button
+                  class="btn-row"
+                  onclick="openQRModal({{ item.resource.id }})"
+                  title="Ver QR de {{ item.resource.display_name }}"
+                >
+                  <i class="ti ti-qrcode" aria-hidden="true"></i>
+                </button>
+              {% endif %}
+
+            {% else %}
+              {% if perms_ctx.can_crud_people %}
+                <button class="btn-row" onclick="reactivateWorker({{ item.resource.id }}, '{{ item.resource.display_name }}')">
+                  <i class="ti ti-refresh" aria-hidden="true"></i> Reactivar
+                </button>
+              {% endif %}
+            {% endif %}
+
+            {% if perms_ctx.can_crud_people %}
+              <button class="btn-row" onclick="editWorker({{ item.resource.id }})">
+                <i class="ti ti-pencil" aria-hidden="true"></i>
+              </button>
+            {% endif %}
+          </div>
+
+          <i class="ti ti-chevron-right row-chevron" aria-hidden="true"></i>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div id="no-results" class="empty-state" style="display:none;">
+      <i class="ti ti-search" aria-hidden="true"></i>
+      <p style="font-size:14px; font-weight:500;">Sin coincidencias</p>
+    </div>
+
+  {% else %}
+    <div class="empty-state">
+      <i class="ti ti-users" aria-hidden="true"></i>
+      <p style="font-size:15px; font-weight:500; margin-bottom:4px;">Sin trabajadores asignados</p>
+      <p style="font-size:13px;">No hay trabajadores registrados en esta obra.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MODAL QR -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="qr-overlay" id="qr-overlay" onclick="handleQROverlayClick(event)">
+  <div class="qr-sheet" id="qr-sheet">
+    <div class="qr-handle"></div>
+
+    <!-- Loading -->
+    <div id="qr-loading" class="qr-loading">
+      <i class="ti ti-loader" aria-hidden="true"></i> Cargando...
+    </div>
+
+    <!-- Contenido QR -->
+    <div id="qr-content" style="display:none;">
+      <div class="qr-header">
+        <div class="qr-name"  id="qr-worker-name"></div>
+        <div class="qr-cargo" id="qr-worker-cargo"></div>
+        <div class="qr-rut"   id="qr-worker-rut"></div>
+      </div>
+
+      <div class="qr-body">
+        <div class="qr-container">
+          <div id="qr-code-display"></div>
+          <div class="qr-brand">
+            <svg width="14" height="14" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+              <rect x="4" y="4" width="28" height="4" rx="2" fill="#0025ec"/>
+              <rect x="6" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="11" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="16" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="21" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="26" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="2" y="28" width="32" height="4" rx="2" fill="#0025ec"/>
+            </svg>
+            NOVUS IMPERIUM
+          </div>
+          <div class="qr-uid" id="qr-uid-display"></div>
+        </div>
+      </div>
+
+      <div class="qr-footer">
+        <button onclick="printQR()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px;">
+          <i class="ti ti-printer" aria-hidden="true"></i> Imprimir / Guardar
+        </button>
+        <button onclick="closeQRModal()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px; color:var(--ni-text-sub);">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- QR Code generator — libreria liviana, sin dependencias -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const QR_API_BASE = "{% url 'resources:resource_qr' 0 %}".replace('/0/', '/');
+  const CSRF = "{{ csrf_token }}";
+
+  let currentFilter = 'all';
+  let qrInstance    = null;
+
+  // ── FILTROS ─────────────────────────────────────────────────
+
+  function setFilter(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filterWorkers();
+  }
+
+  function filterWorkers() {
+    const q     = document.getElementById('worker-search').value.toLowerCase().trim();
+    const rows  = document.querySelectorAll('.worker-row');
+    let visible = 0;
+
+    rows.forEach(row => {
+      const name   = row.dataset.name   || '';
+      const rut    = row.dataset.rut    || '';
+      const cargo  = row.dataset.cargo  || '';
+      const estado = row.dataset.estado || '';
+      const active = row.dataset.active === '1';
+
+      let tabMatch = true;
+      if (currentFilter === 'active')   tabMatch = active;
+      if (currentFilter === 'inactive') tabMatch = !active;
+      if (currentFilter === 'session')  tabMatch = estado === 'session';
+      if (currentFilter === 'free')     tabMatch = estado === 'free';
+
+      const searchMatch = !q || name.includes(q) || rut.includes(q) || cargo.includes(q);
+      const show = tabMatch && searchMatch;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    document.getElementById('no-results').style.display =
+      (visible === 0 && (q || currentFilter !== 'all')) ? 'block' : 'none';
+  }
+
+  // ── MODAL QR ────────────────────────────────────────────────
+
+  function openQRModal(resourceId) {
+    document.getElementById('qr-loading').style.display  = 'flex';
+    document.getElementById('qr-content').style.display  = 'none';
+    document.getElementById('qr-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+
+    fetch(QR_API_BASE + resourceId + '/', {
+      headers: { 'X-CSRFToken': CSRF }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { closeQRModal(); return; }
+      renderQRModal(data);
+    })
+    .catch(() => closeQRModal());
+  }
+
+  function renderQRModal(data) {
+    document.getElementById('qr-worker-name').textContent  = data.name;
+    document.getElementById('qr-worker-cargo').textContent = data.cargo || 'Sin cargo';
+    document.getElementById('qr-worker-rut').textContent   = data.rut  || '';
+    document.getElementById('qr-uid-display').textContent  = data.uid;
+
+    // Limpiar QR anterior
+    const container = document.getElementById('qr-code-display');
+    container.innerHTML = '';
+
+    // Generar QR con la URL publica del recurso
+    qrInstance = new QRCode(container, {
+      text:          data.qr_url,
+      width:         200,
+      height:        200,
+      colorDark:     '#131d47',
+      colorLight:    '#ffffff',
+      correctLevel:  QRCode.CorrectLevel.M,
+    });
+
+    document.getElementById('qr-loading').style.display = 'none';
+    document.getElementById('qr-content').style.display = 'block';
+  }
+
+  function closeQRModal() {
+    document.getElementById('qr-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+    qrInstance = null;
+  }
+
+  function handleQROverlayClick(e) {
+    if (e.target === document.getElementById('qr-overlay')) closeQRModal();
+  }
+
+  // Imprimir / guardar QR
+  function printQR() {
+    const name  = document.getElementById('qr-worker-name').textContent;
+    const cargo = document.getElementById('qr-worker-cargo').textContent;
+    const rut   = document.getElementById('qr-worker-rut').textContent;
+    const canvas = document.querySelector('#qr-code-display canvas');
+
+    if (!canvas) return;
+
+    const dataUrl = canvas.toDataURL('image/png');
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>QR — ${name}</title>
+        <style>
+          body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+          .card { display: inline-block; border: 2px solid #e0e0e0; border-radius: 12px; padding: 24px 32px; }
+          img  { display: block; margin: 0 auto 12px; }
+          h2   { font-size: 18px; margin: 0 0 4px; color: #131d47; }
+          p    { font-size: 13px; color: #666; margin: 2px 0; }
+          .brand { font-size: 10px; color: #0025ec; font-weight: bold; margin-top: 12px; letter-spacing: 0.05em; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <img src="${dataUrl}" width="200" height="200">
+          <h2>${name}</h2>
+          <p>${cargo}</p>
+          ${rut ? `<p>${rut}</p>` : ''}
+          <p class="brand">NOVUS IMPERIUM — Control de Partidas A&C</p>
+        </div>
+        <script>window.onload = () => window.print();<\/script>
+      </body>
+      </html>
+    `);
+    win.document.close();
+  }
+
+  // Swipe down para cerrar en mobile
+  let touchStartY = 0;
+  document.getElementById('qr-sheet').addEventListener('touchstart', e => {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.getElementById('qr-sheet').addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientY - touchStartY > 80) closeQRModal();
+  }, { passive: true });
+
+  // ── PLACEHOLDERS CRUD ───────────────────────────────────────
+
+  function editWorker(id)              { alert('Edicion — proximamente'); }
+  function reactivateWorker(id, name)  { alert('Reactivar a ' + name + ' — proximamente'); }
+</script>
+{% endblock %}
