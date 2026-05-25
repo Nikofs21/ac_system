@@ -6,7 +6,6 @@
 <style>
   .form-wrap { max-width: 520px; margin: 0 auto; padding: 16px; }
 
-  /* Selector de tipo — solo en modo creación */
   .type-selector { display: flex; gap: 8px; margin-bottom: 20px; }
   .type-btn {
     flex: 1; height: 56px;
@@ -21,22 +20,17 @@
   }
   .type-btn i    { font-size: 20px; color: #bbb; }
   .type-btn span { font-size: 12px; font-weight: 500; color: var(--ni-text-sub); }
-  .type-btn.selected {
-    border-color: var(--ni-blue);
-    background: var(--ni-blue-soft);
-  }
+  .type-btn.selected { border-color: var(--ni-blue); background: var(--ni-blue-soft); }
   .type-btn.selected i    { color: var(--ni-blue); }
   .type-btn.selected span { color: var(--ni-blue); }
 
-  /* Secciones dinamicas */
   .form-section { display: none; }
   .form-section.visible { display: block; }
 
-  /* Campo con error */
   .ni-input.error, .ni-select.error { border-color: #c0392b; }
   .field-error { font-size: 11px; color: #c0392b; margin-top: 4px; }
+  .field-hint  { font-size: 11px; color: var(--ni-text-sub); margin-top: 4px; }
 
-  /* Cargo inline */
   .cargo-row { display: flex; gap: 8px; align-items: flex-end; }
   .cargo-row .ni-select { flex: 1; }
   .btn-add-cargo {
@@ -50,7 +44,7 @@
   }
   .btn-add-cargo:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); }
 
-  /* Modal cargo inline */
+  /* Modal cargo */
   .cargo-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,0.45); z-index: 1000;
@@ -61,8 +55,7 @@
     background: var(--ni-white);
     border-radius: 16px 16px 0 0;
     width: 100%; max-width: 480px;
-    animation: slideUp 0.2s ease;
-    overflow: hidden;
+    animation: slideUp 0.2s ease; overflow: hidden;
   }
   @media (min-width: 600px) {
     .cargo-overlay { align-items: center; padding: 16px; }
@@ -77,7 +70,6 @@
   .cargo-sub    { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
   .cargo-body   { padding: 16px; }
   .cargo-footer { padding: 12px 16px; border-top: 0.5px solid var(--ni-border); display: flex; gap: 8px; }
-
   .btn-cargo-confirm {
     flex: 1; height: 42px; border: none; border-radius: var(--radius);
     background: var(--ni-blue); color: #fff;
@@ -92,10 +84,7 @@
     cursor: pointer; padding: 0 14px;
   }
 
-  /* Hint RUT */
-  .field-hint { font-size: 11px; color: var(--ni-text-sub); margin-top: 4px; }
-
-  /* Baja modal */
+  /* Modal baja */
   .baja-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,0.45); z-index: 1000;
@@ -125,12 +114,10 @@
 </div>
 
 <div class="form-wrap">
-
   <form method="post" id="resource-form">
     {% csrf_token %}
 
     {% if mode == 'create' %}
-      <!-- SELECTOR DE TIPO -->
       <div style="margin-bottom:6px;">
         <label class="ni-label">Tipo de registro</label>
       </div>
@@ -150,9 +137,13 @@
       </div>
       <input type="hidden" name="resource_type" id="resource_type"
         value="{% if can_people %}PERSON{% else %}MACHINERY{% endif %}">
+    {% else %}
+      {# En modo edición fijar el tipo para que el backend lo sepa #}
+      <input type="hidden" name="resource_type"
+        value="{{ resource.resource_category.resource_type }}">
     {% endif %}
 
-    <!-- CAMPOS COMUNES -->
+    <!-- NOMBRE -->
     <div class="ni-field">
       <label class="ni-label" for="display_name">
         {% if mode == 'edit' %}
@@ -177,7 +168,12 @@
     </div>
 
     <!-- SECCIÓN PERSONA -->
-    <div class="form-section {% if mode == 'create' and can_people %}visible{% elif mode == 'edit' and resource.resource_category.resource_type == 'PERSON' %}visible{% endif %}" id="section-person">
+    <div class="form-section
+      {% if mode == 'create' and can_people %}visible
+      {% elif mode == 'edit' and resource.resource_category.resource_type == 'PERSON' %}visible
+      {% endif %}"
+      id="section-person">
+
       <div class="ni-field">
         <label class="ni-label" for="person_rut">RUT</label>
         <input
@@ -196,15 +192,17 @@
       </div>
 
       <div class="ni-field">
-        <label class="ni-label" for="job_title_person">Cargo</label>
+        <label class="ni-label" for="job_title_select">Cargo</label>
         <div class="cargo-row">
-          <select class="ni-select" name="job_title_id" id="job_title_person">
+          {# Un solo select para personas — siempre con name="job_title_id" #}
+          <select class="ni-select" name="job_title_id" id="job_title_select">
             <option value="">Sin cargo asignado</option>
             {% for jt in job_titles %}
               <option value="{{ jt.id }}"
                 {% if post_data and post_data.job_title_id == jt.id|stringformat:"s" %}selected
-                {% elif resource and resource.job_title_id == jt.id %}selected{% endif %}>
-                {{ jt.name }}{% if jt.site %} (esta obra){% endif %}
+                {% elif resource and resource.job_title_id == jt.id %}selected
+                {% endif %}>
+                {{ jt.name }}
               </option>
             {% endfor %}
           </select>
@@ -216,7 +214,10 @@
     </div>
 
     <!-- SECCIÓN MAQUINARIA -->
-    <div class="form-section {% if mode == 'edit' and resource.resource_category.resource_type == 'MACHINERY' %}visible{% endif %}" id="section-machine">
+    <div class="form-section
+      {% if mode == 'edit' and resource.resource_category.resource_type == 'MACHINERY' %}visible{% endif %}"
+      id="section-machine">
+
       <div class="ni-field">
         <label class="ni-label" for="license_plate">Patente</label>
         <input
@@ -234,15 +235,17 @@
       </div>
 
       <div class="ni-field">
-        <label class="ni-label" for="job_title_machine">Tipo de maquinaria</label>
+        <label class="ni-label" for="machine_title_select">Tipo de maquinaria</label>
         <div class="cargo-row">
-          <select class="ni-select" name="job_title_id" id="job_title_machine">
+          {# Select separado para maquinaria — en creacion solo uno estará activo #}
+          <select class="ni-select" name="job_title_id" id="machine_title_select">
             <option value="">Sin tipo asignado</option>
             {% for jt in machine_titles %}
               <option value="{{ jt.id }}"
                 {% if post_data and post_data.job_title_id == jt.id|stringformat:"s" %}selected
-                {% elif resource and resource.job_title_id == jt.id %}selected{% endif %}>
-                {{ jt.name }}{% if jt.site %} (esta obra){% endif %}
+                {% elif resource and resource.job_title_id == jt.id %}selected
+                {% endif %}>
+                {{ jt.name }}
               </option>
             {% endfor %}
           </select>
@@ -274,10 +277,9 @@
       </a>
     </div>
   </form>
-
 </div>
 
-<!-- ══ MODAL CARGO INLINE ══ -->
+<!-- MODAL CARGO INLINE -->
 <div class="cargo-overlay" id="cargo-overlay" onclick="handleCargoOverlay(event)">
   <div class="cargo-sheet">
     <div class="cargo-header">
@@ -301,13 +303,13 @@
     <div class="cargo-footer">
       <button class="btn-cargo-cancel" onclick="closeCargoModal()">Cancelar</button>
       <button class="btn-cargo-confirm" onclick="confirmNewCargo()">
-        <i class="ti ti-plus" aria-hidden="true"></i> Agregar cargo
+        <i class="ti ti-plus" aria-hidden="true"></i> Agregar
       </button>
     </div>
   </div>
 </div>
 
-<!-- ══ MODAL BAJA ══ -->
+<!-- MODAL BAJA -->
 {% if mode == 'edit' %}
 <div class="baja-overlay" id="baja-overlay" onclick="handleBajaOverlay(event)">
   <div class="baja-sheet">
@@ -342,15 +344,17 @@
 
 {% block extra_js %}
 <script>
+  const CSRF      = "{{ csrf_token }}";
   const CARGO_URL = "{% url 'resources:job_title_create' %}";
   {% if mode == 'edit' %}
   const BAJA_URL  = "{% url 'resources:resource_deactivate' resource.id %}";
   {% endif %}
-  const CSRF = "{{ csrf_token }}";
 
   let currentCargoType = 'PERSON';
 
   // ── SELECTOR DE TIPO (solo creación) ─────────────────────────
+  // La clave del fix: en creación, el select inactivo NO debe tener name
+  // para que el backend no reciba el valor vacío del select oculto.
 
   function selectType(type) {
     document.getElementById('resource_type').value = type;
@@ -360,6 +364,8 @@
     const secPerson  = document.getElementById('section-person');
     const secMachine = document.getElementById('section-machine');
     const labelName  = document.getElementById('label-name');
+    const selPerson  = document.getElementById('job_title_select');
+    const selMachine = document.getElementById('machine_title_select');
 
     if (type === 'PERSON') {
       btnPerson?.classList.add('selected');
@@ -368,8 +374,9 @@
       secMachine?.classList.remove('visible');
       if (labelName) labelName.textContent = 'Nombre completo';
       document.getElementById('display_name').placeholder = 'Ej: Juan Pérez González';
-      // El job_title lo maneja el select de personas
-      syncJobTitleName('person');
+      // Solo el select activo tiene name
+      if (selPerson)  selPerson.name  = 'job_title_id';
+      if (selMachine) selMachine.name = '';
     } else {
       btnMachine?.classList.add('selected');
       btnPerson?.classList.remove('selected');
@@ -377,26 +384,18 @@
       secPerson?.classList.remove('visible');
       if (labelName) labelName.textContent = 'Identificacion';
       document.getElementById('display_name').placeholder = 'Ej: Retroexcavadora CAT 320';
-      syncJobTitleName('machine');
+      if (selMachine) selMachine.name = 'job_title_id';
+      if (selPerson)  selPerson.name  = '';
     }
   }
 
-  // Asegurar que el select activo tenga el name correcto
-  function syncJobTitleName(active) {
-    const selPerson  = document.getElementById('job_title_person');
-    const selMachine = document.getElementById('job_title_machine');
-    if (selPerson)  selPerson.name  = active === 'person'  ? 'job_title_id' : '';
-    if (selMachine) selMachine.name = active === 'machine' ? 'job_title_id' : '';
-  }
-
-  // Init en modo creación
+  // Init en creación
   {% if mode == 'create' %}
     const initType = document.getElementById('resource_type')?.value || 'PERSON';
     selectType(initType);
   {% endif %}
 
   // ── FORMATO RUT en tiempo real ────────────────────────────────
-
   const rutInput = document.getElementById('person_rut');
   if (rutInput) {
     rutInput.addEventListener('blur', function() {
@@ -409,11 +408,10 @@
   }
 
   // ── MODAL CARGO INLINE ────────────────────────────────────────
-
   function openCargoModal(type) {
     currentCargoType = type;
-    const title = document.getElementById('cargo-modal-title');
-    title.textContent = type === 'PERSON' ? 'Nuevo cargo' : 'Nuevo tipo de maquinaria';
+    document.getElementById('cargo-modal-title').textContent =
+      type === 'PERSON' ? 'Nuevo cargo' : 'Nuevo tipo de maquinaria';
     document.getElementById('new-cargo-name').value = '';
     document.getElementById('cargo-error').style.display = 'none';
     document.getElementById('cargo-overlay').classList.add('visible');
@@ -431,12 +429,11 @@
   }
 
   function confirmNewCargo() {
-    const name = document.getElementById('new-cargo-name').value.trim();
+    const name  = document.getElementById('new-cargo-name').value.trim();
     const errEl = document.getElementById('cargo-error');
-
     if (!name) {
-      errEl.textContent = 'El nombre es obligatorio.';
-      errEl.style.display = 'block';
+      errEl.textContent    = 'El nombre es obligatorio.';
+      errEl.style.display  = 'block';
       return;
     }
 
@@ -448,22 +445,22 @@
     .then(r => r.json())
     .then(data => {
       if (data.status === 'ok') {
-        // Agregar al select correspondiente y seleccionarlo
-        const selectId = currentCargoType === 'PERSON' ? 'job_title_person' : 'job_title_machine';
+        // Agregar al select correcto y seleccionarlo
+        const selectId = currentCargoType === 'PERSON' ? 'job_title_select' : 'machine_title_select';
         const select   = document.getElementById(selectId);
         const opt      = document.createElement('option');
         opt.value       = data.id;
-        opt.textContent = data.name + ' (esta obra)';
+        opt.textContent = data.name;  // Sin "(esta obra)"
         opt.selected    = true;
         select.appendChild(opt);
         closeCargoModal();
       } else {
-        errEl.textContent = data.error || 'Error al crear el cargo.';
+        errEl.textContent   = data.error || 'Error al crear el cargo.';
         errEl.style.display = 'block';
       }
     })
     .catch(() => {
-      errEl.textContent = 'Error de conexion.';
+      errEl.textContent   = 'Error de conexion.';
       errEl.style.display = 'block';
     });
   }
@@ -473,7 +470,6 @@
   });
 
   // ── MODAL BAJA ────────────────────────────────────────────────
-
   {% if mode == 'edit' %}
   function openBajaModal() {
     document.getElementById('baja-reason').value = '';
@@ -500,6 +496,7 @@
         window.location.href = "{% url 'resources:worker_list' %}";
       } else {
         alert(data.error || 'Error al dar de baja.');
+        closeBajaModal();
       }
     })
     .catch(() => alert('Error de conexion.'));

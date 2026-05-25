@@ -354,7 +354,11 @@ def resource_deactivate(request, resource_id):
 @require_active_site
 @require_POST
 def resource_reactivate(request, resource_id):
-    """Reactiva un recurso inactivo y lo re-asigna a la obra activa."""
+    """
+    Reactiva un recurso inactivo y lo re-asigna a la obra activa.
+    Cierra cualquier asignacion ACTIVE previa en otras obras antes
+    de crear la nueva, para respetar el constraint de unicidad.
+    """
     site     = get_active_site(request)
     resource = get_object_or_404(Resource, id=resource_id, company=site.company)
 
@@ -367,19 +371,33 @@ def resource_reactivate(request, resource_id):
         return JsonResponse({'error': 'Sin permiso.'}, status=403)
 
     with transaction.atomic():
+        # Reactivar el recurso
         resource.status     = 'ACTIVE'
         resource.updated_by = request.user
         resource.save()
 
-        # Crear nueva asignación a la obra activa
-        # (puede que antes estuviera en otra obra)
-        already = ResourceSiteAssignment.objects.filter(
+        # Verificar si ya tiene asignacion activa en la obra actual
+        already_here = ResourceSiteAssignment.objects.filter(
             resource=resource,
             site=site,
             status='ACTIVE',
         ).exists()
 
-        if not already:
+        if already_here:
+            # Ya esta asignado aqui, nada que hacer
+            pass
+        else:
+            # Cerrar cualquier asignacion activa en otras obras
+            # (el constraint solo permite una ACTIVE por recurso)
+            ResourceSiteAssignment.objects.filter(
+                resource=resource,
+                status='ACTIVE',
+            ).update(
+                status='ENDED',
+                ended_at=timezone.now(),
+            )
+
+            # Crear asignacion nueva en la obra activa
             ResourceSiteAssignment.objects.create(
                 resource=resource,
                 site=site,
@@ -390,9 +408,9 @@ def resource_reactivate(request, resource_id):
             )
 
     return JsonResponse({
-        'status': 'ok',
+        'status':      'ok',
         'resource_id': resource.id,
-        'message': f'{resource.display_name} reactivado.',
+        'message':     f'{resource.display_name} reactivado en {site.name}.',
     })
 
 

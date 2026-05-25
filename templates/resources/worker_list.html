@@ -223,7 +223,7 @@
     <p class="ni-page-sub">{{ site.name }}</p>
   </div>
   {% if perms_ctx.can_crud_people %}
-    <a href="{% url 'resources:resource_create' %}" class="ni-btn ni-btn-primary" ...>
+    <a href="{% url 'resources:resource_create' %}" class="ni-btn ni-btn-primary" style="width:auto; padding:9px 16px; font-size:13px;">
       <i class="ti ti-plus" aria-hidden="true"></i> Agregar
     </a>
   {% endif %}
@@ -592,9 +592,6 @@
     })
     .catch(() => showToast('Error de conexion.', 'error'));
   }
-
-  const CSRF = "{{ csrf_token }}";
-
-
+  
 </script>
 {% endblock %}
