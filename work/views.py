@@ -41,6 +41,20 @@ def require_active_site(view_func):
     return login_required(wrapper)
 
 
+def _clear_assignment_session(request):
+    """Limpia todo el estado del flujo de asignacion."""
+    for key in [
+        'assignment_stage_id',
+        'assignment_task_id',
+        'assignment_workers',
+        'assignment_preloaded_name',
+        'assignment_in_flow',
+        'assignment_from_preload',  # legacy
+    ]:
+        request.session.pop(key, None)
+    request.session.modified = True
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # FLUJO DE ASIGNACION
 # ─────────────────────────────────────────────────────────────────────────────
@@ -49,9 +63,14 @@ def require_active_site(view_func):
 def assignment_new(request):
     """
     Paso 1: Seleccionar etapa y partida.
-    Si viene de una pre-carga (QR o listado), muestra aviso del trabajador.
-    Si el usuario inicia el flujo desde cero (sin pre-carga), limpia
-    cualquier pre-carga huerfana que haya quedado de una sesion anterior.
+
+    Logica de pre-carga:
+    - Si viene de assignment_preload: ya tiene assignment_workers con el
+      trabajador y assignment_in_flow=True. Se conserva.
+    - Si viene del paso 2 o 3 (dentro del flujo): assignment_in_flow=True.
+      Se conserva.
+    - Cualquier otro origen (sidebar, URL directa, listado sin pre-cargar):
+      assignment_in_flow no existe o es False. Se limpia todo.
     """
     site = get_active_site(request)
 
@@ -61,19 +80,16 @@ def assignment_new(request):
     if not can_people and not can_machines:
         return redirect('access_denied')
 
-    # Si viene directo a /asignar/ sin pre-carga activa, limpiar sesion anterior
-    # para evitar que un trabajador pre-cargado persista sin querer.
-    # La pre-carga se mantiene solo si viene de assignment_preload (tiene flag).
-    coming_from_preload = request.session.get('assignment_from_preload', False)
-    if not coming_from_preload:
-        # Limpiar cualquier estado previo
-        request.session.pop('assignment_stage_id', None)
-        request.session.pop('assignment_task_id', None)
-        request.session.pop('assignment_workers', None)
-        request.session.pop('assignment_preloaded_name', None)
+    # Si NO estamos dentro del flujo, limpiar estado anterior
+    in_flow = request.session.get('assignment_in_flow', False)
+    if not in_flow:
+        _clear_assignment_session(request)
 
-    # Limpiar el flag de pre-carga una vez usado
-    request.session.pop('assignment_from_preload', None)
+    # Marcar que estamos activamente en el flujo
+    # Este flag persiste mientras el supervisor navegue por los 3 pasos.
+    # Se elimina solo cuando el flujo termina (confirmar) o se limpia.
+    request.session['assignment_in_flow'] = True
+    request.session.modified = True
 
     stage_tasks = StageTask.objects.select_related(
         'stage', 'task'
@@ -87,10 +103,10 @@ def assignment_new(request):
 
     etapas = {}
     for st in stage_tasks:
-        stage_id = st.stage.id
-        if stage_id not in etapas:
-            etapas[stage_id] = {'stage': st.stage, 'tasks': []}
-        etapas[stage_id]['tasks'].append(st.task)
+        sid = st.stage.id
+        if sid not in etapas:
+            etapas[sid] = {'stage': st.stage, 'tasks': []}
+        etapas[sid]['tasks'].append(st.task)
 
     preloaded_name = request.session.get('assignment_preloaded_name', '')
 
@@ -103,6 +119,7 @@ def assignment_new(request):
             if not request.session.get('assignment_workers'):
                 request.session['assignment_workers'] = []
             request.session.pop('assignment_preloaded_name', None)
+            request.session.modified = True
             return redirect('work:assignment_scan')
 
     return render(request, 'work/assignment_step1.html', {
@@ -136,6 +153,10 @@ def assignment_scan(request):
     workers_in_group = Resource.objects.filter(
         id__in=worker_ids
     ).select_related('job_title') if worker_ids else []
+
+    # Mantener el flag de flujo activo
+    request.session['assignment_in_flow'] = True
+    request.session.modified = True
 
     if request.method == 'POST' and 'confirm' in request.POST:
         return redirect('work:assignment_confirm')
@@ -184,7 +205,6 @@ def scan_qr(request):
             'message': 'Trabajador no encontrado o no pertenece a esta empresa.'
         }, status=404)
 
-    # Verificar permiso por tipo de recurso
     is_person    = resource.resource_category.resource_type == 'PERSON'
     is_machinery = resource.resource_category.resource_type == 'MACHINERY'
 
@@ -193,7 +213,6 @@ def scan_qr(request):
     if is_machinery and not user_has_permission(request.user, 'sessions.start_machines', site):
         return JsonResponse({'status': 'error', 'message': 'Sin permiso para iniciar sesiones de maquinarias.'}, status=403)
 
-    # Verificar asignacion a la obra
     assigned = ResourceSiteAssignment.objects.filter(
         resource=resource, site=site, status='ACTIVE'
     ).exists()
@@ -203,7 +222,6 @@ def scan_qr(request):
             'message': f'{resource.display_name} no esta asignado a esta obra.'
         }, status=400)
 
-    # Verificar si ya esta en el grupo
     worker_ids = request.session.get('assignment_workers', [])
     if resource.id in worker_ids:
         return JsonResponse({
@@ -211,12 +229,10 @@ def scan_qr(request):
             'message': f'{resource.display_name} ya esta en el grupo.'
         })
 
-    # Sesion abierta
     open_session = WorkSession.objects.filter(
         resource=resource, site=site, status='OPEN'
     ).select_related('task', 'stage').first()
 
-    # No en obra
     no_on_site = NoOnSiteEvent.objects.filter(
         resource=resource,
         site=site,
@@ -224,7 +240,6 @@ def scan_qr(request):
         status='ACTIVE'
     ).first()
 
-    # Agregar al grupo — con o sin sesion abierta
     worker_ids.append(resource.id)
     request.session['assignment_workers'] = worker_ids
     request.session.modified = True
@@ -239,7 +254,6 @@ def scan_qr(request):
         }
     }
 
-    # Advertencia de sesion abierta — se cierra automaticamente al confirmar
     if open_session:
         response_data['warning'] = {
             'type':       'open_session',
@@ -247,7 +261,6 @@ def scan_qr(request):
             'session_id': open_session.id,
         }
 
-    # Advertencia de No en obra — se puede agregar igual
     if no_on_site:
         response_data['warning'] = {
             'type':    'no_on_site',
@@ -327,7 +340,6 @@ def assignment_confirm(request):
     """
     Paso 3: Confirmar e iniciar sesiones.
     Si alguno del grupo tiene sesion abierta, la cierra antes de crear la nueva.
-    Muestra advertencia en pantalla antes de confirmar.
     """
     site = get_active_site(request)
 
@@ -346,7 +358,10 @@ def assignment_confirm(request):
     task    = get_object_or_404(TaskCatalog, id=task_id)
     workers = Resource.objects.filter(id__in=worker_ids).select_related('job_title')
 
-    # Detectar trabajadores con sesion abierta
+    # Mantener flag de flujo activo en el paso 3
+    request.session['assignment_in_flow'] = True
+    request.session.modified = True
+
     workers_with_session = []
     for worker in workers:
         open_session = WorkSession.objects.filter(
@@ -358,7 +373,6 @@ def assignment_confirm(request):
                 'open_session': open_session,
             })
 
-    # Detectar marcas No en obra
     no_on_site_workers = []
     for worker in workers:
         nos = NoOnSiteEvent.objects.filter(
@@ -387,7 +401,6 @@ def assignment_confirm(request):
 
         with transaction.atomic():
             for worker in workers:
-                # Cerrar sesion abierta si existe
                 open_session = WorkSession.objects.filter(
                     resource=worker, site=site, status='OPEN'
                 ).first()
@@ -401,12 +414,10 @@ def assignment_confirm(request):
                     open_session.save()
                     sessions_replaced += 1
 
-                # Obtener asignacion activa
                 assignment = ResourceSiteAssignment.objects.filter(
                     resource=worker, site=site, status='ACTIVE'
                 ).first()
 
-                # Crear nueva sesion
                 WorkSession.objects.create(
                     company=site.company,
                     site=site,
@@ -426,11 +437,8 @@ def assignment_confirm(request):
                 )
                 sessions_created += 1
 
-        # Limpiar sesion Django
-        request.session.pop('assignment_stage_id', None)
-        request.session.pop('assignment_task_id', None)
-        request.session.pop('assignment_workers', None)
-        request.session.pop('assignment_preloaded_name', None)
+        # Flujo completado — limpiar todo
+        _clear_assignment_session(request)
 
         msg = f'{sessions_created} sesiones iniciadas en {task.name}.'
         if sessions_replaced:
@@ -444,6 +452,7 @@ def assignment_confirm(request):
         'workers':              workers,
         'workers_with_session': workers_with_session,
         'no_on_site_workers':   no_on_site_workers,
+        'has_high_risk':        task.risk_level == 'HIGH_RISK',
         'site':                 site,
         'page_title':           'Confirmar asignacion',
         'step':                 3,
@@ -465,7 +474,6 @@ def active_workers(request):
     site  = get_active_site(request)
     today = timezone.localdate()
 
-    # Determinar si el usuario ve solo sus propias sesiones
     try:
         role_code = request.user.site_memberships.get(
             site=site, is_active=True
@@ -476,11 +484,7 @@ def active_workers(request):
     ROLES_OWN_SESSIONS_ONLY = {'supervisor', 'bodeguero'}
     own_only = role_code in ROLES_OWN_SESSIONS_ONLY
 
-    # Filtrar sesiones abiertas
-    sessions_filter = {
-        'site':   site,
-        'status': 'OPEN',
-    }
+    sessions_filter = {'site': site, 'status': 'OPEN'}
     if own_only:
         sessions_filter['started_by'] = request.user
 
@@ -490,7 +494,6 @@ def active_workers(request):
         'resource', 'resource__job_title', 'task', 'stage'
     ).order_by('started_at')
 
-    # Sesiones cerradas hoy (propias si corresponde)
     closed_filter = {
         'site':             site,
         'status__in':       ['CLOSED', 'AUTO_CLOSED'],
@@ -501,22 +504,18 @@ def active_workers(request):
 
     closed_today = WorkSession.objects.filter(**closed_filter).count()
 
-    # Recursos asignados activamente a la obra
-    assigned_resources = ResourceSiteAssignment.objects.filter(
+    assigned_resources   = ResourceSiteAssignment.objects.filter(
         site=site, status='ACTIVE'
     ).values_list('resource_id', flat=True)
 
-    resources_with_open = open_sessions.values_list('resource_id', flat=True)
+    resources_with_open  = open_sessions.values_list('resource_id', flat=True)
 
     no_on_site_today = NoOnSiteEvent.objects.filter(
         site=site, event_date=today, status='ACTIVE'
     ).values_list('resource_id', flat=True)
 
-    # Sin sesion: solo cuenta recursos relevantes segun scope
     if own_only:
-        # El supervisor solo ve cuantos de sus recursos no tienen sesion abierta
-        # (los que el mismo ha iniciado alguna vez hoy pero ya cerraron, o sin sesion)
-        unassigned_count = 0  # No aplica el concepto de "sin asignar" para supervisor
+        unassigned_count = 0
     else:
         unassigned_count = len([
             r for r in assigned_resources
@@ -536,7 +535,6 @@ def active_workers(request):
         'now':              timezone.now(),
         'perms_ctx':        perms_ctx,
     })
-
 
 
 @require_active_site
@@ -563,11 +561,9 @@ def close_session(request, session_id):
     session.duration_minutes = duration
     session.save()
 
-    # Respuesta para HTMX o AJAX (pagina QR)
     if request.htmx:
         return HttpResponse(status=204, headers={'HX-Trigger': 'sessionClosed'})
 
-    # Si viene de fetch() (JS), devolver JSON
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
        'application/json' in request.headers.get('Accept', ''):
         return JsonResponse({'status': 'ok'})
@@ -616,9 +612,11 @@ def mass_close(request):
 @require_active_site
 def assignment_preload(request, resource_id):
     """
-    Inicia el flujo de asignacion con un trabajador pre-cargado.
-    Establece flag 'assignment_from_preload' para que assignment_new
-    no limpie la sesion al entrar.
+    Inicia el flujo con un trabajador pre-cargado desde QR o listado.
+
+    Siempre limpia el estado anterior y establece el nuevo trabajador.
+    Marca assignment_in_flow=True para que assignment_new conserve el estado.
+    Si habia una pre-carga anterior, la reemplaza.
     """
     site = get_active_site(request)
 
@@ -655,12 +653,13 @@ def assignment_preload(request, resource_id):
         messages.error(request, 'Sin permiso para iniciar sesiones de maquinarias.')
         return redirect('resources:worker_list')
 
-    # Limpiar estado anterior y pre-cargar este trabajador
+    # Siempre limpiar estado anterior y establecer nueva pre-carga.
+    # assignment_in_flow=True le dice a assignment_new que conserve este estado.
     request.session['assignment_stage_id']       = None
     request.session['assignment_task_id']        = None
     request.session['assignment_workers']        = [resource.id]
     request.session['assignment_preloaded_name'] = resource.display_name
-    request.session['assignment_from_preload']   = True  # Flag para que no se limpie
+    request.session['assignment_in_flow']        = True
     request.session.modified = True
 
     messages.info(

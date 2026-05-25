@@ -53,30 +53,7 @@
   .pill-warn    { background: #fef3e2; color: var(--ni-warn); }
   .pill-blue    { background: var(--ni-blue-soft); color: var(--ni-blue); }
 
-  /* ── TABS ── */
-  .review-tabs {
-    display: flex;
-    border-bottom: 0.5px solid var(--ni-border);
-    background: var(--ni-white);
-    padding: 0 16px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .review-tabs::-webkit-scrollbar { display: none; }
-  .review-tab {
-    padding: 10px 14px;
-    font-size: 12px; font-weight: 500;
-    color: var(--ni-text-sub);
-    border-bottom: 2px solid transparent;
-    white-space: nowrap;
-    background: none; border-top: none; border-left: none; border-right: none;
-    cursor: pointer; font-family: var(--font-main);
-  }
-  .review-tab.active { color: var(--ni-blue); border-bottom-color: var(--ni-blue); }
-
   /* ── WORKER ROWS (accordion) ── */
-  .worker-section { margin: 0; }
-
   .worker-header {
     display: flex; align-items: center; gap: 10px;
     padding: 12px 16px;
@@ -124,7 +101,7 @@
   .chevron-icon { font-size: 16px; color: #ccc; transition: transform 0.2s; }
   .chevron-icon.open { transform: rotate(90deg); }
 
-  /* ── DETALLE DE SESIONES ── */
+  /* ── DETALLE SESIONES (acordeón móvil) ── */
   .worker-detail {
     display: none;
     background: #f8f9ff;
@@ -133,6 +110,7 @@
   }
   .worker-detail.visible { display: block; }
 
+  /* ── SESSION CARD ── */
   .session-card {
     background: var(--ni-white);
     border: 0.5px solid var(--ni-border);
@@ -148,7 +126,7 @@
   .sc-task  { font-size: 13px; font-weight: 500; color: var(--ni-dark); }
   .sc-stage { font-size: 11px; color: var(--ni-text-sub); margin-top: 1px; }
   .session-card-body {
-    display: flex; gap: 0;
+    display: flex;
     font-size: 11px;
   }
   .sc-stat {
@@ -158,8 +136,11 @@
   }
   .sc-stat:last-child { border-right: none; }
   .sc-stat-label { color: var(--ni-text-sub); font-size: 10px; font-family: var(--font-mono); }
-  .sc-stat-value { color: var(--ni-text); font-weight: 500; font-family: var(--font-mono); }
-  .session-card-footer { padding: 8px 12px; border-top: 0.5px solid #f0f0f0; display: flex; justify-content: flex-end; }
+  .sc-stat-value { color: var(--ni-text); font-weight: 500; font-family: var(--font-mono); font-size: 12px; }
+  .session-card-footer {
+    padding: 8px 12px; border-top: 0.5px solid #f0f0f0;
+    display: flex; justify-content: flex-end;
+  }
 
   .btn-edit-session {
     font-size: 12px;
@@ -198,7 +179,6 @@
     justify-content: center;
   }
   .edit-overlay.visible { display: flex; }
-
   .edit-sheet {
     background: var(--ni-white);
     border-radius: 16px 16px 0 0;
@@ -214,16 +194,13 @@
     from { transform: translateY(40px); opacity: 0; }
     to   { transform: translateY(0);    opacity: 1; }
   }
-
   .edit-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--ni-border); margin: 10px auto 0; }
   @media (min-width: 600px) { .edit-handle { display: none; } }
-
   .edit-header { padding: 16px; border-bottom: 0.5px solid var(--ni-border); }
   .edit-title  { font-size: 15px; font-weight: 600; color: var(--ni-dark); }
   .edit-sub    { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
   .edit-body   { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
   .edit-footer { padding: 12px 16px; border-top: 0.5px solid var(--ni-border); display: flex; gap: 8px; }
-
   .btn-confirm-edit {
     flex: 1; height: 44px; border: none; border-radius: var(--radius);
     background: var(--ni-blue); color: var(--ni-white);
@@ -241,19 +218,40 @@
 
   /* ── DESKTOP: dos columnas ── */
   @media (min-width: 900px) {
-    .review-layout { display: grid; grid-template-columns: 280px 1fr; min-height: 500px; align-items: start; }
-    .review-left { border-right: 0.5px solid var(--ni-border); position: sticky; top: calc(var(--ni-topbar-h) + 120px); max-height: calc(100vh - 200px); overflow-y: auto; }
-    .review-right { padding: 16px; }
+    .review-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: 500px;
+      align-items: start;
+    }
+    .review-left {
+      border-right: 0.5px solid var(--ni-border);
+      position: sticky;
+      top: calc(var(--ni-topbar-h) + 100px);
+      max-height: calc(100vh - 180px);
+      overflow-y: auto;
+    }
+    .review-right { display: block !important; padding: 20px; }
     .worker-detail { display: none !important; }
-    .worker-header { border-bottom: 0.5px solid var(--ni-border); }
-    .worker-header.selected { background: var(--ni-blue-soft) !important; }
-    .desktop-detail { display: block; }
     .chevron-icon  { display: none; }
+    .worker-header.selected { background: var(--ni-blue-soft) !important; }
   }
   @media (max-width: 899px) {
     .review-layout { display: block; }
     .review-right  { display: none; }
-    .desktop-detail { display: none; }
+  }
+
+  /* Panel derecho desktop */
+  .desktop-worker-header {
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 0.5px solid var(--ni-border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .desktop-worker-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; flex-shrink: 0;
   }
 
   /* Toast */
@@ -275,7 +273,6 @@
 
 {% block content %}
 
-<!-- PAGE HEADER -->
 <div class="ni-page-header">
   <div>
     <h1 class="ni-page-title">Revision de partidas</h1>
@@ -286,7 +283,6 @@
   </div>
 </div>
 
-<!-- FILTROS -->
 <form method="get" class="review-filters">
   <input
     type="date"
@@ -310,7 +306,6 @@
   </button>
 </form>
 
-<!-- STATS -->
 <div class="stats-bar">
   <span class="stat-pill pill-total">
     <i class="ti ti-users" aria-hidden="true"></i>{{ total }} total
@@ -330,21 +325,19 @@
   {% endif %}
 </div>
 
-<!-- LAYOUT RESPONSIVE -->
 <div class="review-layout">
 
-  <!-- COLUMNA IZQUIERDA / LISTA MÓVIL -->
+  <!-- COLUMNA IZQUIERDA / LISTA -->
   <div class="review-left" id="review-left">
-    <div class="ni-card" style="border-radius:0; border-left:none; border-right:none; border-top:none;">
+    <div style="border-radius:0; border-left:none; border-right:none; border-top:none;">
 
       {% if workers_with_sessions %}
         {% for item in workers_with_sessions %}
-          <div class="worker-section" id="ws-{{ item.resource.id }}">
+          <div id="ws-{{ item.resource.id }}">
             <div
               class="worker-header"
               id="wh-{{ item.resource.id }}"
               onclick="toggleWorker({{ item.resource.id }})"
-              data-resource-id="{{ item.resource.id }}"
             >
               <div class="wh-avatar av-{{ item.estado }}">
                 {{ item.resource.display_name|slice:":1" }}{{ item.resource.display_name.split|last|slice:":1" }}
@@ -363,13 +356,13 @@
                   <span class="w-badge badge-closed">Cerrada</span>
                 {% endif %}
                 {% if item.nos_event %}
-                  <span class="w-badge badge-warn">No en obra</span>
+                  <span class="w-badge badge-warn">NOS</span>
                 {% endif %}
                 <i class="ti ti-chevron-right chevron-icon" id="chev-{{ item.resource.id }}" aria-hidden="true"></i>
               </div>
             </div>
 
-            <!-- Detalle (solo móvil / tablet) -->
+            <!-- Acordeón móvil -->
             <div class="worker-detail" id="wd-{{ item.resource.id }}">
               {% for session in item.sessions %}
                 <div class="session-card" id="sc-{{ session.id }}">
@@ -378,11 +371,9 @@
                       <div class="sc-task" id="sc-task-{{ session.id }}">{{ session.task_name_snapshot }}</div>
                       <div class="sc-stage" id="sc-stage-{{ session.id }}">{{ session.stage_name_snapshot }}</div>
                     </div>
-                    {% if session.status == 'OPEN' %}
-                      <span class="w-badge badge-open">Abierta</span>
-                    {% else %}
-                      <span class="w-badge badge-closed">Cerrada</span>
-                    {% endif %}
+                    <span class="w-badge {% if session.status == 'OPEN' %}badge-open{% else %}badge-closed{% endif %}">
+                      {% if session.status == 'OPEN' %}Abierta{% else %}Cerrada{% endif %}
+                    </span>
                   </div>
                   <div class="session-card-body">
                     <div class="sc-stat">
@@ -391,14 +382,10 @@
                     </div>
                     <div class="sc-stat">
                       <span class="sc-stat-label">Duracion</span>
-                      <span class="sc-stat-value" id="sc-dur-{{ session.id }}">
-                        {% if session.duration_minutes %}
-                          {{ session.duration_minutes }} min
-                        {% elif session.status == 'OPEN' %}
-                          En curso
-                        {% else %}
-                          —
-                        {% endif %}
+                      <span class="sc-stat-value">
+                        {% if session.duration_minutes %}{{ session.duration_minutes }} min
+                        {% elif session.status == 'OPEN' %}En curso
+                        {% else %}—{% endif %}
                       </span>
                     </div>
                     <div class="sc-stat">
@@ -410,11 +397,8 @@
                   </div>
                   {% if can_edit %}
                     <div class="session-card-footer">
-                      <button
-                        class="btn-edit-session"
-                        onclick="openEditModal({{ session.id }})"
-                      >
-                        <i class="ti ti-pencil" aria-hidden="true"></i> Editar etapa/partida
+                      <button class="btn-edit-session" onclick="openEditModal({{ session.id }})">
+                        <i class="ti ti-pencil" aria-hidden="true"></i> Editar
                       </button>
                     </div>
                   {% endif %}
@@ -432,10 +416,9 @@
         </div>
       {% endif %}
 
-      <!-- Sin sesion -->
       {% if workers_without_sessions %}
         <div class="section-divider">
-          Sin sesion hoy
+          Sin sesion
           <span class="stat-pill pill-warn" style="font-size:10px; padding:2px 8px;">{{ sin_sesion }}</span>
         </div>
         {% for item in workers_without_sessions %}
@@ -461,31 +444,27 @@
     </div>
   </div>
 
-  <!-- COLUMNA DERECHA (solo desktop) -->
-  <div class="review-right desktop-detail" id="review-right">
+  <!-- COLUMNA DERECHA desktop -->
+  <div class="review-right" id="review-right" style="display:none;">
     <div id="desktop-detail-content">
       <div class="empty-state">
         <i class="ti ti-hand-finger" aria-hidden="true"></i>
         <p style="font-size:14px; font-weight:500; margin-bottom:4px;">Selecciona un trabajador</p>
-        <p style="font-size:13px;">Toca un nombre de la lista para ver sus sesiones.</p>
+        <p style="font-size:13px;">Elige un nombre de la lista para ver sus sesiones.</p>
       </div>
     </div>
   </div>
 
 </div>
 
-<!-- ═══════════════════════════════════════════ -->
-<!-- MODAL DE EDICION -->
-<!-- ═══════════════════════════════════════════ -->
+<!-- MODAL EDICION -->
 <div class="edit-overlay" id="edit-overlay" onclick="handleEditOverlay(event)">
   <div class="edit-sheet" id="edit-sheet">
     <div class="edit-handle"></div>
-
     <div id="edit-loading" style="padding:32px; text-align:center; color:var(--ni-text-sub);">
       <i class="ti ti-loader" style="font-size:28px; display:block; margin-bottom:8px;" aria-hidden="true"></i>
       Cargando...
     </div>
-
     <div id="edit-content" style="display:none;">
       <div class="edit-header">
         <div class="edit-title">Editar etapa / partida</div>
@@ -523,7 +502,6 @@
   </div>
 </div>
 
-<!-- TOAST -->
 <div id="review-toast">
   <i class="ti ti-check" aria-hidden="true"></i>
   <span id="toast-msg"></span>
@@ -534,92 +512,150 @@
 {% block extra_js %}
 <script>
   const EDIT_URL_BASE = "{% url 'work:session_edit' 0 %}".replace('/0/', '/');
-  const CSRF = "{{ csrf_token }}";
+  const CSRF    = "{{ csrf_token }}";
   const CAN_EDIT = {{ can_edit|yesno:"true,false" }};
-  const IS_TODAY = {{ is_today|yesno:"true,false" }};
 
   let currentSessionId = null;
   let editEtapasData   = [];
   let selectedWorkerId = null;
 
-  // ── ACCORDION MOVIL ────────────────────────────────────────
+  // ── DATOS EMBEBIDOS DESDE DJANGO ─────────────────────────────
+  // Toda la info de sesiones viene aquí como JSON para que
+  // el panel derecho (desktop) se construya sin clonar el DOM.
+
+  const WORKERS_DATA = {
+    {% for item in workers_with_sessions %}
+    "{{ item.resource.id }}": {
+      "name":    "{{ item.resource.display_name }}",
+      "cargo":   "{{ item.resource.job_title.name|default:'Sin cargo' }}",
+      "initials":"{{ item.resource.display_name|slice:':1' }}{{ item.resource.display_name.split|last|slice:':1' }}",
+      "estado":  "{{ item.estado }}",
+      "sessions": [
+        {% for s in item.sessions %}
+        {
+          "id":        {{ s.id }},
+          "task":      "{{ s.task_name_snapshot|escapejs }}",
+          "stage":     "{{ s.stage_name_snapshot|escapejs }}",
+          "status":    "{{ s.status }}",
+          "started":   "{{ s.started_at|time:'H:i' }}",
+          "duration":  {% if s.duration_minutes %}{{ s.duration_minutes }}{% else %}null{% endif %},
+          "supervisor":"{{ s.responsible_supervisor.get_full_name|default:'—'|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  };
+
+  // ── ACCORDION MÓVIL ──────────────────────────────────────────
 
   function toggleWorker(resourceId) {
-    const detail  = document.getElementById('wd-' + resourceId);
-    const chevron = document.getElementById('chev-' + resourceId);
-    const header  = document.getElementById('wh-' + resourceId);
-
-    if (!detail) return;
-
-    const isOpen = detail.classList.contains('visible');
-
-    // En desktop, seleccionar en vez de expandir
     if (window.innerWidth >= 900) {
       selectWorkerDesktop(resourceId);
       return;
     }
 
+    const detail  = document.getElementById('wd-' + resourceId);
+    const chevron = document.getElementById('chev-' + resourceId);
+    const header  = document.getElementById('wh-' + resourceId);
+    if (!detail) return;
+
+    const isOpen = detail.classList.contains('visible');
     if (isOpen) {
       detail.classList.remove('visible');
-      chevron && chevron.classList.remove('open');
+      chevron?.classList.remove('open');
       header.classList.remove('expanded');
     } else {
       detail.classList.add('visible');
-      chevron && chevron.classList.add('open');
+      chevron?.classList.add('open');
       header.classList.add('expanded');
     }
   }
 
-  // ── DESKTOP: seleccionar trabajador ────────────────────────
+  // ── DESKTOP: construir panel derecho desde JSON ───────────────
 
   function selectWorkerDesktop(resourceId) {
-    // Quitar seleccion anterior
+    // Marcar seleccionado en lista
     document.querySelectorAll('.worker-header').forEach(h => h.classList.remove('selected'));
     document.getElementById('wh-' + resourceId)?.classList.add('selected');
     selectedWorkerId = resourceId;
 
-    // Construir detalle en columna derecha
-    const section = document.getElementById('ws-' + resourceId);
-    if (!section) return;
+    const worker = WORKERS_DATA[resourceId];
+    const container = document.getElementById('desktop-detail-content');
 
-    const nameEl  = section.querySelector('.wh-name');
-    const metaEl  = section.querySelector('.wh-meta');
-    const details = section.querySelector('.worker-detail');
-
-    if (!details) {
-      document.getElementById('desktop-detail-content').innerHTML = `
-        <div style="padding:24px; text-align:center; color:var(--ni-text-sub); font-size:13px;">
-          Sin sesiones para este trabajador.
+    if (!worker) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+          <p style="font-size:14px;">Sin sesiones para este trabajador.</p>
         </div>`;
       return;
     }
 
-    // Clonar el detalle al panel derecho
-    const clone = details.cloneNode(true);
-    clone.classList.remove('worker-detail'); // evita que display:none !important del media query oculte el clon
-    clone.style.display = 'block';
-    clone.style.background = 'transparent';
-    clone.style.padding = '0';
-    clone.style.borderBottom = 'none';
-
-    const headerHtml = `
-      <div style="margin-bottom:16px; padding-bottom:12px; border-bottom:0.5px solid var(--ni-border);">
-        <div style="font-size:16px; font-weight:600; color:var(--ni-dark);">${nameEl?.textContent?.trim() || ''}</div>
-        <div style="font-size:12px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:2px;">${metaEl?.textContent?.trim() || ''}</div>
+    // Construir encabezado
+    const avatarClass = worker.estado === 'open' ? 'av-open' : 'av-closed';
+    let html = `
+      <div class="desktop-worker-header">
+        <div class="desktop-worker-avatar ${avatarClass}">${worker.initials}</div>
+        <div>
+          <div style="font-size:16px; font-weight:600; color:var(--ni-dark);">${worker.name}</div>
+          <div style="font-size:12px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:2px;">
+            ${worker.cargo} · ${worker.sessions.length} sesión${worker.sessions.length !== 1 ? 'es' : ''}
+          </div>
+        </div>
       </div>`;
 
-    document.getElementById('desktop-detail-content').innerHTML = headerHtml;
-    document.getElementById('desktop-detail-content').appendChild(clone);
+    // Construir tarjetas de sesiones
+    worker.sessions.forEach(s => {
+      const isOpen   = s.status === 'OPEN';
+      const badgeCls = isOpen ? 'badge-open' : 'badge-closed';
+      const badgeTxt = isOpen ? 'Abierta' : 'Cerrada';
+      const durTxt   = s.duration ? s.duration + ' min' : (isOpen ? 'En curso' : '—');
+      const editBtn  = CAN_EDIT
+        ? `<div class="session-card-footer">
+             <button class="btn-edit-session" onclick="openEditModal(${s.id})">
+               <i class="ti ti-pencil" aria-hidden="true"></i> Editar etapa/partida
+             </button>
+           </div>`
+        : '';
+
+      html += `
+        <div class="session-card" id="sc-${s.id}" style="margin-bottom:10px;">
+          <div class="session-card-header">
+            <div>
+              <div class="sc-task" id="sc-task-${s.id}">${s.task}</div>
+              <div class="sc-stage" id="sc-stage-${s.id}">${s.stage}</div>
+            </div>
+            <span class="w-badge ${badgeCls}">${badgeTxt}</span>
+          </div>
+          <div class="session-card-body">
+            <div class="sc-stat">
+              <span class="sc-stat-label">Inicio</span>
+              <span class="sc-stat-value">${s.started}</span>
+            </div>
+            <div class="sc-stat">
+              <span class="sc-stat-label">Duracion</span>
+              <span class="sc-stat-value">${durTxt}</span>
+            </div>
+            <div class="sc-stat">
+              <span class="sc-stat-label">Supervisor</span>
+              <span class="sc-stat-value" style="font-size:10px; font-family:var(--font-main);">${s.supervisor}</span>
+            </div>
+          </div>
+          ${editBtn}
+        </div>`;
+    });
+
+    container.innerHTML = html;
   }
 
-  // Re-seleccionar al resize
   window.addEventListener('resize', () => {
     if (window.innerWidth >= 900 && selectedWorkerId) {
       selectWorkerDesktop(selectedWorkerId);
     }
   });
 
-  // ── MODAL DE EDICION ────────────────────────────────────────
+  // ── MODAL DE EDICION ─────────────────────────────────────────
 
   function openEditModal(sessionId) {
     currentSessionId = sessionId;
@@ -646,7 +682,6 @@
       data.worker_name + ' · ' + data.started_at + ' · ' +
       (data.status === 'OPEN' ? 'Sesion abierta' : 'Sesion cerrada');
 
-    // Poblar selector de etapas
     const stageSelect = document.getElementById('edit-stage');
     stageSelect.innerHTML = '<option value="">Selecciona una etapa...</option>';
     data.etapas.forEach(etapa => {
@@ -657,22 +692,17 @@
       stageSelect.appendChild(opt);
     });
 
-    // Filtrar partidas segun etapa actual
     filterEditTasks(data.current_task_id);
-
     document.getElementById('edit-reason').value = '';
-
     document.getElementById('edit-loading').style.display = 'none';
     document.getElementById('edit-content').style.display  = 'block';
   }
 
   function filterEditTasks(preselectedTaskId) {
-    const stageId   = parseInt(document.getElementById('edit-stage').value);
+    const stageId    = parseInt(document.getElementById('edit-stage').value);
     const taskSelect = document.getElementById('edit-task');
-
     taskSelect.innerHTML = '<option value="">Selecciona una partida...</option>';
-    taskSelect.disabled = !stageId;
-
+    taskSelect.disabled  = !stageId;
     if (!stageId) return;
 
     const etapa = editEtapasData.find(e => e.id === stageId);
@@ -710,18 +740,25 @@
     const btn = document.getElementById('btn-confirm-edit');
     btn.disabled = true;
 
-    const body = new URLSearchParams({ stage_id: stageId, task_id: taskId, reason });
-
     fetch(EDIT_URL_BASE + currentSessionId + '/', {
       method: 'POST',
       headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
+      body: new URLSearchParams({ stage_id: stageId, task_id: taskId, reason }).toString(),
     })
     .then(r => r.json())
     .then(data => {
       btn.disabled = false;
       if (data.status === 'ok') {
-        // Actualizar en pantalla sin recargar
+        // Actualizar en WORKERS_DATA para que re-render sea correcto
+        if (selectedWorkerId && WORKERS_DATA[selectedWorkerId]) {
+          const sess = WORKERS_DATA[selectedWorkerId].sessions.find(s => s.id === currentSessionId);
+          if (sess) {
+            sess.task  = data.new_task_name;
+            sess.stage = data.new_stage_name;
+          }
+        }
+
+        // Actualizar elementos visibles en móvil
         const taskEl  = document.getElementById('sc-task-'  + currentSessionId);
         const stageEl = document.getElementById('sc-stage-' + currentSessionId);
         if (taskEl)  taskEl.textContent  = data.new_task_name;
@@ -730,7 +767,7 @@
         closeEditModal();
         showToast('Sesion actualizada correctamente.', 'ok');
 
-        // Si estamos en desktop, re-renderizar el detalle
+        // Re-renderizar panel derecho en desktop
         if (window.innerWidth >= 900 && selectedWorkerId) {
           selectWorkerDesktop(selectedWorkerId);
         }
@@ -741,7 +778,7 @@
     .catch(() => { btn.disabled = false; showToast('Error de conexion.', 'error'); });
   }
 
-  // Swipe down para cerrar en mobile
+  // Swipe down para cerrar modal en mobile
   let touchStartY = 0;
   document.getElementById('edit-sheet').addEventListener('touchstart', e => {
     touchStartY = e.touches[0].clientY;
@@ -750,14 +787,13 @@
     if (e.changedTouches[0].clientY - touchStartY > 80) closeEditModal();
   }, { passive: true });
 
-  // ── TOAST ────────────────────────────────────────────────────
+  // ── TOAST ─────────────────────────────────────────────────────
 
   let toastTimer = null;
   function showToast(msg, type) {
     const toast = document.getElementById('review-toast');
-    const icon  = toast.querySelector('i');
+    toast.querySelector('i').className = 'ti ti-' + (type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x');
     document.getElementById('toast-msg').textContent = msg;
-    icon.className = 'ti ti-' + (type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x');
     toast.classList.add('visible');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove('visible'), 3000);

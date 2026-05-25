@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block nav_list %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-wrap { max-width: 520px; margin: 0 auto; padding: 16px; }
+
+  /* Selector de tipo — solo en modo creación */
+  .type-selector { display: flex; gap: 8px; margin-bottom: 20px; }
+  .type-btn {
+    flex: 1; height: 56px;
+    border: 1.5px solid var(--ni-border);
+    border-radius: var(--radius);
+    background: var(--ni-white);
+    cursor: pointer;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: var(--font-main);
+  }
+  .type-btn i    { font-size: 20px; color: #bbb; }
+  .type-btn span { font-size: 12px; font-weight: 500; color: var(--ni-text-sub); }
+  .type-btn.selected {
+    border-color: var(--ni-blue);
+    background: var(--ni-blue-soft);
+  }
+  .type-btn.selected i    { color: var(--ni-blue); }
+  .type-btn.selected span { color: var(--ni-blue); }
+
+  /* Secciones dinamicas */
+  .form-section { display: none; }
+  .form-section.visible { display: block; }
+
+  /* Campo con error */
+  .ni-input.error, .ni-select.error { border-color: #c0392b; }
+  .field-error { font-size: 11px; color: #c0392b; margin-top: 4px; }
+
+  /* Cargo inline */
+  .cargo-row { display: flex; gap: 8px; align-items: flex-end; }
+  .cargo-row .ni-select { flex: 1; }
+  .btn-add-cargo {
+    height: 42px; width: 42px; flex-shrink: 0;
+    border: 1.5px solid var(--ni-border);
+    border-radius: var(--radius);
+    background: var(--ni-white);
+    cursor: pointer; font-size: 18px; color: var(--ni-blue);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s;
+  }
+  .btn-add-cargo:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); }
+
+  /* Modal cargo inline */
+  .cargo-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 1000;
+    align-items: flex-end; justify-content: center;
+  }
+  .cargo-overlay.visible { display: flex; }
+  .cargo-sheet {
+    background: var(--ni-white);
+    border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 480px;
+    animation: slideUp 0.2s ease;
+    overflow: hidden;
+  }
+  @media (min-width: 600px) {
+    .cargo-overlay { align-items: center; padding: 16px; }
+    .cargo-sheet   { border-radius: var(--radius-lg); }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .cargo-header { padding: 14px 16px; border-bottom: 0.5px solid var(--ni-border); }
+  .cargo-title  { font-size: 15px; font-weight: 600; color: var(--ni-dark); }
+  .cargo-sub    { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
+  .cargo-body   { padding: 16px; }
+  .cargo-footer { padding: 12px 16px; border-top: 0.5px solid var(--ni-border); display: flex; gap: 8px; }
+
+  .btn-cargo-confirm {
+    flex: 1; height: 42px; border: none; border-radius: var(--radius);
+    background: var(--ni-blue); color: #fff;
+    font-family: var(--font-brand); font-weight: 700; font-size: 14px;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-cargo-confirm:hover { opacity: 0.88; }
+  .btn-cargo-cancel {
+    height: 42px; border: 1.5px solid var(--ni-border); border-radius: var(--radius);
+    background: var(--ni-white); color: var(--ni-dark);
+    font-family: var(--font-main); font-weight: 500; font-size: 14px;
+    cursor: pointer; padding: 0 14px;
+  }
+
+  /* Hint RUT */
+  .field-hint { font-size: 11px; color: var(--ni-text-sub); margin-top: 4px; }
+
+  /* Baja modal */
+  .baja-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 1000;
+    align-items: flex-end; justify-content: center;
+  }
+  .baja-overlay.visible { display: flex; }
+  .baja-sheet {
+    background: var(--ni-white);
+    border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 480px;
+    animation: slideUp 0.2s ease; overflow: hidden;
+  }
+  @media (min-width: 600px) {
+    .baja-overlay { align-items: center; padding: 16px; }
+    .baja-sheet   { border-radius: var(--radius-lg); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">{{ page_title }}</h1>
+    <p class="ni-page-sub">{{ site.name }}</p>
+  </div>
+</div>
+
+<div class="form-wrap">
+
+  <form method="post" id="resource-form">
+    {% csrf_token %}
+
+    {% if mode == 'create' %}
+      <!-- SELECTOR DE TIPO -->
+      <div style="margin-bottom:6px;">
+        <label class="ni-label">Tipo de registro</label>
+      </div>
+      <div class="type-selector">
+        {% if can_people %}
+          <button type="button" class="type-btn {% if not can_machines %}selected{% endif %}" id="btn-type-person" onclick="selectType('PERSON')">
+            <i class="ti ti-user" aria-hidden="true"></i>
+            <span>Persona</span>
+          </button>
+        {% endif %}
+        {% if can_machines %}
+          <button type="button" class="type-btn" id="btn-type-machine" onclick="selectType('MACHINERY')">
+            <i class="ti ti-bulldozer" aria-hidden="true"></i>
+            <span>Maquinaria</span>
+          </button>
+        {% endif %}
+      </div>
+      <input type="hidden" name="resource_type" id="resource_type"
+        value="{% if can_people %}PERSON{% else %}MACHINERY{% endif %}">
+    {% endif %}
+
+    <!-- CAMPOS COMUNES -->
+    <div class="ni-field">
+      <label class="ni-label" for="display_name">
+        {% if mode == 'edit' %}
+          {% if resource.resource_category.resource_type == 'PERSON' %}Nombre completo{% else %}Identificacion{% endif %}
+        {% else %}
+          <span id="label-name">Nombre completo</span>
+        {% endif %}
+      </label>
+      <input
+        class="ni-input {% if errors.display_name %}error{% endif %}"
+        type="text"
+        name="display_name"
+        id="display_name"
+        value="{% if post_data %}{{ post_data.display_name }}{% elif resource %}{{ resource.display_name }}{% endif %}"
+        placeholder="Ej: Juan Pérez González"
+        required
+        autocomplete="off"
+      >
+      {% if errors.display_name %}
+        <div class="field-error">{{ errors.display_name }}</div>
+      {% endif %}
+    </div>
+
+    <!-- SECCIÓN PERSONA -->
+    <div class="form-section {% if mode == 'create' and can_people %}visible{% elif mode == 'edit' and resource.resource_category.resource_type == 'PERSON' %}visible{% endif %}" id="section-person">
+      <div class="ni-field">
+        <label class="ni-label" for="person_rut">RUT</label>
+        <input
+          class="ni-input {% if errors.person_rut %}error{% endif %}"
+          type="text"
+          name="person_rut"
+          id="person_rut"
+          value="{% if post_data %}{{ post_data.person_rut }}{% elif resource %}{{ resource.person_rut|default:'' }}{% endif %}"
+          placeholder="12345678-9"
+          autocomplete="off"
+        >
+        <div class="field-hint">Sin puntos, con guión. Ej: 12345678-9</div>
+        {% if errors.person_rut %}
+          <div class="field-error">{{ errors.person_rut }}</div>
+        {% endif %}
+      </div>
+
+      <div class="ni-field">
+        <label class="ni-label" for="job_title_person">Cargo</label>
+        <div class="cargo-row">
+          <select class="ni-select" name="job_title_id" id="job_title_person">
+            <option value="">Sin cargo asignado</option>
+            {% for jt in job_titles %}
+              <option value="{{ jt.id }}"
+                {% if post_data and post_data.job_title_id == jt.id|stringformat:"s" %}selected
+                {% elif resource and resource.job_title_id == jt.id %}selected{% endif %}>
+                {{ jt.name }}{% if jt.site %} (esta obra){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn-add-cargo" onclick="openCargoModal('PERSON')" title="Agregar nuevo cargo">
+            <i class="ti ti-plus" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN MAQUINARIA -->
+    <div class="form-section {% if mode == 'edit' and resource.resource_category.resource_type == 'MACHINERY' %}visible{% endif %}" id="section-machine">
+      <div class="ni-field">
+        <label class="ni-label" for="license_plate">Patente</label>
+        <input
+          class="ni-input {% if errors.license_plate %}error{% endif %}"
+          type="text"
+          name="license_plate"
+          id="license_plate"
+          value="{% if post_data %}{{ post_data.license_plate }}{% elif resource %}{{ resource.license_plate|default:'' }}{% endif %}"
+          placeholder="Ej: ABCD12"
+          autocomplete="off"
+        >
+        {% if errors.license_plate %}
+          <div class="field-error">{{ errors.license_plate }}</div>
+        {% endif %}
+      </div>
+
+      <div class="ni-field">
+        <label class="ni-label" for="job_title_machine">Tipo de maquinaria</label>
+        <div class="cargo-row">
+          <select class="ni-select" name="job_title_id" id="job_title_machine">
+            <option value="">Sin tipo asignado</option>
+            {% for jt in machine_titles %}
+              <option value="{{ jt.id }}"
+                {% if post_data and post_data.job_title_id == jt.id|stringformat:"s" %}selected
+                {% elif resource and resource.job_title_id == jt.id %}selected{% endif %}>
+                {{ jt.name }}{% if jt.site %} (esta obra){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn-add-cargo" onclick="openCargoModal('MACHINERY')" title="Agregar nuevo tipo">
+            <i class="ti ti-plus" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTONES -->
+    <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px;">
+      <button type="submit" class="ni-btn ni-btn-primary">
+        <i class="ti ti-{% if mode == 'create' %}user-plus{% else %}check{% endif %}" aria-hidden="true"></i>
+        {% if mode == 'create' %}Agregar{% else %}Guardar cambios{% endif %}
+      </button>
+
+      {% if mode == 'edit' and resource.status == 'ACTIVE' %}
+        {% if perms_ctx.can_crud_people or perms_ctx.can_crud_machines %}
+          <button type="button" class="ni-btn ni-btn-danger" onclick="openBajaModal()">
+            <i class="ti ti-user-minus" aria-hidden="true"></i>
+            Dar de baja
+          </button>
+        {% endif %}
+      {% endif %}
+
+      <a href="{% url 'resources:worker_list' %}" class="ni-btn ni-btn-secondary" style="text-align:center;">
+        Cancelar
+      </a>
+    </div>
+  </form>
+
+</div>
+
+<!-- ══ MODAL CARGO INLINE ══ -->
+<div class="cargo-overlay" id="cargo-overlay" onclick="handleCargoOverlay(event)">
+  <div class="cargo-sheet">
+    <div class="cargo-header">
+      <div class="cargo-title" id="cargo-modal-title">Nuevo cargo</div>
+      <div class="cargo-sub">Quedará disponible solo en esta obra</div>
+    </div>
+    <div class="cargo-body">
+      <div class="ni-field" style="margin-bottom:0;">
+        <label class="ni-label" for="new-cargo-name">Nombre del cargo</label>
+        <input
+          class="ni-input"
+          type="text"
+          id="new-cargo-name"
+          placeholder="Ej: Maestro Carpintero"
+          maxlength="120"
+          autocomplete="off"
+        >
+        <div id="cargo-error" style="font-size:11px; color:#c0392b; margin-top:4px; display:none;"></div>
+      </div>
+    </div>
+    <div class="cargo-footer">
+      <button class="btn-cargo-cancel" onclick="closeCargoModal()">Cancelar</button>
+      <button class="btn-cargo-confirm" onclick="confirmNewCargo()">
+        <i class="ti ti-plus" aria-hidden="true"></i> Agregar cargo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL BAJA ══ -->
+{% if mode == 'edit' %}
+<div class="baja-overlay" id="baja-overlay" onclick="handleBajaOverlay(event)">
+  <div class="baja-sheet">
+    <div style="padding:16px; border-bottom:0.5px solid var(--ni-border);">
+      <div style="font-size:15px; font-weight:600; color:#c0392b;">Dar de baja</div>
+      <div style="font-size:12px; color:var(--ni-text-sub); margin-top:2px;">{{ resource.display_name }}</div>
+    </div>
+    <div style="padding:16px;">
+      <div class="ni-alert ni-alert-warn" style="margin-bottom:14px; font-size:12px;">
+        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+        <span>El trabajador dejará de aparecer en las asignaciones. El historial se conserva.</span>
+      </div>
+      <div class="ni-field" style="margin-bottom:0;">
+        <label class="ni-label" for="baja-reason">Motivo (opcional)</label>
+        <input class="ni-input" type="text" id="baja-reason" placeholder="Ej: fin de contrato" maxlength="200">
+      </div>
+    </div>
+    <div style="padding:12px 16px; border-top:0.5px solid var(--ni-border); display:flex; gap:8px;">
+      <button class="btn-cargo-cancel" onclick="closeBajaModal()">Cancelar</button>
+      <button
+        style="flex:1; height:42px; border:none; border-radius:var(--radius); background:#c0392b; color:#fff; font-family:var(--font-brand); font-weight:700; font-size:14px; cursor:pointer;"
+        onclick="confirmBaja()"
+      >
+        Confirmar baja
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const CARGO_URL = "{% url 'resources:job_title_create' %}";
+  {% if mode == 'edit' %}
+  const BAJA_URL  = "{% url 'resources:resource_deactivate' resource.id %}";
+  {% endif %}
+  const CSRF = "{{ csrf_token }}";
+
+  let currentCargoType = 'PERSON';
+
+  // ── SELECTOR DE TIPO (solo creación) ─────────────────────────
+
+  function selectType(type) {
+    document.getElementById('resource_type').value = type;
+
+    const btnPerson  = document.getElementById('btn-type-person');
+    const btnMachine = document.getElementById('btn-type-machine');
+    const secPerson  = document.getElementById('section-person');
+    const secMachine = document.getElementById('section-machine');
+    const labelName  = document.getElementById('label-name');
+
+    if (type === 'PERSON') {
+      btnPerson?.classList.add('selected');
+      btnMachine?.classList.remove('selected');
+      secPerson?.classList.add('visible');
+      secMachine?.classList.remove('visible');
+      if (labelName) labelName.textContent = 'Nombre completo';
+      document.getElementById('display_name').placeholder = 'Ej: Juan Pérez González';
+      // El job_title lo maneja el select de personas
+      syncJobTitleName('person');
+    } else {
+      btnMachine?.classList.add('selected');
+      btnPerson?.classList.remove('selected');
+      secMachine?.classList.add('visible');
+      secPerson?.classList.remove('visible');
+      if (labelName) labelName.textContent = 'Identificacion';
+      document.getElementById('display_name').placeholder = 'Ej: Retroexcavadora CAT 320';
+      syncJobTitleName('machine');
+    }
+  }
+
+  // Asegurar que el select activo tenga el name correcto
+  function syncJobTitleName(active) {
+    const selPerson  = document.getElementById('job_title_person');
+    const selMachine = document.getElementById('job_title_machine');
+    if (selPerson)  selPerson.name  = active === 'person'  ? 'job_title_id' : '';
+    if (selMachine) selMachine.name = active === 'machine' ? 'job_title_id' : '';
+  }
+
+  // Init en modo creación
+  {% if mode == 'create' %}
+    const initType = document.getElementById('resource_type')?.value || 'PERSON';
+    selectType(initType);
+  {% endif %}
+
+  // ── FORMATO RUT en tiempo real ────────────────────────────────
+
+  const rutInput = document.getElementById('person_rut');
+  if (rutInput) {
+    rutInput.addEventListener('blur', function() {
+      let val = this.value.replace(/\./g, '').replace(/ /g, '').toUpperCase();
+      if (val && !val.includes('-') && val.length >= 2) {
+        val = val.slice(0, -1) + '-' + val.slice(-1);
+      }
+      this.value = val;
+    });
+  }
+
+  // ── MODAL CARGO INLINE ────────────────────────────────────────
+
+  function openCargoModal(type) {
+    currentCargoType = type;
+    const title = document.getElementById('cargo-modal-title');
+    title.textContent = type === 'PERSON' ? 'Nuevo cargo' : 'Nuevo tipo de maquinaria';
+    document.getElementById('new-cargo-name').value = '';
+    document.getElementById('cargo-error').style.display = 'none';
+    document.getElementById('cargo-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('new-cargo-name').focus(), 200);
+  }
+
+  function closeCargoModal() {
+    document.getElementById('cargo-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+
+  function handleCargoOverlay(e) {
+    if (e.target === document.getElementById('cargo-overlay')) closeCargoModal();
+  }
+
+  function confirmNewCargo() {
+    const name = document.getElementById('new-cargo-name').value.trim();
+    const errEl = document.getElementById('cargo-error');
+
+    if (!name) {
+      errEl.textContent = 'El nombre es obligatorio.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    fetch(CARGO_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ name, resource_type: currentCargoType }).toString(),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        // Agregar al select correspondiente y seleccionarlo
+        const selectId = currentCargoType === 'PERSON' ? 'job_title_person' : 'job_title_machine';
+        const select   = document.getElementById(selectId);
+        const opt      = document.createElement('option');
+        opt.value       = data.id;
+        opt.textContent = data.name + ' (esta obra)';
+        opt.selected    = true;
+        select.appendChild(opt);
+        closeCargoModal();
+      } else {
+        errEl.textContent = data.error || 'Error al crear el cargo.';
+        errEl.style.display = 'block';
+      }
+    })
+    .catch(() => {
+      errEl.textContent = 'Error de conexion.';
+      errEl.style.display = 'block';
+    });
+  }
+
+  document.getElementById('new-cargo-name')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); confirmNewCargo(); }
+  });
+
+  // ── MODAL BAJA ────────────────────────────────────────────────
+
+  {% if mode == 'edit' %}
+  function openBajaModal() {
+    document.getElementById('baja-reason').value = '';
+    document.getElementById('baja-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeBajaModal() {
+    document.getElementById('baja-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+  function handleBajaOverlay(e) {
+    if (e.target === document.getElementById('baja-overlay')) closeBajaModal();
+  }
+  function confirmBaja() {
+    const reason = document.getElementById('baja-reason').value.trim();
+    fetch(BAJA_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ reason }).toString(),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        window.location.href = "{% url 'resources:worker_list' %}";
+      } else {
+        alert(data.error || 'Error al dar de baja.');
+      }
+    })
+    .catch(() => alert('Error de conexion.'));
+  }
+  {% endif %}
+</script>
+{% endblock %}

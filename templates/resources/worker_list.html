@@ -223,7 +223,7 @@
     <p class="ni-page-sub">{{ site.name }}</p>
   </div>
   {% if perms_ctx.can_crud_people %}
-    <a href="#" class="ni-btn ni-btn-primary" style="width:auto; padding:9px 16px; font-size:13px;">
+    <a href="{% url 'resources:resource_create' %}" class="ni-btn ni-btn-primary" ...>
       <i class="ti ti-plus" aria-hidden="true"></i> Agregar
     </a>
   {% endif %}
@@ -559,7 +559,42 @@
 
   // ── PLACEHOLDERS CRUD ───────────────────────────────────────
 
-  function editWorker(id)              { alert('Edicion — proximamente'); }
-  function reactivateWorker(id, name)  { alert('Reactivar a ' + name + ' — proximamente'); }
+  function editWorker(resourceId) {
+    window.location.href = `/resources/trabajadores/${resourceId}/editar/`;
+  }
+  function reactivateWorker(resourceId, name) {
+    if (!confirm(`¿Reactivar a ${name} y asignarlo a esta obra?`)) return;
+
+    fetch(`/resources/trabajadores/${resourceId}/reactivar/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        showToast(data.message, 'ok');
+        // Actualizar la fila sin recargar
+        const row = document.getElementById('wrow-' + resourceId);
+        if (row) {
+          row.dataset.estado  = 'free';
+          row.dataset.active  = '1';
+          row.classList.remove('inactive-row');
+          const avatar = row.querySelector('.worker-avatar');
+          const badge  = row.querySelector('.worker-badge');
+          if (avatar) { avatar.className = 'worker-avatar av-free'; }
+          if (badge)  { badge.className = 'worker-badge badge-free'; badge.textContent = 'Activo'; }
+        }
+        // Recargar para reflejar botones correctos
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showToast(data.error || 'Error al reactivar.', 'error');
+      }
+    })
+    .catch(() => showToast('Error de conexion.', 'error'));
+  }
+
+  const CSRF = "{{ csrf_token }}";
+
+
 </script>
 {% endblock %}

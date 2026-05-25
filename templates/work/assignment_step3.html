@@ -2,6 +2,102 @@
 {% block title %}Confirmar asignacion{% endblock %}
 {% block nav_assign %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* Modal alto riesgo */
+  .risk-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .risk-overlay.visible { display: flex; }
+
+  .risk-sheet {
+    background: var(--ni-white);
+    border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 520px;
+    animation: slideUp 0.2s ease;
+    overflow: hidden;
+  }
+  @media (min-width: 600px) {
+    .risk-overlay { align-items: center; padding: 16px; }
+    .risk-sheet   { border-radius: var(--radius-lg); }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .risk-header {
+    background: #c0392b;
+    padding: 16px 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .risk-header i   { font-size: 24px; color: #fff; flex-shrink: 0; }
+  .risk-header-title { font-size: 16px; font-weight: 600; color: #fff; }
+  .risk-header-sub   { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px; }
+
+  .risk-body { padding: 16px 20px; }
+  .risk-body-msg {
+    font-size: 13px; color: var(--ni-text); line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  .risk-worker-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .risk-worker-item {
+    display: flex; align-items: center; gap: 10px;
+    background: #fce8e8; border: 0.5px solid #f0b0b0;
+    border-radius: var(--radius); padding: 9px 12px;
+  }
+  .risk-worker-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #c0392b; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; flex-shrink: 0;
+  }
+  .risk-worker-name  { font-size: 13px; font-weight: 500; }
+  .risk-worker-task  { font-size: 11px; color: #c0392b; font-family: var(--font-mono); }
+
+  .risk-checkbox-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: #fff8f8; border: 0.5px solid #f0b0b0;
+    border-radius: var(--radius); padding: 12px;
+    cursor: pointer;
+  }
+  .risk-checkbox-row input[type="checkbox"] {
+    width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px;
+    accent-color: #c0392b; cursor: pointer;
+  }
+  .risk-checkbox-label {
+    font-size: 13px; color: var(--ni-text); line-height: 1.5;
+    cursor: pointer;
+  }
+
+  .risk-footer { padding: 12px 20px; border-top: 0.5px solid var(--ni-border); display: flex; gap: 8px; }
+
+  .btn-risk-confirm {
+    flex: 1; height: 44px; border: none; border-radius: var(--radius);
+    background: #c0392b; color: #fff;
+    font-family: var(--font-brand); font-weight: 700; font-size: 14px;
+    cursor: pointer; opacity: 0.4; pointer-events: none;
+    transition: opacity 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .btn-risk-confirm.enabled { opacity: 1; pointer-events: auto; }
+  .btn-risk-confirm.enabled:hover { opacity: 0.88; }
+
+  .btn-risk-cancel {
+    height: 44px; border: 1.5px solid var(--ni-border); border-radius: var(--radius);
+    background: var(--ni-white); color: var(--ni-dark);
+    font-family: var(--font-main); font-weight: 500; font-size: 14px;
+    cursor: pointer; padding: 0 16px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="ni-timeline">
   <div class="ni-t-step done">
@@ -36,7 +132,7 @@
           </div>
         {% endfor %}
         <div style="font-size:12px; margin-top:6px; opacity:0.85;">
-          Al confirmar, estas sesiones se cerraran automaticamente y se iniciaran en la nueva partida.
+          Al confirmar, estas sesiones se cerraran automaticamente.
         </div>
       </div>
     </div>
@@ -59,6 +155,12 @@
   <div class="ni-card" style="margin-bottom:16px;">
     <div class="ni-card-header">
       <span class="ni-card-title">Resumen</span>
+      {% if has_high_risk %}
+        <span class="ni-badge" style="background:#fce8e8; color:#c0392b;">
+          <i class="ti ti-alert-triangle" style="font-size:10px; margin-right:3px;" aria-hidden="true"></i>
+          Alto riesgo
+        </span>
+      {% endif %}
     </div>
     <div style="padding:0;">
       <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
@@ -95,7 +197,7 @@
     </div>
     <div style="padding:12px; display:flex; flex-direction:column; gap:6px;">
       {% for worker in workers %}
-        {% with has_session=False %}
+        {% comment %}Chip advertencia si tiene sesion abierta{% endcomment %}
         {% for item in workers_with_session %}
           {% if item.worker.id == worker.id %}
             <div style="display:flex; align-items:center; gap:9px; border:0.5px solid var(--ni-warn-bdr); border-radius:var(--radius); padding:8px 10px; background:var(--ni-warn-bg);">
@@ -112,11 +214,7 @@
             </div>
           {% endif %}
         {% endfor %}
-        {% endwith %}
 
-        {# Chip normal para todos (los que tienen sesion ya se muestran arriba con color distinto) #}
-        {% with show_normal=True %}
-        {% for item in workers_with_session %}{% if item.worker.id == worker.id %}{% endfor %}
         <div style="display:flex; align-items:center; gap:9px; border:0.5px solid var(--ni-border); border-radius:var(--radius); padding:8px 10px; background:#fafafa;">
           <div style="width:30px; height:30px; border-radius:50%; background:var(--ni-blue-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:var(--ni-blue); flex-shrink:0;">
             {{ worker.display_name|slice:":1" }}
@@ -126,14 +224,20 @@
             <p style="font-family:var(--font-mono); font-size:10px; color:var(--ni-text-sub);">{{ worker.job_title.name|default:"Sin cargo" }}</p>
           </div>
         </div>
-        {% endwith %}
       {% endfor %}
     </div>
   </div>
 
-  <form method="post">
+  <form method="post" id="confirm-form">
     {% csrf_token %}
-    <button type="submit" name="start" class="ni-btn ni-btn-primary">
+    <button
+      type="{% if has_high_risk %}button{% else %}submit{% endif %}"
+      name="start"
+      id="btn-start"
+      class="ni-btn ni-btn-primary"
+      {% if has_high_risk %}onclick="openRiskModal()"{% endif %}
+      style="{% if has_high_risk %}background:#c0392b;{% endif %}"
+    >
       <i class="ti ti-player-play" aria-hidden="true"></i>
       {% if workers_with_session %}
         Cerrar sesiones anteriores e iniciar {{ workers|length }}
@@ -142,9 +246,124 @@
       {% endif %}
     </button>
     <a href="{% url 'work:assignment_scan' %}" class="ni-btn ni-btn-secondary" style="margin-top:10px; text-align:center; display:block;">
-      <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver a editar grupo
+      <i class="ti ti-arrow-left" aria-hidden="true"></i>
+      Volver a editar grupo
     </a>
   </form>
 
 </div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- MODAL ALTO RIESGO -->
+<!-- ═══════════════════════════════════════ -->
+{% if has_high_risk %}
+<div class="risk-overlay" id="risk-overlay">
+  <div class="risk-sheet">
+
+    <div class="risk-header">
+      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+      <div>
+        <div class="risk-header-title">Partida de alto riesgo</div>
+        <div class="risk-header-sub">Se requiere confirmacion explicita</div>
+      </div>
+    </div>
+
+    <div class="risk-body">
+      <p class="risk-body-msg">
+        La partida <strong>{{ task.name }}</strong> esta clasificada como
+        <strong>alto riesgo</strong>. Los siguientes trabajadores quedarán
+        asignados a esta partida:
+      </p>
+
+      <div class="risk-worker-list">
+        {% for worker in workers %}
+          <div class="risk-worker-item">
+            <div class="risk-worker-avatar">
+              {{ worker.display_name|slice:":1" }}{{ worker.display_name.split|last|slice:":1" }}
+            </div>
+            <div>
+              <div class="risk-worker-name">{{ worker.display_name }}</div>
+              <div class="risk-worker-task">{{ task.name }} · {{ stage.name }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <label class="risk-checkbox-row" for="risk-confirm-check">
+        <input
+          type="checkbox"
+          id="risk-confirm-check"
+          onchange="toggleRiskConfirm(this)"
+        >
+        <span class="risk-checkbox-label">
+          Confirmo que los trabajadores cuentan con los elementos de proteccion
+          personal (EPP) necesarios y estan en condiciones de realizar esta
+          actividad de alto riesgo.
+        </span>
+      </label>
+    </div>
+
+    <div class="risk-footer">
+      <button class="btn-risk-cancel" onclick="closeRiskModal()">Cancelar</button>
+      <button
+        class="btn-risk-confirm"
+        id="btn-risk-confirm"
+        onclick="submitWithRisk()"
+      >
+        <i class="ti ti-player-play" aria-hidden="true"></i>
+        Confirmar e iniciar
+      </button>
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  {% if has_high_risk %}
+  function openRiskModal() {
+    document.getElementById('risk-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    // Resetear checkbox cada vez que se abre
+    const cb = document.getElementById('risk-confirm-check');
+    if (cb) { cb.checked = false; toggleRiskConfirm(cb); }
+  }
+
+  function closeRiskModal() {
+    document.getElementById('risk-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+
+  function toggleRiskConfirm(checkbox) {
+    const btn = document.getElementById('btn-risk-confirm');
+    if (checkbox.checked) {
+      btn.classList.add('enabled');
+    } else {
+      btn.classList.remove('enabled');
+    }
+  }
+
+  function submitWithRisk() {
+    const cb = document.getElementById('risk-confirm-check');
+    if (!cb || !cb.checked) return;
+    closeRiskModal();
+    // Agregar campo hidden y enviar el form
+    const form = document.getElementById('confirm-form');
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = 'start';
+    input.value = '1';
+    form.appendChild(input);
+    form.submit();
+  }
+
+  // Cerrar con click fuera del sheet
+  document.getElementById('risk-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeRiskModal();
+  });
+  {% endif %}
+</script>
 {% endblock %}
