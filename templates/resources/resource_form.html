@@ -352,9 +352,12 @@
 
   let currentCargoType = 'PERSON';
 
-  // ── SELECTOR DE TIPO (solo creación) ─────────────────────────
-  // La clave del fix: en creación, el select inactivo NO debe tener name
-  // para que el backend no reciba el valor vacío del select oculto.
+  // ── SELECTOR DE TIPO ─────────────────────────────────────────
+  // En creación: el usuario elige el tipo y selectType() activa/desactiva
+  // el name del select correcto.
+  // En edición: no hay selector de tipo, pero igual hay que desactivar
+  // el name del select que no corresponde para que el POST no envíe
+  // un valor vacío desde el select oculto.
 
   function selectType(type) {
     document.getElementById('resource_type').value = type;
@@ -374,7 +377,6 @@
       secMachine?.classList.remove('visible');
       if (labelName) labelName.textContent = 'Nombre completo';
       document.getElementById('display_name').placeholder = 'Ej: Juan Pérez González';
-      // Solo el select activo tiene name
       if (selPerson)  selPerson.name  = 'job_title_id';
       if (selMachine) selMachine.name = '';
     } else {
@@ -389,10 +391,22 @@
     }
   }
 
-  // Init en creación
+  // Init según modo
   {% if mode == 'create' %}
     const initType = document.getElementById('resource_type')?.value || 'PERSON';
     selectType(initType);
+  {% else %}
+    // En edición: desactivar el name del select que no corresponde
+    const resourceType = "{{ resource.resource_category.resource_type }}";
+    const selPerson  = document.getElementById('job_title_select');
+    const selMachine = document.getElementById('machine_title_select');
+    if (resourceType === 'PERSON') {
+      if (selPerson)  selPerson.name  = 'job_title_id';
+      if (selMachine) selMachine.name = '';
+    } else {
+      if (selMachine) selMachine.name = 'job_title_id';
+      if (selPerson)  selPerson.name  = '';
+    }
   {% endif %}
 
   // ── FORMATO RUT en tiempo real ────────────────────────────────
@@ -445,12 +459,11 @@
     .then(r => r.json())
     .then(data => {
       if (data.status === 'ok') {
-        // Agregar al select correcto y seleccionarlo
         const selectId = currentCargoType === 'PERSON' ? 'job_title_select' : 'machine_title_select';
         const select   = document.getElementById(selectId);
         const opt      = document.createElement('option');
         opt.value       = data.id;
-        opt.textContent = data.name;  // Sin "(esta obra)"
+        opt.textContent = data.name;
         opt.selected    = true;
         select.appendChild(opt);
         closeCargoModal();

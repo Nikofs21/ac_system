@@ -406,6 +406,18 @@
   </div>
 </div>
 
+<div id="wl-toast" style="
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+  background:var(--ni-dark); color:var(--ni-white);
+  border-radius:var(--radius); padding:10px 18px;
+  font-size:13px; z-index:2000;
+  display:none; align-items:center; gap:8px;
+  max-width:90vw; text-align:center;
+  box-shadow:0 4px 16px rgba(0,0,0,0.2);">
+  <i class="ti ti-check" id="wl-toast-icon" aria-hidden="true"></i>
+  <span id="wl-toast-msg"></span>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -562,6 +574,7 @@
   function editWorker(resourceId) {
     window.location.href = `/resources/trabajadores/${resourceId}/editar/`;
   }
+
   function reactivateWorker(resourceId, name) {
     if (!confirm(`¿Reactivar a ${name} y asignarlo a esta obra?`)) return;
 
@@ -573,25 +586,27 @@
     .then(data => {
       if (data.status === 'ok') {
         showToast(data.message, 'ok');
-        // Actualizar la fila sin recargar
-        const row = document.getElementById('wrow-' + resourceId);
-        if (row) {
-          row.dataset.estado  = 'free';
-          row.dataset.active  = '1';
-          row.classList.remove('inactive-row');
-          const avatar = row.querySelector('.worker-avatar');
-          const badge  = row.querySelector('.worker-badge');
-          if (avatar) { avatar.className = 'worker-avatar av-free'; }
-          if (badge)  { badge.className = 'worker-badge badge-free'; badge.textContent = 'Activo'; }
-        }
-        // Recargar para reflejar botones correctos
-        setTimeout(() => location.reload(), 800);
+        // Recargar después de que el toast sea visible,
+        // así el usuario ve la confirmación antes de que refresque
+        setTimeout(() => location.reload(), 1500);
       } else {
         showToast(data.error || 'Error al reactivar.', 'error');
       }
     })
     .catch(() => showToast('Error de conexion.', 'error'));
   }
-  
+
+  let wlToastTimer = null;
+  function showToast(msg, type) {
+    const toast = document.getElementById('wl-toast');
+    const icon  = document.getElementById('wl-toast-icon');
+    const span  = document.getElementById('wl-toast-msg');
+    if (!toast) { alert(msg); return; }
+    icon.className = 'ti ti-' + (type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x');
+    span.textContent = msg;
+    toast.style.display = 'flex';
+    clearTimeout(wlToastTimer);
+    wlToastTimer = setTimeout(() => { toast.style.display = 'none'; }, 3000);
+  }
 </script>
 {% endblock %}

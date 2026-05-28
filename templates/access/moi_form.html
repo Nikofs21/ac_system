@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block nav_moi %}active{% endblock %}
+
+{% block content %}
+
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">{{ page_title }}</h1>
+    <p class="ni-page-sub">{{ site.name }}</p>
+  </div>
+</div>
+
+<div style="max-width:520px; margin:0 auto; padding:16px;">
+  <form method="post" id="moi-form">
+    {% csrf_token %}
+
+    <div class="ni-field">
+      <label class="ni-label" for="first_name">Nombre</label>
+      <input
+        class="ni-input {% if errors.first_name %}error{% endif %}"
+        type="text"
+        name="first_name"
+        id="first_name"
+        value="{% if post_data %}{{ post_data.first_name }}{% elif membership %}{{ membership.user.first_name }}{% endif %}"
+        placeholder="Ej: Juan"
+        autocomplete="off"
+        required
+      >
+      {% if errors.first_name %}
+        <div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.first_name }}</div>
+      {% endif %}
+    </div>
+
+    <div class="ni-field">
+      <label class="ni-label" for="last_name">Apellido</label>
+      <input
+        class="ni-input {% if errors.last_name %}error{% endif %}"
+        type="text"
+        name="last_name"
+        id="last_name"
+        value="{% if post_data %}{{ post_data.last_name }}{% elif membership %}{{ membership.user.last_name }}{% endif %}"
+        placeholder="Ej: Pérez González"
+        autocomplete="off"
+        required
+      >
+      {% if errors.last_name %}
+        <div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.last_name }}</div>
+      {% endif %}
+    </div>
+
+    <div class="ni-field">
+      <label class="ni-label" for="email">
+        Correo electrónico
+        {% if mode == 'edit' %}
+          <span style="font-size:10px; color:#aaa; font-weight:400;">(no editable)</span>
+        {% endif %}
+      </label>
+      {% if mode == 'create' %}
+        <input
+          class="ni-input {% if errors.email %}error{% endif %}"
+          type="email"
+          name="email"
+          id="email"
+          value="{% if post_data %}{{ post_data.email }}{% endif %}"
+          placeholder="supervisor@constructora.cl"
+          autocomplete="off"
+          required
+        >
+        {% if errors.email %}
+          <div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.email }}</div>
+        {% endif %}
+        <div style="font-size:11px; color:var(--ni-text-sub); margin-top:4px;">
+          Si el correo ya existe en el sistema, se vinculará el usuario existente.
+        </div>
+      {% else %}
+        <input
+          class="ni-input"
+          type="email"
+          value="{{ membership.user.email }}"
+          disabled
+          style="opacity:0.6; cursor:not-allowed;"
+        >
+      {% endif %}
+    </div>
+
+    <div class="ni-field">
+      <label class="ni-label" for="rut">RUT</label>
+      <input
+        class="ni-input"
+        type="text"
+        name="rut"
+        id="rut"
+        value="{% if post_data %}{{ post_data.rut }}{% elif membership %}{{ membership.user.rut|default:'' }}{% endif %}"
+        placeholder="12345678-9"
+        autocomplete="off"
+      >
+      <div style="font-size:11px; color:var(--ni-text-sub); margin-top:4px;">Sin puntos, con guión. Opcional.</div>
+    </div>
+
+    <div class="ni-field">
+      <label class="ni-label" for="role_id">Rol</label>
+      <select
+        class="ni-select {% if errors.role_id %}error{% endif %}"
+        name="role_id"
+        id="role_id"
+        required
+      >
+        <option value="">Selecciona un rol...</option>
+        {% for role in roles %}
+          <option value="{{ role.id }}"
+            {% if post_data and post_data.role_id == role.id|stringformat:"s" %}selected
+            {% elif membership and membership.role_id == role.id %}selected
+            {% endif %}>
+            {{ role.name }}
+          </option>
+        {% endfor %}
+      </select>
+      {% if errors.role_id %}
+        <div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.role_id }}</div>
+      {% endif %}
+    </div>
+
+    <div class="ni-field">
+      <label class="ni-label" for="notes">Notas (opcional)</label>
+      <input
+        class="ni-input"
+        type="text"
+        name="notes"
+        id="notes"
+        value="{% if post_data %}{{ post_data.notes }}{% elif membership %}{{ membership.notes|default:'' }}{% endif %}"
+        placeholder="Ej: reemplaza a María durante licencia"
+        maxlength="300"
+        autocomplete="off"
+      >
+    </div>
+
+    <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px;">
+      <button type="submit" class="ni-btn ni-btn-primary">
+        <i class="ti ti-{% if mode == 'create' %}user-plus{% else %}check{% endif %}" aria-hidden="true"></i>
+        {% if mode == 'create' %}Agregar usuario{% else %}Guardar cambios{% endif %}
+      </button>
+      <a href="{% url 'access:moi_list' %}" class="ni-btn ni-btn-secondary" style="text-align:center;">
+        Cancelar
+      </a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Formato RUT en tiempo real
+  const rutInput = document.getElementById('rut');
+  if (rutInput) {
+    rutInput.addEventListener('blur', function() {
+      let val = this.value.replace(/\./g, '').replace(/ /g, '').toUpperCase();
+      if (val && !val.includes('-') && val.length >= 2) {
+        val = val.slice(0, -1) + '-' + val.slice(-1);
+      }
+      this.value = val;
+    });
+  }
+</script>
+{% endblock %}

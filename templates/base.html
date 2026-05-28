@@ -244,7 +244,7 @@
 
     {% if perms_ctx.can_view_moi %}
       <div class="ni-sb-section">Administracion</div>
-      <a href="#" class="ni-sb-item {% block nav_moi %}{% endblock %}">
+      <a href="{% url 'access:moi_list' %}" class="ni-sb-item {% block nav_moi %}{% endblock %}">
         <i class="ti ti-id-badge" aria-hidden="true"></i>
         <span>Mano de obra indirecta</span>
       </a>
@@ -255,6 +255,13 @@
       <a href="#" class="ni-sb-item {% block nav_companies %}{% endblock %}">
         <i class="ti ti-building-factory" aria-hidden="true"></i>
         <span>Empresas y obras</span>
+      </a>
+    {% endif %}
+
+    {% if features.subcontracts and perms_ctx.can_start_people %}
+      <a href="{% url 'subcontracts:subcontract_list' %}" class="ni-sb-item">
+        <i class="ti ti-building-factory" aria-hidden="true"></i>
+        <span>Subcontratos</span>
       </a>
     {% endif %}
 

@@ -6,7 +6,7 @@ from django.conf import settings
 class Subcontract(models.Model):
 
     class Status(models.TextChoices):
-        ACTIVE = 'ACTIVE', 'Activo'
+        ACTIVE   = 'ACTIVE',   'Activo'
         INACTIVE = 'INACTIVE', 'Inactivo'
 
     company = models.ForeignKey(
@@ -19,8 +19,10 @@ class Subcontract(models.Model):
         on_delete=models.PROTECT,
         related_name='subcontracts'
     )
+    uid = models.CharField(max_length=64, unique=True, blank=True)
     name = models.CharField(max_length=180)
     code = models.CharField(max_length=60)
+    rut  = models.CharField(max_length=20, blank=True, null=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -48,15 +50,25 @@ class Subcontract(models.Model):
             )
         ]
 
+    def save(self, *args, **kwargs):
+        if not self.uid:
+            import uuid
+            self.uid = uuid.uuid4().hex
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f'{self.name} ({self.code}) - {self.site.name}'
 
 
 class SubcontractSession(models.Model):
+    """
+    Sesion de trabajo de un subcontrato.
+    Una sesion agrupa una o mas partidas (detalles) que el subcontrato
+    ejecuta durante un periodo de tiempo.
+    """
 
     class Status(models.TextChoices):
-        OPEN = 'OPEN', 'Abierta'
-        PARTIAL = 'PARTIAL', 'Parcial'
+        OPEN   = 'OPEN',   'Abierta'
         CLOSED = 'CLOSED', 'Cerrada'
         VOIDED = 'VOIDED', 'Anulada'
 
@@ -75,19 +87,9 @@ class SubcontractSession(models.Model):
         on_delete=models.PROTECT,
         related_name='sessions'
     )
-    stage = models.ForeignKey(
-        'work.Stage',
-        on_delete=models.PROTECT,
-        related_name='subcontract_sessions'
-    )
-    task = models.ForeignKey(
-        'work.TaskCatalog',
-        on_delete=models.PROTECT,
-        related_name='subcontract_sessions'
-    )
     started_at = models.DateTimeField()
-    ended_at = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(
+    ended_at   = models.DateTimeField(null=True, blank=True)
+    status     = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.OPEN
@@ -100,10 +102,10 @@ class SubcontractSession(models.Model):
     ended_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True, blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name='subcontract_sessions_ended'
     )
-    notes = models.TextField(blank=True, null=True)
+    notes      = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -114,64 +116,149 @@ class SubcontractSession(models.Model):
         ordering = ['-started_at']
 
     def __str__(self):
-        return f'{self.subcontract.name} - {self.task.name} ({self.status})'
+        return f'{self.subcontract.name} — {self.started_at:%Y-%m-%d %H:%M} ({self.status})'
 
 
 class SubcontractSessionDetail(models.Model):
-
-    session = models.OneToOneField(
+    """
+    Una partida dentro de una sesion de subcontrato.
+    Cada detalle tiene su propia linea de tiempo de personal (slots).
+    """
+    session = models.ForeignKey(
         SubcontractSession,
-        on_delete=models.CASCADE,
-        related_name='detail'
+        on_delete=models.PROTECT,
+        related_name='details'
     )
-    quantity_started = models.DecimalField(max_digits=14, decimal_places=4)
-    quantity_closed = models.DecimalField(max_digits=14, decimal_places=4, default=0)
-    unit_code = models.CharField(max_length=20)
-    updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True, blank=True,
-        on_delete=models.SET_NULL,
-        related_name='subcontract_details_updated'
+    task = models.ForeignKey(
+        'work.TaskCatalog',
+        on_delete=models.PROTECT,
+        related_name='subcontract_details'
     )
+    unit_code  = models.CharField(max_length=20, default='personas')
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'subcontracts_session_detail'
-        verbose_name = 'Detalle de sesion de subcontrato'
-        verbose_name_plural = 'Detalles de sesion de subcontrato'
+        verbose_name = 'Detalle de sesion'
+        verbose_name_plural = 'Detalles de sesion'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['session', 'task'],
+                name='unique_task_per_subcontract_session'
+            )
+        ]
+
+    def current_quantity(self):
+        """Cantidad activa en este momento (slot sin ended_at)."""
+        slot = self.personnel_slots.filter(ended_at__isnull=True).first()
+        return slot.quantity if slot else 0
+
+    def total_person_minutes(self):
+        """
+        Calcula el total de persona-minutos para esta partida.
+        Suma (quantity × duracion_minutos) de cada slot cerrado
+        mas el slot activo si la sesion sigue abierta.
+        """
+        from django.utils import timezone
+        total = 0
+        for slot in self.personnel_slots.all():
+            end = slot.ended_at or timezone.now()
+            if slot.started_at and end:
+                minutes = (end - slot.started_at).total_seconds() / 60
+                total  += slot.quantity * minutes
+        return round(total, 2)
 
     def __str__(self):
-        return f'{self.session} - {self.quantity_closed}/{self.quantity_started} {self.unit_code}'
+        return f'{self.session} — {self.task.name}'
+
+
+class SubcontractPersonnelSlot(models.Model):
+    """
+    Tramo de tiempo con una cantidad fija de personas en una partida.
+    Cada vez que cambia la cantidad, se cierra el slot activo y se abre uno nuevo.
+    Esto permite calcular HH exactas aunque la cantidad cambie varias veces.
+
+    Ejemplo:
+      Slot 1: quantity=4, started=08:00, ended=10:00  → 4 × 120 min = 480 min
+      Slot 2: quantity=5, started=10:00, ended=18:00  → 5 × 480 min = 2400 min
+      Total: 2880 min = 48 HH
+    """
+    detail = models.ForeignKey(
+        SubcontractSessionDetail,
+        on_delete=models.PROTECT,
+        related_name='personnel_slots'
+    )
+    quantity   = models.PositiveIntegerField()
+    started_at = models.DateTimeField()
+    ended_at   = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='subcontract_slots_created'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'subcontracts_personnel_slot'
+        verbose_name = 'Tramo de personal'
+        verbose_name_plural = 'Tramos de personal'
+        ordering = ['detail', 'started_at']
+        constraints = [
+            # Solo puede haber un slot activo (sin ended_at) por detalle
+            models.UniqueConstraint(
+                fields=['detail'],
+                condition=models.Q(ended_at__isnull=True),
+                name='unique_active_slot_per_detail'
+            )
+        ]
+
+    def duration_minutes(self):
+        from django.utils import timezone
+        end = self.ended_at or timezone.now()
+        if self.started_at:
+            return round((end - self.started_at).total_seconds() / 60, 2)
+        return 0
+
+    def __str__(self):
+        ended = self.ended_at.strftime('%H:%M') if self.ended_at else 'activo'
+        return f'{self.detail.task.name} | {self.quantity} pers | {self.started_at:%H:%M}→{ended}'
 
 
 class SubcontractSessionHistory(models.Model):
+    """
+    Bitacora de cambios relevantes en una sesion de subcontrato.
+    """
 
     class ChangeType(models.TextChoices):
-        DAY_EDIT = 'DAY_EDIT', 'Edicion del dia'
-        QUANTITY_ADJUSTMENT = 'QUANTITY_ADJUSTMENT', 'Ajuste de cantidad'
-        FORCE_CLOSE = 'FORCE_CLOSE', 'Cierre forzado'
+        START              = 'START',              'Inicio'
+        QUANTITY_CHANGE    = 'QUANTITY_CHANGE',    'Cambio de cantidad'
+        TASK_ADDED         = 'TASK_ADDED',         'Partida agregada'
+        TASK_REMOVED       = 'TASK_REMOVED',       'Partida eliminada'
+        CLOSE              = 'CLOSE',              'Cierre'
+        FORCE_CLOSE        = 'FORCE_CLOSE',        'Cierre forzado'
 
-    session = models.ForeignKey(
+    session    = models.ForeignKey(
         SubcontractSession,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='history'
     )
     changed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        related_name='subcontract_history'
+        related_name='subcontract_history_entries'
     )
-    change_type = models.CharField(max_length=30, choices=ChangeType.choices)
-    before_json = models.JSONField(null=True, blank=True)
-    after_json = models.JSONField(null=True, blank=True)
-    reason = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    change_type  = models.CharField(max_length=40, choices=ChangeType.choices)
+    before_json  = models.JSONField(null=True, blank=True)
+    after_json   = models.JSONField(null=True, blank=True)
+    reason       = models.TextField(blank=True, null=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'subcontracts_session_history'
-        verbose_name = 'Historial de sesion de subcontrato'
-        verbose_name_plural = 'Historiales de sesion de subcontrato'
-        ordering = ['-created_at']
+        verbose_name = 'Historial de sesion'
+        verbose_name_plural = 'Historial de sesiones'
+        ordering = ['session', 'created_at']
 
     def __str__(self):
-        return f'{self.session} - {self.change_type}'
+        return f'{self.session} — {self.change_type} por {self.changed_by}'

@@ -45,6 +45,9 @@ def worker_list(request):
 
     today = timezone.localdate()
 
+    # Traer todas las asignaciones a esta obra.
+    # Ordenar poniendo ACTIVE primero — así cuando un recurso tiene
+    # una asignación ACTIVE y una ENDED anterior, siempre tomamos la ACTIVE.
     assignments = ResourceSiteAssignment.objects.filter(
         site=site,
     ).select_related(
@@ -52,9 +55,24 @@ def worker_list(request):
         'resource__job_title',
         'resource__resource_category',
     ).order_by(
-        '-status',
         'resource__display_name',
+        # ACTIVE < CANCELLED < ENDED alfabéticamente — ponemos las ACTIVE primero
+        # usando Case para controlar el orden exacto
     )
+
+    # Construir mapa de resource_id -> mejor asignación
+    # "mejor" = ACTIVE > ENDED > CANCELLED
+    STATUS_PRIORITY = {'ACTIVE': 0, 'ENDED': 1, 'CANCELLED': 2}
+    best_assignment = {}
+    for assignment in assignments:
+        rid = assignment.resource_id
+        if rid not in best_assignment:
+            best_assignment[rid] = assignment
+        else:
+            current_priority = STATUS_PRIORITY.get(best_assignment[rid].status, 99)
+            new_priority     = STATUS_PRIORITY.get(assignment.status, 99)
+            if new_priority < current_priority:
+                best_assignment[rid] = assignment
 
     open_sessions_map = {
         s.resource_id: s
@@ -73,21 +91,19 @@ def worker_list(request):
         )
     }
 
-    seen = set()
     workers = []
-    for assignment in assignments:
-        resource = assignment.resource
-        if resource.id in seen:
-            continue
-        seen.add(resource.id)
-
+    for assignment in sorted(
+        best_assignment.values(),
+        key=lambda a: a.resource.display_name.lower()
+    ):
+        resource     = assignment.resource
         open_session = open_sessions_map.get(resource.id)
         nos_event    = nos_map.get(resource.id)
         is_assigned  = assignment.status == 'ACTIVE' and resource.status == 'ACTIVE'
 
-        if nos_event:
+        if nos_event and is_assigned:
             estado = 'nos'
-        elif open_session:
+        elif open_session and is_assigned:
             estado = 'session'
         elif is_assigned:
             estado = 'free'

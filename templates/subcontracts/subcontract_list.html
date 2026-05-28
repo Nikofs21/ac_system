@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% block title %}Subcontratos{% endblock %}
+
+{% block extra_css %}
+<style>
+  .sub-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 0.5px solid var(--ni-border);
+  }
+  .sub-row:last-child { border-bottom: none; }
+  .sub-row.inactive { opacity: 0.5; }
+
+  .sub-avatar {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    background: var(--ni-blue-soft); color: var(--ni-blue);
+    font-family: var(--font-mono);
+  }
+  .sub-avatar.inactive { background: #f0f0f0; color: #aaa; }
+
+  .sub-info { flex: 1; min-width: 0; }
+  .sub-name { font-size: 14px; font-weight: 500; color: var(--ni-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub-meta { font-size: 11px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 2px; }
+
+  .sub-badge {
+    font-size: 10px; border-radius: 20px; padding: 3px 9px;
+    font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;
+  }
+  .badge-active   { background: var(--ni-blue-soft); color: var(--ni-blue); }
+  .badge-inactive { background: #f0f0f0; color: #bbb; }
+
+  .row-action { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+  .btn-row {
+    height: 32px; border-radius: var(--radius);
+    border: 0.5px solid var(--ni-border);
+    background: var(--ni-white);
+    font-size: 12px; color: var(--ni-text-sub);
+    cursor: pointer; padding: 0 10px;
+    display: flex; align-items: center; gap: 5px;
+    text-decoration: none; white-space: nowrap;
+    font-family: var(--font-main);
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .btn-row:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); color: var(--ni-blue); }
+
+  .stats-bar {
+    display: flex; gap: 8px; padding: 10px 16px;
+    background: var(--ni-white); border-bottom: 0.5px solid var(--ni-border);
+  }
+  .stat-pill {
+    font-size: 11px; border-radius: 20px; padding: 4px 12px;
+    font-family: var(--font-mono); display: flex; align-items: center; gap: 5px;
+  }
+  .stat-total  { background: #f0f0f0; color: #888; }
+  .stat-active { background: var(--ni-blue-soft); color: var(--ni-blue); }
+
+  .empty-state { padding: 48px 24px; text-align: center; color: var(--ni-text-sub); }
+  .empty-state i { font-size: 40px; color: #ddd; display: block; margin-bottom: 12px; }
+
+  .qr-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 1000;
+    align-items: flex-end; justify-content: center;
+  }
+  .qr-overlay.visible { display: flex; }
+  .qr-sheet {
+    background: var(--ni-white); border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 420px; padding: 0 0 32px;
+    animation: slideUp 0.2s ease;
+  }
+  @media (min-width: 600px) {
+    .qr-overlay { align-items: center; padding: 16px; }
+    .qr-sheet { border-radius: var(--radius-lg); }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .qr-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--ni-border); margin: 10px auto 16px; }
+  @media (min-width: 600px) { .qr-handle { display: none; } }
+  .qr-header { padding: 0 20px 16px; border-bottom: 0.5px solid var(--ni-border); text-align: center; }
+  .qr-body   { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .qr-container {
+    background: var(--ni-white); border: 1.5px solid var(--ni-border);
+    border-radius: var(--radius-lg); padding: 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;
+  }
+  .qr-brand { display: flex; align-items: center; gap: 6px; font-family: var(--font-brand); font-weight: 800; font-size: 11px; color: var(--ni-dark); }
+  .qr-footer { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+  .qr-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--ni-text-sub); font-size: 13px; gap: 8px; }
+
+  #sub-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ni-dark); color: var(--ni-white);
+    border-radius: var(--radius); padding: 10px 18px;
+    font-size: 13px; z-index: 2000;
+    display: none; align-items: center; gap: 8px;
+    max-width: 90vw; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  #sub-toast.visible { display: flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">Subcontratos</h1>
+    <p class="ni-page-sub">{{ site.name }}</p>
+  </div>
+  {% if is_provider %}
+    <a href="{% url 'subcontracts:subcontract_create' %}" class="ni-btn ni-btn-primary" style="width:auto; padding:9px 16px; font-size:13px;">
+      <i class="ti ti-plus" aria-hidden="true"></i> Nuevo
+    </a>
+  {% endif %}
+</div>
+
+<div class="stats-bar">
+  <span class="stat-pill stat-total"><i class="ti ti-building-factory" aria-hidden="true"></i>{{ total }} total</span>
+  <span class="stat-pill stat-active"><i class="ti ti-circle-check" aria-hidden="true"></i>{{ active_count }} activos</span>
+</div>
+
+<div class="ni-card" style="margin:12px 16px 24px;">
+  {% if subcontracts %}
+    {% for sub in subcontracts %}
+      <div class="sub-row {% if sub.status == 'INACTIVE' %}inactive{% endif %}" id="srow-{{ sub.id }}">
+        <div class="sub-avatar {% if sub.status == 'INACTIVE' %}inactive{% endif %}">
+          {{ sub.code|slice:":3" }}
+        </div>
+        <div class="sub-info">
+          <div class="sub-name">{{ sub.name }}</div>
+          <div class="sub-meta">
+            {{ sub.code }}
+            {% if sub.rut %}&nbsp;·&nbsp; {{ sub.rut }}{% endif %}
+            {% if sub.reserved_stage %}&nbsp;·&nbsp; Etapa: {{ sub.reserved_stage.name }}{% endif %}
+          </div>
+        </div>
+        <span class="sub-badge {% if sub.status == 'ACTIVE' %}badge-active{% else %}badge-inactive{% endif %}">
+          {% if sub.status == 'ACTIVE' %}Activo{% else %}Inactivo{% endif %}
+        </span>
+        
+        <div class="row-action">
+          {# Asignar — lleva al formulario operativo directamente #}
+          {% if sub.status == 'ACTIVE' %}
+            <a href="/subcontratos/{{ sub.uid }}/" class="btn-row" title="Asignar / Ver sesion">
+              <i class="ti ti-plus" aria-hidden="true"></i> Asignar
+            </a>
+          {% endif %}
+
+          {# QR visible para todos los que tienen acceso al listado #}
+          <button class="btn-row" onclick="openQRModal({{ sub.id }})" title="Ver QR">
+            <i class="ti ti-qrcode" aria-hidden="true"></i>
+          </button>
+
+          {# Editar e inactivar/reactivar solo prestador #}
+          {% if is_provider %}
+            <a href="{% url 'subcontracts:subcontract_edit' sub.id %}" class="btn-row">
+              <i class="ti ti-pencil" aria-hidden="true"></i>
+            </a>
+            {% if sub.status == 'ACTIVE' %}
+              <button class="btn-row" onclick="deactivateSub({{ sub.id }}, '{{ sub.name|escapejs }}')" title="Inactivar">
+                <i class="ti ti-ban" aria-hidden="true"></i>
+              </button>
+            {% else %}
+              <button class="btn-row" onclick="reactivateSub({{ sub.id }}, '{{ sub.name|escapejs }}')" title="Reactivar">
+                <i class="ti ti-refresh" aria-hidden="true"></i>
+              </button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <i class="ti ti-building-factory" aria-hidden="true"></i>
+      <p style="font-size:15px; font-weight:500; margin-bottom:4px;">Sin subcontratos</p>
+      <p style="font-size:13px;">No hay subcontratos registrados en esta obra.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- MODAL QR -->
+<div class="qr-overlay" id="qr-overlay" onclick="if(event.target===this)closeQRModal()">
+  <div class="qr-sheet" id="qr-sheet">
+    <div class="qr-handle"></div>
+    <div id="qr-loading" class="qr-loading"><i class="ti ti-loader" aria-hidden="true"></i> Cargando...</div>
+    <div id="qr-content" style="display:none;">
+      <div class="qr-header">
+        <div style="font-size:16px; font-weight:600; color:var(--ni-dark);" id="qr-sub-name"></div>
+        <div style="font-size:12px; color:var(--ni-text-sub); margin-top:2px;" id="qr-sub-stage"></div>
+        <div style="font-size:11px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:2px;" id="qr-sub-code"></div>
+      </div>
+      <div class="qr-body">
+        <div class="qr-container">
+          <div id="qr-code-display"></div>
+          <div class="qr-brand">
+            <svg width="14" height="14" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+              <rect x="4" y="4" width="28" height="4" rx="2" fill="#0025ec"/>
+              <rect x="6" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="11" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="16" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="21" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="26" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
+              <rect x="2" y="28" width="32" height="4" rx="2" fill="#0025ec"/>
+            </svg>
+            NOVUS IMPERIUM
+          </div>
+          <div style="font-family:var(--font-mono); font-size:10px; color:#bbb;">Subcontrato</div>
+        </div>
+      </div>
+      <div class="qr-footer">
+        <button onclick="printSubQR()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px;">
+          <i class="ti ti-printer" aria-hidden="true"></i> Imprimir / Guardar
+        </button>
+        <button onclick="closeQRModal()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px; color:var(--ni-text-sub);">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="sub-toast">
+  <i class="ti ti-check" id="sub-toast-icon" aria-hidden="true"></i>
+  <span id="sub-toast-msg"></span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const CSRF = "{{ csrf_token }}";
+
+  function openQRModal(subId) {
+    document.getElementById('qr-loading').style.display = 'flex';
+    document.getElementById('qr-content').style.display = 'none';
+    document.getElementById('qr-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+
+    fetch(`/subcontracts/${subId}/qr/`, { headers: { 'X-CSRFToken': CSRF } })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('qr-sub-name').textContent  = data.name;
+      document.getElementById('qr-sub-stage').textContent = data.stage ? `Etapa: ${data.stage}` : '';
+      document.getElementById('qr-sub-code').textContent  = data.code;
+      const container = document.getElementById('qr-code-display');
+      container.innerHTML = '';
+      new QRCode(container, {
+        text: data.qr_url, width: 200, height: 200,
+        colorDark: '#131d47', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+      document.getElementById('qr-loading').style.display = 'none';
+      document.getElementById('qr-content').style.display = 'block';
+    })
+    .catch(() => closeQRModal());
+  }
+
+  function closeQRModal() {
+    document.getElementById('qr-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+
+  function printSubQR() {
+    const name  = document.getElementById('qr-sub-name').textContent;
+    const stage = document.getElementById('qr-sub-stage').textContent;
+    const code  = document.getElementById('qr-sub-code').textContent;
+    const canvas = document.querySelector('#qr-code-display canvas');
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>QR — ${name}</title>
+      <style>body{font-family:Arial,sans-serif;text-align:center;padding:40px;}
+      .card{display:inline-block;border:2px solid #e0e0e0;border-radius:12px;padding:24px 32px;}
+      img{display:block;margin:0 auto 12px;}h2{font-size:18px;margin:0 0 4px;color:#131d47;}
+      p{font-size:13px;color:#666;margin:2px 0;}
+      .brand{font-size:10px;color:#0025ec;font-weight:bold;margin-top:12px;letter-spacing:.05em;}</style>
+      </head><body><div class="card"><img src="${dataUrl}" width="200" height="200">
+      <h2>${name}</h2><p>${code}</p>${stage ? `<p>${stage}</p>` : ''}
+      <p class="brand">NOVUS IMPERIUM — Subcontrato</p></div>
+      <script>window.onload=()=>window.print();<\/script></body></html>`);
+    win.document.close();
+  }
+
+  let touchStartY = 0;
+  document.getElementById('qr-sheet').addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+  document.getElementById('qr-sheet').addEventListener('touchend', e => { if (e.changedTouches[0].clientY - touchStartY > 80) closeQRModal(); }, { passive: true });
+
+  function deactivateSub(subId, name) {
+    if (!confirm(`¿Inactivar "${name}"?`)) return;
+    fetch(`/subcontracts/${subId}/inactivar/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') { showToast(data.message, 'ok'); setTimeout(() => location.reload(), 1500); }
+      else showToast(data.error || 'Error.', 'error');
+    })
+    .catch(() => showToast('Error de conexion.', 'error'));
+  }
+
+  function reactivateSub(subId, name) {
+    if (!confirm(`¿Reactivar "${name}"?`)) return;
+    fetch(`/subcontracts/${subId}/reactivar/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') { showToast(data.message, 'ok'); setTimeout(() => location.reload(), 1500); }
+      else showToast(data.error || 'Error.', 'error');
+    })
+    .catch(() => showToast('Error de conexion.', 'error'));
+  }
+
+  let toastTimer = null;
+  function showToast(msg, type) {
+    const toast = document.getElementById('sub-toast');
+    document.getElementById('sub-toast-icon').className = 'ti ti-' + (type === 'ok' ? 'check' : 'x');
+    document.getElementById('sub-toast-msg').textContent = msg;
+    toast.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('visible'), 3000);
+  }
+</script>
+{% endblock %}
