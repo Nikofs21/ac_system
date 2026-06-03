@@ -258,7 +258,7 @@
       </a>
     {% endif %}
 
-    {% if features.subcontracts and perms_ctx.can_start_people %}
+    {% if features.subcontracts and perms_ctx.can_view_subcontracts %}
       <a href="{% url 'subcontracts:subcontract_list' %}" class="ni-sb-item">
         <i class="ti ti-building-factory" aria-hidden="true"></i>
         <span>Subcontratos</span>

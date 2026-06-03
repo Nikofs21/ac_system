@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from django.contrib import admin
 from .models import (
-    Stage, TaskCatalog, StageTask, SupervisorStagePermission,
+    Stage, TaskCatalog, StageTask, SupervisorTaskPermission,
     WorkSession, WorkSessionChangeLog, MassCloseBatch,
     MassCloseBatchItem, OvertimePolicy
 )
+
+
 
 
 @admin.register(Stage)
@@ -63,5 +65,31 @@ class MassCloseBatchAdmin(admin.ModelAdmin):
 
 @admin.register(OvertimePolicy)
 class OvertimePolicyAdmin(admin.ModelAdmin):
-    list_display = ('site', 'weekday', 'normal_end_time', 'all_day_overtime', 'is_active')
-    list_filter = ('is_active', 'site')
+    list_display  = ('site', 'get_weekday_display', 'normal_end_time', 'auto_close_time', 'all_day_overtime', 'is_active')
+    list_filter   = ('is_active', 'site')
+    ordering      = ('site', 'weekday')
+
+    def get_weekday_display(self, obj):
+        dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo']
+        return dias[obj.weekday] if 0 <= obj.weekday <= 6 else str(obj.weekday)
+    get_weekday_display.short_description = 'Dia'
+
+class SupervisorTaskPermissionInline(admin.TabularInline):
+    model = SupervisorTaskPermission
+    extra = 1
+    fields = ('task', 'is_active')
+
+
+@admin.register(SupervisorTaskPermission)
+class SupervisorTaskPermissionAdmin(admin.ModelAdmin):
+    list_display  = ('get_supervisor', 'get_site', 'task', 'is_active')
+    list_filter   = ('is_active', 'site_membership__site')
+    search_fields = ('site_membership__user__email', 'task__name')
+
+    def get_supervisor(self, obj):
+        return obj.site_membership.user.get_full_name() or obj.site_membership.user.email
+    get_supervisor.short_description = 'Supervisor'
+
+    def get_site(self, obj):
+        return obj.site_membership.site.name
+    get_site.short_description = 'Obra'

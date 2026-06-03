@@ -48,6 +48,8 @@ PERMISSION_CODES = {
     'organigram.edit':             'Editar organigrama',
     'system.manage_companies':     'Crear/editar empresas y obras',
     'system.manage_users':         'Crear/asignar usuarios y roles',
+    'subcontracts.view_list':  'Ver listado de subcontratos',
+    'subcontracts.operate':    'Operar formulario de subcontrato',
 }
 
 
@@ -81,6 +83,8 @@ ROLE_PERMISSIONS = {
         'bulk_close.own_sessions',
         'organigram.view',
         'organigram.edit',
+        'subcontracts.view_list',
+        'subcontracts.operate',
     ],
 
     'administrativo': [
@@ -126,6 +130,8 @@ ROLE_PERMISSIONS = {
         'sessions_review.edit_today',
         'no_en_obra.manage',
         'bulk_close.own_sessions',
+        'subcontracts.view_list',
+        'subcontracts.operate',
     ],
 
     'aac': [
@@ -142,6 +148,8 @@ ROLE_PERMISSIONS = {
         'no_en_obra.manage',
         'moi.view',
         'bulk_close.own_sessions',
+        'subcontracts.view_list',
+        'subcontracts.operate',
     ],
 }
 
@@ -325,6 +333,7 @@ def get_user_context_permissions(user, site):
         'can_edit_orgchart':      'organigram.edit'            in perms,
         'can_manage_companies':   'system.manage_companies'    in perms,
         'can_manage_users':       'system.manage_users'        in perms,
+        'can_view_subcontracts':  'subcontracts.view_list'     in perms,
         'is_novus_super':         is_novus_super(user),
         'role_code':              get_user_role_for_site(user, site).code if get_user_role_for_site(user, site) else '',
     }

@@ -28,12 +28,6 @@ class Subcontract(models.Model):
         choices=Status.choices,
         default=Status.ACTIVE
     )
-    reserved_stage = models.ForeignKey(
-        'work.Stage',
-        null=True, blank=True,
-        on_delete=models.SET_NULL,
-        related_name='subcontracts'
-    )
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -262,3 +256,56 @@ class SubcontractSessionHistory(models.Model):
 
     def __str__(self):
         return f'{self.session} — {self.change_type} por {self.changed_by}'
+
+class SubcontractTaskAssignment(models.Model):
+    """
+    Partidas autorizadas para un subcontrato en una obra.
+
+    Cada partida tiene su propia etapa reservada — esto permite que un
+    subcontrato trabaje partidas de etapas distintas, cada una bajo
+    una etapa reservada especifica creada para ese subcontrato.
+
+    Ejemplo:
+        Subcontrato "Yeseros Martinez":
+            - Partida "Tabique simple"  → Etapa "Tabiques - Yeseros Martinez"
+            - Partida "Tabique doble"   → Etapa "Tabiques - Yeseros Martinez"
+            - Partida "Cielo yeso"      → Etapa "Cielos - Yeseros Martinez"
+
+    En reportes, buscar por etapa reservada muestra todo lo del subcontrato
+    agrupado limpiamente.
+
+    Solo el prestador configura estas asignaciones.
+    """
+    subcontract = models.ForeignKey(
+        'subcontracts.Subcontract',
+        on_delete=models.CASCADE,
+        related_name='task_assignments'
+    )
+    task = models.ForeignKey(
+        'work.TaskCatalog',
+        on_delete=models.PROTECT,
+        related_name='subcontract_assignments'
+    )
+    reserved_stage = models.ForeignKey(
+        'work.Stage',
+        on_delete=models.PROTECT,
+        related_name='subcontract_task_assignments',
+        help_text='Etapa reservada bajo la cual se registran las sesiones de esta partida.'
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'subcontracts_task_assignment'
+        verbose_name = 'Partida asignada a subcontrato'
+        verbose_name_plural = 'Partidas asignadas a subcontrato'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['subcontract', 'task'],
+                name='unique_task_per_subcontract'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.subcontract.name} — {self.task.name} ({self.reserved_stage.name})'

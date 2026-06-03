@@ -18,6 +18,7 @@ from core.permissions import (
     site_feature_enabled,
     get_user_context_permissions,
 )
+from core.task_permissions import get_allowed_tasks_for_user
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +92,8 @@ def assignment_new(request):
     request.session['assignment_in_flow'] = True
     request.session.modified = True
 
+    allowed_tasks = get_allowed_tasks_for_user(request.user, site)
+
     stage_tasks = StageTask.objects.select_related(
         'stage', 'task'
     ).filter(
@@ -99,6 +102,7 @@ def assignment_new(request):
         stage__is_active=True,
         task__status='ACTIVE',
         stage__stage_type='NORMAL',
+        task__in=allowed_tasks,
     ).order_by('stage__name', 'display_order', 'task__name')
 
     etapas = {}

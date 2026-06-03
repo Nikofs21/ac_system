@@ -19,6 +19,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     'rest_framework',
     'django_htmx',
+    'django_celery_beat',
 ]
 
 LOCAL_APPS = [
@@ -87,7 +88,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'es-cl'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Santiago'
 USE_I18N = True
 USE_TZ = True
 
@@ -100,3 +101,34 @@ AUTH_USER_MODEL = 'access.User'
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CELERY
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Redis como broker y backend de resultados
+# En desarrollo usa Redis local: redis://localhost:6379/0
+# En produccion configurar via variable de entorno
+CELERY_BROKER_URL         = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND     = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+
+CELERY_ACCEPT_CONTENT     = ['json']
+CELERY_TASK_SERIALIZER    = 'json'
+CELERY_RESULT_SERIALIZER  = 'json'
+CELERY_TIMEZONE           = 'America/Santiago'
+CELERY_ENABLE_UTC         = True
+
+# Beat — scheduler de tareas periodicas
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Reintentos automaticos ante fallo de conexion al broker
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'auto-close-sessions': {
+        'task': 'work.auto_close_sessions',
+        'schedule': 15 * 60,  # cada 15 minutos
+    },
+}

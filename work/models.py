@@ -137,34 +137,45 @@ class StageTask(models.Model):
         return f'{self.stage.name} - {self.task.name} ({self.site.name})'
 
 
-class SupervisorStagePermission(models.Model):
+class SupervisorTaskPermission(models.Model):
+    """
+    Restriccion de partidas permitidas para un supervisor en una obra.
 
+    Si un supervisor tiene filas en esta tabla, solo puede ver y asignar
+    las partidas listadas. Si no tiene ninguna fila, ve todas las partidas
+    de la obra sin restriccion.
+
+    Esto permite configurar supervisores especializados (electrico, yesero, etc.)
+    sin afectar a supervisores generales que no necesitan restriccion.
+
+    Solo el prestador configura estas restricciones.
+    """
     site_membership = models.ForeignKey(
         'companies.SiteMembership',
         on_delete=models.CASCADE,
-        related_name='stage_permissions'
+        related_name='task_permissions'
     )
-    stage = models.ForeignKey(
-        Stage,
+    task = models.ForeignKey(
+        'work.TaskCatalog',
         on_delete=models.CASCADE,
         related_name='supervisor_permissions'
     )
-    is_allowed = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'work_supervisor_stage_permission'
-        verbose_name = 'Permiso de etapa por supervisor'
-        verbose_name_plural = 'Permisos de etapa por supervisor'
+        db_table = 'work_supervisor_task_permission'
+        verbose_name = 'Permiso de partida por supervisor'
+        verbose_name_plural = 'Permisos de partida por supervisor'
         constraints = [
             models.UniqueConstraint(
-                fields=['site_membership', 'stage'],
-                name='unique_supervisor_stage_permission'
+                fields=['site_membership', 'task'],
+                name='unique_supervisor_task_permission'
             )
         ]
 
     def __str__(self):
-        return f'{self.site_membership} - {self.stage.name}'
+        return f'{self.site_membership} — {self.task.name}'
 
 
 class WorkSession(models.Model):
@@ -280,9 +291,10 @@ class WorkSessionChangeLog(models.Model):
 
     class ChangeType(models.TextChoices):
         DAY_CORRECTION = 'DAY_CORRECTION', 'Correccion del dia'
-        FORCE_CLOSE = 'FORCE_CLOSE', 'Cierre forzado'
+        FORCE_CLOSE    = 'FORCE_CLOSE',    'Cierre forzado'
         OVERTIME_SPLIT = 'OVERTIME_SPLIT', 'Division hora extra'
-        VOID = 'VOID', 'Anulacion'
+        VOID           = 'VOID',           'Anulacion'
+        AUTO_CLOSE     = 'AUTO_CLOSE',     'Cierre automatico'
 
     session = models.ForeignKey(
         WorkSession,
@@ -291,7 +303,8 @@ class WorkSessionChangeLog(models.Model):
     )
     changed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
         related_name='session_changes'
     )
     change_type = models.CharField(max_length=20, choices=ChangeType.choices)
@@ -377,21 +390,51 @@ class MassCloseBatchItem(models.Model):
 
 
 class OvertimePolicy(models.Model):
+    """
+    Politica de jornada laboral por dia de la semana.
 
-    site = models.ForeignKey(
+    normal_end_time: hora oficial de fin de jornada.
+        Se usa para calculos de HH y como ended_at en cierres automaticos.
+        Ejemplo: 18:00 lunes-jueves, 17:00 viernes.
+
+    auto_close_time: hora en que el sistema cierra sesiones abiertas automaticamente.
+        Debe ser posterior a normal_end_time para no interferir con hora extra legitima.
+        Ejemplo: 19:30 lunes-jueves, 18:30 viernes.
+
+    Por que son distintas:
+        Si auto_close_time == normal_end_time, el cierre puede ejecutarse
+        hasta 15 minutos antes (por el intervalo del task), cerrando sesiones
+        de hora extra que esten en curso. El buffer entre ambas horas
+        protege esos casos.
+    """
+
+    site     = models.ForeignKey(
         'companies.Site',
         on_delete=models.CASCADE,
         related_name='overtime_policies'
     )
-    weekday = models.SmallIntegerField()
-    normal_end_time = models.TimeField(null=True, blank=True)
-    all_day_overtime = models.BooleanField(default=False)
+    weekday  = models.SmallIntegerField(
+        help_text='0=Lunes, 1=Martes, 2=Miercoles, 3=Jueves, 4=Viernes, 5=Sabado, 6=Domingo'
+    )
+    normal_end_time = models.TimeField(
+        null=True, blank=True,
+        help_text='Hora oficial de fin de jornada. Se escribe en ended_at al cerrar automaticamente.'
+    )
+    auto_close_time = models.TimeField(
+        null=True, blank=True,
+        help_text='Hora en que el sistema cierra sesiones abiertas. '
+                  'Debe ser posterior a normal_end_time (buffer recomendado: 1-2 hrs).'
+    )
+    all_day_overtime = models.BooleanField(
+        default=False,
+        help_text='Si esta marcado, todo el dia se considera hora extra y no hay cierre automatico.'
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'work_overtime_policy'
-        verbose_name = 'Politica de hora extra'
-        verbose_name_plural = 'Politicas de hora extra'
+        verbose_name = 'Politica de jornada'
+        verbose_name_plural = 'Politicas de jornada'
         constraints = [
             models.UniqueConstraint(
                 fields=['site', 'weekday'],
@@ -399,5 +442,16 @@ class OvertimePolicy(models.Model):
             )
         ]
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.auto_close_time and self.normal_end_time:
+            if self.auto_close_time <= self.normal_end_time:
+                raise ValidationError(
+                    'La hora de cierre automatico debe ser posterior a la hora oficial de fin de jornada.'
+                )
+
     def __str__(self):
-        return f'{self.site.name} - dia {self.weekday}'
+        dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo']
+        dia  = dias[self.weekday] if 0 <= self.weekday <= 6 else str(self.weekday)
+        return f'{self.site.name} — {dia} | fin: {self.normal_end_time} | cierre auto: {self.auto_close_time}'
+

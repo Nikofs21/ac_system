@@ -52,13 +52,12 @@ def require_active_site(view_func):
 def subcontract_list(request):
     site = get_active_site(request)
 
-    if not user_has_permission(request.user, 'sessions.start_people', site) and \
-       not request.user.actor_type == 'PROVIDER':
+    if not user_has_permission(request.user, 'subcontracts.view_list', site):
         return redirect('access_denied')
 
     subcontracts = Subcontract.objects.filter(
         site=site,
-    ).select_related('reserved_stage').order_by('name')
+    ).select_related('company', 'site').order_by('name')
 
     is_provider = request.user.actor_type == 'PROVIDER'
     perms_ctx   = get_user_context_permissions(request.user, site)
