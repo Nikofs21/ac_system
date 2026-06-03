@@ -4,609 +4,362 @@
 
 {% block extra_css %}
 <style>
-  .search-bar {
-    padding: 10px 16px;
-    background: var(--ni-white);
-    border-bottom: 0.5px solid var(--ni-border);
-    position: sticky;
-    top: var(--ni-topbar-h);
-    z-index: 10;
-    display: flex;
-    gap: 8px;
-    align-items: center;
+  /* ── filtros ── */
+  .filter-bar {
+    display: flex; gap: 6px; padding: 10px 16px;
+    background: var(--ni-white); border-bottom: 0.5px solid var(--ni-border);
+    overflow-x: auto; align-items: center;
   }
-  .search-wrap { position: relative; flex: 1; }
-  .search-wrap input {
-    width: 100%;
-    border: 1.5px solid var(--ni-border);
-    border-radius: var(--radius);
-    padding: 9px 12px 9px 36px;
-    font-size: 14px;
+  .filter-btn {
+    border: 0.5px solid var(--ni-border); border-radius: 20px;
+    padding: 5px 14px; font-size: 12px; background: var(--ni-white);
+    color: var(--ni-text-sub); cursor: pointer; white-space: nowrap;
     font-family: var(--font-main);
-    background: var(--ni-light);
-    color: var(--ni-text);
-    outline: none;
-    transition: border-color 0.15s;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
   }
-  .search-wrap input:focus { border-color: var(--ni-blue); background: var(--ni-white); }
-  .search-icon {
-    position: absolute; left: 10px; top: 50%;
-    transform: translateY(-50%);
-    font-size: 16px; color: var(--ni-text-sub); pointer-events: none;
-  }
+  .filter-btn.active { background: var(--ni-blue); border-color: var(--ni-blue); color: #fff; }
 
-  .stats-bar {
-    display: flex; gap: 8px; padding: 10px 16px;
-    background: var(--ni-white);
-    border-bottom: 0.5px solid var(--ni-border);
-    flex-wrap: wrap;
+  /* ── acciones masivas ── */
+  .bulk-bar {
+    display: none; align-items: center; gap: 10px;
+    padding: 8px 16px;
+    background: var(--ni-blue-soft); border-bottom: 0.5px solid #b0c0ff;
+    font-size: 13px; color: var(--ni-blue);
   }
-  .stat-pill {
-    font-size: 11px; border-radius: 20px; padding: 4px 12px;
-    font-family: var(--font-mono);
+  .bulk-bar.visible { display: flex; }
+  .bulk-count { font-weight: 600; font-family: var(--font-mono); }
+  .bulk-actions { margin-left: auto; display: flex; gap: 8px; }
+  .btn-bulk {
+    height: 32px; border-radius: var(--radius);
+    border: 1px solid var(--ni-blue);
+    background: var(--ni-white); color: var(--ni-blue);
+    font-size: 12px; cursor: pointer; padding: 0 12px;
     display: flex; align-items: center; gap: 5px;
+    font-family: var(--font-main); white-space: nowrap;
   }
-  .stat-total   { background: #f0f0f0; color: #888; }
-  .stat-active  { background: var(--ni-blue-soft); color: var(--ni-blue); }
-
-  .filter-tabs {
-    display: flex;
-    border-bottom: 0.5px solid var(--ni-border);
-    background: var(--ni-white);
-    padding: 0 16px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .filter-tabs::-webkit-scrollbar { display: none; }
-  .filter-tab {
-    padding: 10px 14px; font-size: 12px; font-weight: 500;
-    color: var(--ni-text-sub); cursor: pointer;
-    border-bottom: 2px solid transparent;
-    white-space: nowrap; background: none;
-    border-top: none; border-left: none; border-right: none;
+  .btn-bulk:hover { background: var(--ni-blue); color: #fff; }
+  .btn-bulk-deselect {
+    height: 32px; border-radius: var(--radius);
+    border: none; background: none;
+    color: var(--ni-blue); font-size: 12px;
+    cursor: pointer; padding: 0 8px;
     font-family: var(--font-main);
-    transition: color 0.15s;
   }
-  .filter-tab.active { color: var(--ni-blue); border-bottom-color: var(--ni-blue); }
-  .filter-tab:hover  { color: var(--ni-dark); }
 
+  /* ── filas ── */
   .worker-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
     border-bottom: 0.5px solid var(--ni-border);
     transition: background 0.1s;
-    -webkit-tap-highlight-color: transparent;
   }
   .worker-row:last-child { border-bottom: none; }
-  .worker-row.inactive-row { opacity: 0.55; }
+  .worker-row.selected { background: #f0f4ff; }
+
+  .row-check {
+    width: 18px; height: 18px; flex-shrink: 0;
+    accent-color: var(--ni-blue); cursor: pointer;
+    display: none;  /* oculto por defecto, visible en pestaña activos */
+  }
+  .show-checks .row-check { display: block; }
 
   .worker-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 600; flex-shrink: 0;
+    font-size: 11px; font-weight: 700; color: var(--ni-blue);
+    background: var(--ni-blue-soft); font-family: var(--font-mono);
   }
-  .av-free     { background: var(--ni-blue-soft); color: var(--ni-blue); }
-  .av-session  { background: #e8f5ee; color: var(--ni-success); }
-  .av-nos      { background: #fef3e2; color: var(--ni-warn); }
-  .av-inactive { background: #f0f0f0; color: #aaa; }
+  .worker-avatar.inactive { background: #f0f0f0; color: #aaa; }
+  .worker-avatar.session  { background: #e8f5ee; color: #2e7d32; }
 
   .worker-info { flex: 1; min-width: 0; }
-  .worker-name {
-    font-size: 14px; font-weight: 500; color: var(--ni-text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .worker-meta {
-    font-size: 11px; color: var(--ni-text-sub);
-    font-family: var(--font-mono); margin-top: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  .worker-name { font-size: 14px; font-weight: 500; color: var(--ni-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .worker-meta { font-size: 11px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 2px; }
 
-  .worker-badge {
-    font-size: 10px; border-radius: 20px; padding: 3px 9px;
-    font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;
-  }
-  .badge-free     { background: #f0f0f0; color: #888; }
-  .badge-session  { background: #e8f5ee; color: var(--ni-success); }
-  .badge-nos      { background: #fef3e2; color: var(--ni-warn); }
-  .badge-inactive { background: #f0f0f0; color: #bbb; }
+  .worker-status { flex-shrink: 0; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-active   { background: #4caf50; }
+  .dot-inactive { background: #ccc; }
+  .dot-session  { background: var(--ni-blue); }
 
-  .row-action {
-    flex-shrink: 0;
-    display: flex; align-items: center; gap: 6px;
-  }
+  .row-actions { flex-shrink: 0; display: flex; gap: 6px; }
   .btn-row {
-    height: 32px; border-radius: var(--radius);
-    border: 0.5px solid var(--ni-border);
-    background: var(--ni-white);
-    font-size: 12px; color: var(--ni-text-sub);
-    cursor: pointer; padding: 0 10px;
-    display: flex; align-items: center; gap: 5px;
-    text-decoration: none; white-space: nowrap;
-    font-family: var(--font-main);
-    transition: background 0.12s, border-color 0.12s;
+    height: 30px; border-radius: var(--radius);
+    border: 0.5px solid var(--ni-border); background: var(--ni-white);
+    font-size: 11px; color: var(--ni-text-sub); cursor: pointer;
+    padding: 0 10px; display: flex; align-items: center; gap: 4px;
+    text-decoration: none; white-space: nowrap; font-family: var(--font-main);
   }
   .btn-row:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); color: var(--ni-blue); }
-  .btn-row-primary { background: var(--ni-blue); border-color: var(--ni-blue); color: var(--ni-white); }
-  .btn-row-primary:hover { opacity: 0.88; background: var(--ni-blue); color: var(--ni-white); }
-  .row-chevron { font-size: 16px; color: #ccc; flex-shrink: 0; }
 
-  .empty-state { padding: 48px 24px; text-align: center; color: var(--ni-text-sub); }
-  .empty-state i { font-size: 40px; color: #ddd; display: block; margin-bottom: 12px; }
+  /* ── select all ── */
+  .select-all-bar {
+    display: none; padding: 8px 16px;
+    background: #fafafa; border-bottom: 0.5px solid var(--ni-border);
+    font-size: 12px; color: var(--ni-text-sub);
+    align-items: center; gap: 8px;
+  }
+  .select-all-bar.visible { display: flex; }
+  .select-all-check { accent-color: var(--ni-blue); width: 16px; height: 16px; cursor: pointer; }
 
-  /* ── MODAL QR ── */
-  .qr-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 1000;
-    align-items: flex-end;
-    justify-content: center;
-  }
-  .qr-overlay.visible { display: flex; }
+  .empty-state { padding: 40px 24px; text-align: center; color: var(--ni-text-sub); }
+  .empty-state i { font-size: 36px; color: #ddd; display: block; margin-bottom: 8px; }
 
-  .qr-sheet {
-    background: var(--ni-white);
-    border-radius: 16px 16px 0 0;
-    width: 100%; max-width: 420px;
-    padding: 0 0 32px;
-    animation: slideUp 0.2s ease;
+  /* toast */
+  #qr-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ni-dark); color: var(--ni-white);
+    border-radius: var(--radius); padding: 10px 18px;
+    font-size: 13px; z-index: 2000; display: none;
+    align-items: center; gap: 8px; max-width: 90vw;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   }
-  @media (min-width: 600px) {
-    .qr-overlay { align-items: center; padding: 16px; }
-    .qr-sheet { border-radius: var(--radius-lg); }
-  }
-  @keyframes slideUp {
-    from { transform: translateY(40px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
-
-  .qr-handle {
-    width: 36px; height: 4px; border-radius: 2px;
-    background: var(--ni-border); margin: 10px auto 16px;
-  }
-  @media (min-width: 600px) { .qr-handle { display: none; } }
-
-  .qr-header {
-    padding: 0 20px 16px;
-    border-bottom: 0.5px solid var(--ni-border);
-    text-align: center;
-  }
-  .qr-name  { font-size: 16px; font-weight: 600; color: var(--ni-dark); }
-  .qr-cargo { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
-  .qr-rut   { font-size: 11px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 2px; }
-
-  .qr-body {
-    padding: 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 16px;
-  }
-
-  /* Contenedor del QR con borde de marca */
-  .qr-container {
-    background: var(--ni-white);
-    border: 1.5px solid var(--ni-border);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 12px;
-    width: 100%;
-  }
-  #qr-code-display { display: flex; justify-content: center; }
-  #qr-code-display canvas, #qr-code-display img { border-radius: 4px; }
-
-  .qr-uid {
-    font-family: var(--font-mono); font-size: 10px;
-    color: #bbb; text-align: center; word-break: break-all;
-  }
-
-  /* Branding bajo el QR */
-  .qr-brand {
-    display: flex; align-items: center; gap: 6px;
-    font-family: var(--font-brand); font-weight: 800;
-    font-size: 11px; color: var(--ni-dark);
-  }
-
-  .qr-footer {
-    padding: 0 20px;
-    display: flex; flex-direction: column; gap: 8px;
-  }
-  .qr-loading {
-    display: flex; align-items: center; justify-content: center;
-    padding: 40px; color: var(--ni-text-sub); font-size: 13px; gap: 8px;
-  }
+  #qr-toast.visible { display: flex; }
 </style>
 {% endblock %}
 
 {% block content %}
-
 <div class="ni-page-header">
   <div>
     <h1 class="ni-page-title">Trabajadores</h1>
     <p class="ni-page-sub">{{ site.name }}</p>
   </div>
   {% if perms_ctx.can_crud_people %}
-    <a href="{% url 'resources:resource_create' %}" class="ni-btn ni-btn-primary" style="width:auto; padding:9px 16px; font-size:13px;">
-      <i class="ti ti-plus" aria-hidden="true"></i> Agregar
+    <a href="{% url 'resources:resource_create' %}" class="ni-btn ni-btn-primary"
+       style="width:auto; padding:9px 16px; font-size:13px;">
+      <i class="ti ti-plus" aria-hidden="true"></i> Nuevo
     </a>
   {% endif %}
 </div>
 
-<div class="stats-bar">
-  <span class="stat-pill stat-total">
-    <i class="ti ti-users" aria-hidden="true"></i>
-    {{ total }} total
-  </span>
-  <span class="stat-pill stat-active">
-    <i class="ti ti-circle-check" aria-hidden="true"></i>
-    {{ active_count }} activos
-  </span>
+<!-- Filtros -->
+<div class="filter-bar" role="tablist">
+  <button class="filter-btn {% if active_filter == 'active' %}active{% endif %}"
+          onclick="setFilter('active')" role="tab">
+    Activos <span style="opacity:.6;">({{ counts.active }})</span>
+  </button>
+  <button class="filter-btn {% if active_filter == 'with_session' %}active{% endif %}"
+          onclick="setFilter('with_session')" role="tab">
+    Con sesión <span style="opacity:.6;">({{ counts.with_session }})</span>
+  </button>
+  <button class="filter-btn {% if active_filter == 'without_session' %}active{% endif %}"
+          onclick="setFilter('without_session')" role="tab">
+    Sin sesión <span style="opacity:.6;">({{ counts.without_session }})</span>
+  </button>
+  <button class="filter-btn {% if active_filter == 'inactive' %}active{% endif %}"
+          onclick="setFilter('inactive')" role="tab">
+    Inactivos <span style="opacity:.6;">({{ counts.inactive }})</span>
+  </button>
 </div>
 
-<div class="filter-tabs">
-  <button class="filter-tab active" onclick="setFilter('all', this)">Todos</button>
-  <button class="filter-tab" onclick="setFilter('active', this)">Activos</button>
-  <button class="filter-tab" onclick="setFilter('session', this)">Con sesion</button>
-  <button class="filter-tab" onclick="setFilter('free', this)">Sin sesion</button>
-  <button class="filter-tab" onclick="setFilter('inactive', this)">Inactivos</button>
+<!-- Select all bar — solo visible en pestaña activos -->
+{% if active_filter == 'active' %}
+<div class="select-all-bar" id="select-all-bar">
+  <input type="checkbox" class="select-all-check" id="check-all" onchange="toggleAll(this)">
+  <label for="check-all" style="cursor:pointer;">Seleccionar todos</label>
 </div>
+{% endif %}
 
-<div class="search-bar">
-  <div class="search-wrap">
-    <i class="ti ti-search search-icon" aria-hidden="true"></i>
-    <input
-      type="text"
-      id="worker-search"
-      placeholder="Buscar por nombre, RUT o cargo..."
-      autocomplete="off"
-      oninput="filterWorkers()"
-    >
+<!-- Barra de acciones masivas -->
+<div class="bulk-bar" id="bulk-bar">
+  <span class="bulk-count" id="bulk-count">0</span>
+  <span>seleccionados</span>
+  <div class="bulk-actions">
+    {% if perms_ctx.can_view_qr and active_filter == 'active' %}
+      <button class="btn-bulk" onclick="downloadQRs()">
+        <i class="ti ti-qrcode" aria-hidden="true"></i> Descargar QRs
+      </button>
+    {% endif %}
+    <button class="btn-bulk-deselect" onclick="clearSelection()">
+      Deseleccionar
+    </button>
   </div>
 </div>
 
-<div class="ni-card" style="margin: 12px 16px 24px;">
+<!-- Lista -->
+<div class="ni-card" style="margin: 12px 16px 24px;" id="worker-list"
+     {% if active_filter == 'active' %}class="ni-card show-checks"{% endif %}>
   {% if workers %}
-    <div id="worker-list">
-      {% for item in workers %}
-        <div
-          class="worker-row {% if item.estado == 'inactive' %}inactive-row{% endif %}"
-          id="wrow-{{ item.resource.id }}"
-          data-name="{{ item.resource.display_name|lower }}"
-          data-rut="{{ item.resource.person_rut|default:''|lower }}"
-          data-cargo="{{ item.resource.job_title.name|lower|default:'' }}"
-          data-estado="{{ item.estado }}"
-          data-active="{% if item.is_assigned %}1{% else %}0{% endif %}"
-        >
-          <div class="worker-avatar av-{{ item.estado }}">
-            {{ item.resource.display_name|slice:":1" }}{{ item.resource.display_name.split|last|slice:":1" }}
-          </div>
+    {% for worker in workers %}
+      <div class="worker-row" id="wrow-{{ worker.id }}">
 
-          <div class="worker-info">
-            <div class="worker-name">{{ item.resource.display_name }}</div>
-            <div class="worker-meta">
-              {{ item.resource.job_title.name|default:"Sin cargo" }}
-              {% if item.resource.person_rut %}&nbsp;·&nbsp; {{ item.resource.person_rut }}{% endif %}
-              {% if item.estado == 'session' %}&nbsp;·&nbsp; {{ item.open_session.task_name_snapshot }}
-              {% elif item.estado == 'nos' %}&nbsp;·&nbsp; No en obra
-              {% elif item.estado == 'inactive' %}&nbsp;·&nbsp; Inactivo
-              {% endif %}
-            </div>
-          </div>
+        {% if active_filter == 'active' %}
+          <input
+            type="checkbox"
+            class="row-check worker-check"
+            value="{{ worker.id }}"
+            onchange="updateBulkBar()"
+            aria-label="Seleccionar {{ worker.display_name }}"
+          >
+        {% endif %}
 
-          <span class="worker-badge badge-{{ item.estado }}">
-            {% if item.estado == 'session' %}Con sesion
-            {% elif item.estado == 'nos' %}No en obra
-            {% elif item.estado == 'inactive' %}Inactivo
-            {% else %}Activo{% endif %}
-          </span>
-
-          <div class="row-action">
-            {% if item.is_assigned %}
-              {% if perms_ctx.can_start_people or perms_ctx.can_start_machines %}
-                {% if item.estado == 'free' %}
-                  <a href="{% url 'work:assignment_preload' item.resource.id %}" class="btn-row btn-row-primary">
-                    <i class="ti ti-plus" aria-hidden="true"></i> Asignar
-                  </a>
-                {% elif item.estado == 'session' %}
-                  <span class="btn-row" style="cursor:default; opacity:0.5;">
-                    <i class="ti ti-player-play" aria-hidden="true"></i> En partida
-                  </span>
-                {% endif %}
-              {% endif %}
-
-              {% if perms_ctx.can_view_qr %}
-                <button
-                  class="btn-row"
-                  onclick="openQRModal({{ item.resource.id }})"
-                  title="Ver QR de {{ item.resource.display_name }}"
-                >
-                  <i class="ti ti-qrcode" aria-hidden="true"></i>
-                </button>
-              {% endif %}
-
-            {% else %}
-              {% if perms_ctx.can_crud_people %}
-                <button class="btn-row" onclick="reactivateWorker({{ item.resource.id }}, '{{ item.resource.display_name }}')">
-                  <i class="ti ti-refresh" aria-hidden="true"></i> Reactivar
-                </button>
-              {% endif %}
-            {% endif %}
-
-            {% if perms_ctx.can_crud_people %}
-              <button class="btn-row" onclick="editWorker({{ item.resource.id }})">
-                <i class="ti ti-pencil" aria-hidden="true"></i>
-              </button>
-            {% endif %}
-          </div>
-
-          <i class="ti ti-chevron-right row-chevron" aria-hidden="true"></i>
+        <div class="worker-avatar {% if not worker.is_active_assignment %}inactive{% elif worker.has_open_session %}session{% endif %}">
+          {{ worker.display_name|slice:":2"|upper }}
         </div>
-      {% endfor %}
-    </div>
 
-    <div id="no-results" class="empty-state" style="display:none;">
-      <i class="ti ti-search" aria-hidden="true"></i>
-      <p style="font-size:14px; font-weight:500;">Sin coincidencias</p>
-    </div>
+        <div class="worker-info">
+          <div class="worker-name">{{ worker.display_name }}</div>
+          <div class="worker-meta">
+            {% if worker.job_title %}{{ worker.job_title.name }}{% endif %}
+            {% if worker.person_rut %}&nbsp;·&nbsp;{{ worker.person_rut }}{% endif %}
+          </div>
+        </div>
 
+        <div class="worker-status">
+          <div class="status-dot
+            {% if worker.has_open_session %}dot-session
+            {% elif worker.is_active_assignment %}dot-active
+            {% else %}dot-inactive{% endif %}">
+          </div>
+        </div>
+
+        <div class="row-actions">
+          {% if perms_ctx.can_view_qr %}
+            <a href="{% url 'resources:resource_qr' worker.id %}" class="btn-row" title="Ver QR">
+              <i class="ti ti-qrcode" aria-hidden="true"></i>
+            </a>
+          {% endif %}
+          {% if perms_ctx.can_start_people and worker.is_active_assignment and not worker.has_open_session %}
+            <a href="{% url 'work:assignment_preload' worker.id %}" ...> class="btn-row" title="Asignar partida">
+              <i class="ti ti-plus" aria-hidden="true"></i> Asignar
+            </a>
+          {% endif %}
+          {% if perms_ctx.can_crud_people %}
+            <a href="{% url 'resources:resource_edit' worker.id %}" class="btn-row">
+              <i class="ti ti-pencil" aria-hidden="true"></i>
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
   {% else %}
     <div class="empty-state">
-      <i class="ti ti-users" aria-hidden="true"></i>
-      <p style="font-size:15px; font-weight:500; margin-bottom:4px;">Sin trabajadores asignados</p>
-      <p style="font-size:13px;">No hay trabajadores registrados en esta obra.</p>
+      <i class="ti ti-users-minus" aria-hidden="true"></i>
+      <p style="font-size:14px; font-weight:500; margin-bottom:4px;">Sin trabajadores</p>
+      <p style="font-size:12px;">No hay trabajadores en esta categoría.</p>
     </div>
   {% endif %}
 </div>
 
-<!-- ═══════════════════════════════════════════ -->
-<!-- MODAL QR -->
-<!-- ═══════════════════════════════════════════ -->
-<div class="qr-overlay" id="qr-overlay" onclick="handleQROverlayClick(event)">
-  <div class="qr-sheet" id="qr-sheet">
-    <div class="qr-handle"></div>
-
-    <!-- Loading -->
-    <div id="qr-loading" class="qr-loading">
-      <i class="ti ti-loader" aria-hidden="true"></i> Cargando...
-    </div>
-
-    <!-- Contenido QR -->
-    <div id="qr-content" style="display:none;">
-      <div class="qr-header">
-        <div class="qr-name"  id="qr-worker-name"></div>
-        <div class="qr-cargo" id="qr-worker-cargo"></div>
-        <div class="qr-rut"   id="qr-worker-rut"></div>
-      </div>
-
-      <div class="qr-body">
-        <div class="qr-container">
-          <div id="qr-code-display"></div>
-          <div class="qr-brand">
-            <svg width="14" height="14" viewBox="0 0 36 36" fill="none" aria-hidden="true">
-              <rect x="4" y="4" width="28" height="4" rx="2" fill="#0025ec"/>
-              <rect x="6" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="11" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="16" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="21" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="26" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="2" y="28" width="32" height="4" rx="2" fill="#0025ec"/>
-            </svg>
-            NOVUS IMPERIUM
-          </div>
-          <div class="qr-uid" id="qr-uid-display"></div>
-        </div>
-      </div>
-
-      <div class="qr-footer">
-        <button onclick="printQR()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px;">
-          <i class="ti ti-printer" aria-hidden="true"></i> Imprimir / Guardar
-        </button>
-        <button onclick="closeQRModal()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px; color:var(--ni-text-sub);">
-          Cerrar
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="wl-toast" style="
-  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-  background:var(--ni-dark); color:var(--ni-white);
-  border-radius:var(--radius); padding:10px 18px;
-  font-size:13px; z-index:2000;
-  display:none; align-items:center; gap:8px;
-  max-width:90vw; text-align:center;
-  box-shadow:0 4px 16px rgba(0,0,0,0.2);">
-  <i class="ti ti-check" id="wl-toast-icon" aria-hidden="true"></i>
-  <span id="wl-toast-msg"></span>
+<!-- Toast -->
+<div id="qr-toast">
+  <i class="ti ti-loader" id="toast-icon" aria-hidden="true"></i>
+  <span id="toast-msg">Generando PDF...</span>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
-<!-- QR Code generator — libreria liviana, sin dependencias -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-  const QR_API_BASE = "{% url 'resources:resource_qr' 0 %}".replace('/0/', '/');
-  const CSRF = "{{ csrf_token }}";
+const CSRF    = "{{ csrf_token }}";
+const FILTER  = "{{ active_filter }}";
 
-  let currentFilter = 'all';
-  let qrInstance    = null;
+// ── Filtros ───────────────────────────────────────────────────────────────
+function setFilter(filter) {
+  const url = new URL(window.location);
+  url.searchParams.set('filter', filter);
+  window.location = url.toString();
+}
 
-  // ── FILTROS ─────────────────────────────────────────────────
+// ── Selección ─────────────────────────────────────────────────────────────
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.worker-check:checked');
+  const bulkBar = document.getElementById('bulk-bar');
+  const countEl = document.getElementById('bulk-count');
+  const selectAllBar = document.getElementById('select-all-bar');
 
-  function setFilter(filter, btn) {
-    currentFilter = filter;
-    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    filterWorkers();
+  // Highlight filas seleccionadas
+  document.querySelectorAll('.worker-check').forEach(cb => {
+    cb.closest('.worker-row').classList.toggle('selected', cb.checked);
+  });
+
+  if (checked.length > 0) {
+    bulkBar.classList.add('visible');
+    countEl.textContent = checked.length;
+    if (selectAllBar) selectAllBar.classList.add('visible');
+  } else {
+    bulkBar.classList.remove('visible');
+    if (selectAllBar) selectAllBar.classList.remove('visible');
+  }
+}
+
+function toggleAll(masterCheck) {
+  document.querySelectorAll('.worker-check').forEach(cb => {
+    cb.checked = masterCheck.checked;
+  });
+  updateBulkBar();
+}
+
+function clearSelection() {
+  document.querySelectorAll('.worker-check').forEach(cb => cb.checked = false);
+  const masterCheck = document.getElementById('check-all');
+  if (masterCheck) masterCheck.checked = false;
+  if (checked.length > 0) {
+      bulkBar.classList.add('visible');
+      countEl.textContent = checked.length;
+  } else {
+      bulkBar.classList.remove('visible');
+      // NO ocultar selectAllBar aquí
+  }
+}
+
+// ── Descarga de QRs ───────────────────────────────────────────────────────
+function downloadQRs() {
+  const checked  = document.querySelectorAll('.worker-check:checked');
+  const ids      = Array.from(checked).map(cb => cb.value);
+
+  if (ids.length === 0) {
+    showToast('Selecciona al menos un trabajador.', 'warn');
+    return;
   }
 
-  function filterWorkers() {
-    const q     = document.getElementById('worker-search').value.toLowerCase().trim();
-    const rows  = document.querySelectorAll('.worker-row');
-    let visible = 0;
+  showToast(`Generando PDF con ${ids.length} QR${ids.length > 1 ? 's' : ''}...`, 'loading');
 
-    rows.forEach(row => {
-      const name   = row.dataset.name   || '';
-      const rut    = row.dataset.rut    || '';
-      const cargo  = row.dataset.cargo  || '';
-      const estado = row.dataset.estado || '';
-      const active = row.dataset.active === '1';
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '{% url "resources:download_qr_pdf" %}';
 
-      let tabMatch = true;
-      if (currentFilter === 'active')   tabMatch = active;
-      if (currentFilter === 'inactive') tabMatch = !active;
-      if (currentFilter === 'session')  tabMatch = estado === 'session';
-      if (currentFilter === 'free')     tabMatch = estado === 'free';
+  const csrf = document.createElement('input');
+  csrf.type  = 'hidden';
+  csrf.name  = 'csrfmiddlewaretoken';
+  csrf.value = CSRF;
+  form.appendChild(csrf);
 
-      const searchMatch = !q || name.includes(q) || rut.includes(q) || cargo.includes(q);
-      const show = tabMatch && searchMatch;
-      row.style.display = show ? '' : 'none';
-      if (show) visible++;
-    });
+  ids.forEach(id => {
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = 'resource_ids[]';
+    input.value = id;
+    form.appendChild(input);
+  });
 
-    document.getElementById('no-results').style.display =
-      (visible === 0 && (q || currentFilter !== 'all')) ? 'block' : 'none';
-  }
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
 
-  // ── MODAL QR ────────────────────────────────────────────────
+  // El PDF se descarga automáticamente — ocultar toast después
+  setTimeout(() => hideToast(), 3000);
+}
 
-  function openQRModal(resourceId) {
-    document.getElementById('qr-loading').style.display  = 'flex';
-    document.getElementById('qr-content').style.display  = 'none';
-    document.getElementById('qr-overlay').classList.add('visible');
-    document.body.style.overflow = 'hidden';
+// ── Toast ─────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg, type = 'loading') {
+  const toast   = document.getElementById('qr-toast');
+  const icon    = document.getElementById('toast-icon');
+  const msgEl   = document.getElementById('toast-msg');
+  icon.className = type === 'loading' ? 'ti ti-loader' : 'ti ti-alert-circle';
+  msgEl.textContent = msg;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+}
+function hideToast() {
+  document.getElementById('qr-toast').classList.remove('visible');
+}
 
-    fetch(QR_API_BASE + resourceId + '/', {
-      headers: { 'X-CSRFToken': CSRF }
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) { closeQRModal(); return; }
-      renderQRModal(data);
-    })
-    .catch(() => closeQRModal());
-  }
-
-  function renderQRModal(data) {
-    document.getElementById('qr-worker-name').textContent  = data.name;
-    document.getElementById('qr-worker-cargo').textContent = data.cargo || 'Sin cargo';
-    document.getElementById('qr-worker-rut').textContent   = data.rut  || '';
-    document.getElementById('qr-uid-display').textContent  = data.uid;
-
-    // Limpiar QR anterior
-    const container = document.getElementById('qr-code-display');
-    container.innerHTML = '';
-
-    // Generar QR con la URL publica del recurso
-    qrInstance = new QRCode(container, {
-      text:          data.qr_url,
-      width:         200,
-      height:        200,
-      colorDark:     '#131d47',
-      colorLight:    '#ffffff',
-      correctLevel:  QRCode.CorrectLevel.M,
-    });
-
-    document.getElementById('qr-loading').style.display = 'none';
-    document.getElementById('qr-content').style.display = 'block';
-  }
-
-  function closeQRModal() {
-    document.getElementById('qr-overlay').classList.remove('visible');
-    document.body.style.overflow = '';
-    qrInstance = null;
-  }
-
-  function handleQROverlayClick(e) {
-    if (e.target === document.getElementById('qr-overlay')) closeQRModal();
-  }
-
-  // Imprimir / guardar QR
-  function printQR() {
-    const name  = document.getElementById('qr-worker-name').textContent;
-    const cargo = document.getElementById('qr-worker-cargo').textContent;
-    const rut   = document.getElementById('qr-worker-rut').textContent;
-    const canvas = document.querySelector('#qr-code-display canvas');
-
-    if (!canvas) return;
-
-    const dataUrl = canvas.toDataURL('image/png');
-    const win = window.open('', '_blank');
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>QR — ${name}</title>
-        <style>
-          body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
-          .card { display: inline-block; border: 2px solid #e0e0e0; border-radius: 12px; padding: 24px 32px; }
-          img  { display: block; margin: 0 auto 12px; }
-          h2   { font-size: 18px; margin: 0 0 4px; color: #131d47; }
-          p    { font-size: 13px; color: #666; margin: 2px 0; }
-          .brand { font-size: 10px; color: #0025ec; font-weight: bold; margin-top: 12px; letter-spacing: 0.05em; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <img src="${dataUrl}" width="200" height="200">
-          <h2>${name}</h2>
-          <p>${cargo}</p>
-          ${rut ? `<p>${rut}</p>` : ''}
-          <p class="brand">NOVUS IMPERIUM — Control de Partidas A&C</p>
-        </div>
-        <script>window.onload = () => window.print();<\/script>
-      </body>
-      </html>
-    `);
-    win.document.close();
-  }
-
-  // Swipe down para cerrar en mobile
-  let touchStartY = 0;
-  document.getElementById('qr-sheet').addEventListener('touchstart', e => {
-    touchStartY = e.touches[0].clientY;
-  }, { passive: true });
-  document.getElementById('qr-sheet').addEventListener('touchend', e => {
-    if (e.changedTouches[0].clientY - touchStartY > 80) closeQRModal();
-  }, { passive: true });
-
-  // ── PLACEHOLDERS CRUD ───────────────────────────────────────
-
-  function editWorker(resourceId) {
-    window.location.href = `/resources/trabajadores/${resourceId}/editar/`;
-  }
-
-  function reactivateWorker(resourceId, name) {
-    if (!confirm(`¿Reactivar a ${name} y asignarlo a esta obra?`)) return;
-
-    fetch(`/resources/trabajadores/${resourceId}/reactivar/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.status === 'ok') {
-        showToast(data.message, 'ok');
-        // Recargar después de que el toast sea visible,
-        // así el usuario ve la confirmación antes de que refresque
-        setTimeout(() => location.reload(), 1500);
-      } else {
-        showToast(data.error || 'Error al reactivar.', 'error');
-      }
-    })
-    .catch(() => showToast('Error de conexion.', 'error'));
-  }
-
-  let wlToastTimer = null;
-  function showToast(msg, type) {
-    const toast = document.getElementById('wl-toast');
-    const icon  = document.getElementById('wl-toast-icon');
-    const span  = document.getElementById('wl-toast-msg');
-    if (!toast) { alert(msg); return; }
-    icon.className = 'ti ti-' + (type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x');
-    span.textContent = msg;
-    toast.style.display = 'flex';
-    clearTimeout(wlToastTimer);
-    wlToastTimer = setTimeout(() => { toast.style.display = 'none'; }, 3000);
-  }
+// Inicializar select-all-bar visible si hay checkboxes
+if (FILTER === 'active') {
+  const bar = document.getElementById('select-all-bar');
+  if (bar) bar.classList.add('visible');
+}
 </script>
 {% endblock %}

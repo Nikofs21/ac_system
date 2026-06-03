@@ -36,99 +36,105 @@ def require_active_site(view_func):
 def worker_list(request):
     """
     Listado de trabajadores asignados a la obra activa.
-    Muestra activos e inactivos para poder reactivar.
+    Soporta filtros: active, with_session, without_session, inactive.
+    Pestaña 'active' muestra checkboxes para descarga masiva de QRs.
     """
     site = get_active_site(request)
 
     if not user_has_permission(request.user, 'resources.view', site):
         return redirect('access_denied')
 
-    today = timezone.localdate()
+    today         = timezone.localdate()
+    active_filter = request.GET.get('filter', 'active')
 
-    # Traer todas las asignaciones a esta obra.
-    # Ordenar poniendo ACTIVE primero — así cuando un recurso tiene
-    # una asignación ACTIVE y una ENDED anterior, siempre tomamos la ACTIVE.
-    assignments = ResourceSiteAssignment.objects.filter(
-        site=site,
-    ).select_related(
-        'resource',
-        'resource__job_title',
-        'resource__resource_category',
-    ).order_by(
-        'resource__display_name',
-        # ACTIVE < CANCELLED < ENDED alfabéticamente — ponemos las ACTIVE primero
-        # usando Case para controlar el orden exacto
-    )
+    # ── IDs base para cálculos ────────────────────────────────────────────
+    all_assigned_ids = ResourceSiteAssignment.objects.filter(
+        site=site, status='ACTIVE'
+    ).values_list('resource_id', flat=True)
 
-    # Construir mapa de resource_id -> mejor asignación
-    # "mejor" = ACTIVE > ENDED > CANCELLED
-    STATUS_PRIORITY = {'ACTIVE': 0, 'ENDED': 1, 'CANCELLED': 2}
-    best_assignment = {}
-    for assignment in assignments:
-        rid = assignment.resource_id
-        if rid not in best_assignment:
-            best_assignment[rid] = assignment
-        else:
-            current_priority = STATUS_PRIORITY.get(best_assignment[rid].status, 99)
-            new_priority     = STATUS_PRIORITY.get(assignment.status, 99)
-            if new_priority < current_priority:
-                best_assignment[rid] = assignment
+    open_session_ids = WorkSession.objects.filter(
+        site=site, status='OPEN'
+    ).values_list('resource_id', flat=True)
 
+    # ── Counts para los tabs ──────────────────────────────────────────────
+    counts = {
+        'active': Resource.objects.filter(
+            id__in=all_assigned_ids, status='ACTIVE'
+        ).count(),
+        'with_session': Resource.objects.filter(
+            id__in=open_session_ids, status='ACTIVE'
+        ).count(),
+        'without_session': Resource.objects.filter(
+            id__in=all_assigned_ids, status='ACTIVE'
+        ).exclude(id__in=open_session_ids).count(),
+        'inactive': Resource.objects.filter(
+            company=site.company, status='INACTIVE'
+        ).count(),
+    }
+
+    # ── Construir queryset según filtro ───────────────────────────────────
+    base_active = Resource.objects.filter(
+        id__in=all_assigned_ids, status='ACTIVE'
+    ).select_related('job_title', 'resource_category')
+
+    if active_filter == 'active':
+        resources_qs = base_active
+    elif active_filter == 'with_session':
+        resources_qs = Resource.objects.filter(
+            id__in=open_session_ids, status='ACTIVE'
+        ).select_related('job_title', 'resource_category')
+    elif active_filter == 'without_session':
+        resources_qs = base_active.exclude(id__in=open_session_ids)
+    elif active_filter == 'inactive':
+        resources_qs = Resource.objects.filter(
+            company=site.company, status='INACTIVE'
+        ).select_related('job_title', 'resource_category')
+    else:
+        resources_qs = base_active
+
+    resources_qs = resources_qs.order_by('display_name')
+
+    # ── Mapas auxiliares ──────────────────────────────────────────────────
     open_sessions_map = {
         s.resource_id: s
         for s in WorkSession.objects.filter(
-            site=site,
-            status='OPEN',
+            site=site, status='OPEN'
         ).select_related('task', 'stage')
     }
 
     nos_map = {
         e.resource_id: e
         for e in NoOnSiteEvent.objects.filter(
-            site=site,
-            event_date=today,
-            status='ACTIVE',
+            site=site, event_date=today, status='ACTIVE'
         )
     }
 
+    # ── Construir lista de workers con propiedades extra ──────────────────
     workers = []
-    for assignment in sorted(
-        best_assignment.values(),
-        key=lambda a: a.resource.display_name.lower()
-    ):
-        resource     = assignment.resource
+    for resource in resources_qs:
         open_session = open_sessions_map.get(resource.id)
         nos_event    = nos_map.get(resource.id)
-        is_assigned  = assignment.status == 'ACTIVE' and resource.status == 'ACTIVE'
+        is_assigned  = resource.id in all_assigned_ids and resource.status == 'ACTIVE'
 
-        if nos_event and is_assigned:
-            estado = 'nos'
-        elif open_session and is_assigned:
-            estado = 'session'
-        elif is_assigned:
-            estado = 'free'
-        else:
-            estado = 'inactive'
+        # Anotar propiedades para el template
+        resource.has_open_session    = open_session is not None
+        resource.is_active_assignment = is_assigned
+        resource.open_session        = open_session
+        resource.nos_event           = nos_event
 
-        workers.append({
-            'resource':     resource,
-            'assignment':   assignment,
-            'estado':       estado,
-            'open_session': open_session,
-            'nos_event':    nos_event,
-            'is_assigned':  is_assigned,
-        })
+        workers.append(resource)
 
     perms_ctx = get_user_context_permissions(request.user, site)
 
     return render(request, 'resources/worker_list.html', {
-        'workers':      workers,
-        'site':         site,
-        'today':        today,
-        'page_title':   'Trabajadores',
-        'perms_ctx':    perms_ctx,
-        'total':        len(workers),
-        'active_count': sum(1 for w in workers if w['is_assigned']),
+        'workers':       workers,
+        'site':          site,
+        'today':         today,
+        'page_title':    'Trabajadores',
+        'perms_ctx':     perms_ctx,
+        'active_filter': active_filter,
+        'counts':        counts,
+        'total':         len(workers),
     })
 
 

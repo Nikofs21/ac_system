@@ -2,6 +2,8 @@
 from django.urls import path
 from . import views
 from . import views_crud
+from . import views_qr_pdf
+
 
 app_name = 'resources'
 
@@ -11,6 +13,7 @@ urlpatterns = [
 
     # QR
     path('qr/<int:resource_id>/', views.resource_qr_view, name='resource_qr'),
+    path('qr/descargar/', views_qr_pdf.download_qr_pdf, name='download_qr_pdf'),
 
     # CRUD recursos
     path('trabajadores/nuevo/', views_crud.resource_create, name='resource_create'),

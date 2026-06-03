@@ -4,55 +4,6 @@
 {% block extra_css %}
 <style>
   .form-wrap { max-width: 560px; margin: 0 auto; padding: 16px; }
-
-  /* Partida card */
-  .partida-card {
-    border: 1.5px solid var(--ni-border);
-    border-radius: var(--radius);
-    padding: 14px;
-    margin-bottom: 10px;
-    background: var(--ni-white);
-    position: relative;
-  }
-  .partida-card-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  .partida-card-title { font-size: 13px; font-weight: 600; color: var(--ni-dark); font-family: var(--font-mono); }
-  .btn-remove-partida {
-    background: none; border: none; cursor: pointer;
-    color: #c0392b; font-size: 18px; padding: 2px;
-    display: flex; align-items: center;
-  }
-  .partida-grid { display: grid; grid-template-columns: 1fr 120px; gap: 10px; align-items: end; }
-  @media (max-width: 480px) { .partida-grid { grid-template-columns: 1fr; } }
-
-  .totalizador {
-    background: var(--ni-blue-soft);
-    border: 0.5px solid #b0c0ff;
-    border-radius: var(--radius);
-    padding: 10px 14px;
-    font-size: 13px; color: var(--ni-blue);
-    font-family: var(--font-mono);
-    margin-bottom: 16px;
-    display: flex; gap: 16px;
-  }
-  .total-item { display: flex; flex-direction: column; gap: 2px; }
-  .total-label { font-size: 10px; opacity: 0.7; }
-  .total-value { font-size: 15px; font-weight: 600; }
-
-  .btn-add-partida {
-    display: flex; align-items: center; gap: 8px;
-    border: 1.5px dashed var(--ni-border);
-    border-radius: var(--radius);
-    padding: 12px 16px;
-    background: none; cursor: pointer;
-    color: var(--ni-text-sub); font-size: 13px;
-    font-family: var(--font-main);
-    width: 100%; margin-bottom: 16px;
-    transition: border-color 0.15s, color 0.15s;
-  }
-  .btn-add-partida:hover { border-color: var(--ni-blue); color: var(--ni-blue); }
 </style>
 {% endblock %}
 
@@ -67,7 +18,6 @@
 
 <div class="form-wrap">
 
-  {% if mode == 'create' or mode == 'edit' %}
   <!-- ═══ FORMULARIO CRUD ═══ -->
   <form method="post">
     {% csrf_token %}
@@ -111,24 +61,6 @@
     </div>
 
     <div class="ni-field">
-      <label class="ni-label" for="reserved_stage_id">Etapa reservada</label>
-      <select class="ni-select" name="reserved_stage_id" id="reserved_stage_id">
-        <option value="">Sin etapa reservada</option>
-        {% for stage in reserved_stages %}
-          <option value="{{ stage.id }}"
-            {% if post_data and post_data.reserved_stage_id == stage.id|stringformat:"s" %}selected
-            {% elif subcontract and subcontract.reserved_stage_id == stage.id %}selected
-            {% endif %}>
-            {{ stage.name }}
-          </option>
-        {% endfor %}
-      </select>
-      <div style="font-size:11px; color:var(--ni-text-sub); margin-top:4px;">
-        Solo aparecen etapas de tipo "Reservada subcontrato".
-      </div>
-    </div>
-
-    <div class="ni-field">
       <label class="ni-label" for="notes">Notas (opcional)</label>
       <input
         class="ni-input" type="text" name="notes" id="notes"
@@ -136,6 +68,11 @@
         placeholder="Ej: subcontrato de yeso, activo desde marzo"
         maxlength="300" autocomplete="off"
       >
+    </div>
+
+    <div style="margin-top:8px; padding:10px 14px; background:#f5f5f5; border-radius:var(--radius); font-size:12px; color:var(--ni-text-sub);">
+      <i class="ti ti-info-circle" aria-hidden="true"></i>
+      Las partidas y etapas reservadas se configuran desde el panel de administración una vez creado el subcontrato.
     </div>
 
     <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px;">
@@ -149,172 +86,11 @@
     </div>
   </form>
 
-  {% else %}
-  <!-- ═══ FORMULARIO OPERATIVO — INICIAR PARTIDAS ═══ -->
-  <!-- Ficha del subcontrato -->
-  <div class="ni-card" style="margin-bottom:20px;">
-    <div style="padding:14px 16px;">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-        <div style="width:44px; height:44px; border-radius:10px; background:var(--ni-blue-soft); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--ni-blue); font-family:var(--font-mono); flex-shrink:0;">
-          {{ subcontract.code|slice:":3" }}
-        </div>
-        <div>
-          <div style="font-size:16px; font-weight:600; color:var(--ni-dark);">{{ subcontract.name }}</div>
-          <div style="font-size:12px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:2px;">
-            SUBCONTRATO
-            {% if subcontract.rut %}&nbsp;·&nbsp; {{ subcontract.rut }}{% endif %}
-          </div>
-        </div>
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;">
-        <div>
-          <div style="color:var(--ni-text-sub);">Obra</div>
-          <div style="font-weight:500;">{{ site.name }}</div>
-        </div>
-        <div>
-          <div style="color:var(--ni-text-sub);">Etapa reservada</div>
-          <div style="font-weight:500;">{{ subcontract.reserved_stage.name|default:"Sin etapa" }}</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <form method="post" id="subcontract-op-form">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="iniciar">
-
-    <h2 style="font-size:15px; font-weight:600; color:var(--ni-dark); margin-bottom:4px;">Preparar partidas</h2>
-    <p style="font-size:12px; color:var(--ni-text-sub); margin-bottom:16px;">
-      La etapa está fijada para este subcontrato. Solo se seleccionan partidas de esa etapa y la cantidad de personas.
-    </p>
-
-    {% if subcontract.reserved_stage %}
-      <div style="background:#f5f5f5; border-radius:var(--radius); padding:10px 14px; margin-bottom:16px; font-size:13px; color:var(--ni-text-sub);">
-        Etapa reservada: <strong style="color:var(--ni-dark);">{{ subcontract.reserved_stage.name }}</strong>
-      </div>
-    {% endif %}
-
-    <!-- Partidas dinámicas -->
-    <div id="partidas-container"></div>
-
-    <!-- Totalizador -->
-    <div class="totalizador" id="totalizador">
-      <div class="total-item">
-        <span class="total-label">TOTAL PARTIDAS</span>
-        <span class="total-value" id="total-partidas">0</span>
-      </div>
-      <div class="total-item">
-        <span class="total-label">TOTAL PERSONAS</span>
-        <span class="total-value" id="total-personas">0</span>
-      </div>
-    </div>
-
-    <button type="button" class="btn-add-partida" onclick="addPartida()">
-      <i class="ti ti-plus" aria-hidden="true"></i> Añadir partida
-    </button>
-
-    <button type="submit" class="ni-btn ni-btn-primary" id="btn-iniciar" disabled>
-      <i class="ti ti-player-play" aria-hidden="true"></i> Iniciar partidas
-    </button>
-  </form>
-  {% endif %}
-
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  {% if mode != 'create' and mode != 'edit' %}
-  // Datos de partidas disponibles
-  const TASKS = [
-    {% for st in tasks %}
-    { id: {{ st.task.id }}, name: "{{ st.task.name|escapejs }}" }{% if not forloop.last %},{% endif %}
-    {% endfor %}
-  ];
-
-  let partidaCount = 0;
-
-  function addPartida() {
-    partidaCount++;
-    const container = document.getElementById('partidas-container');
-    const card = document.createElement('div');
-    card.className = 'partida-card';
-    card.id = `partida-card-${partidaCount}`;
-
-    const taskOptions = TASKS.map(t =>
-      `<option value="${t.id}">${t.name}</option>`
-    ).join('');
-
-    card.innerHTML = `
-      <div class="partida-card-header">
-        <span class="partida-card-title">Partida ${partidaCount}</span>
-        <button type="button" class="btn-remove-partida" onclick="removePartida(${partidaCount})">
-          <i class="ti ti-x" aria-hidden="true"></i>
-        </button>
-      </div>
-      <div class="partida-grid">
-        <div class="ni-field" style="margin-bottom:0;">
-          <label class="ni-label">Partida</label>
-          <select class="ni-select" name="task_id" onchange="updateTotals()" required>
-            <option value="">Selecciona una partida...</option>
-            ${taskOptions}
-          </select>
-        </div>
-        <div class="ni-field" style="margin-bottom:0;">
-          <label class="ni-label">Personas</label>
-          <input
-            type="number" name="quantity" class="ni-input"
-            min="1" value="1"
-            oninput="updateTotals()" required
-            style="text-align:center;"
-          >
-        </div>
-      </div>`;
-
-    container.appendChild(card);
-    updateTotals();
-    renumberCards();
-  }
-
-  function removePartida(id) {
-    const card = document.getElementById(`partida-card-${id}`);
-    if (card) card.remove();
-    updateTotals();
-    renumberCards();
-  }
-
-  function renumberCards() {
-    document.querySelectorAll('.partida-card').forEach((card, i) => {
-      const title = card.querySelector('.partida-card-title');
-      if (title) title.textContent = `Partida ${i + 1}`;
-    });
-  }
-
-  function updateTotals() {
-    const cards     = document.querySelectorAll('.partida-card');
-    let totalPersonas = 0;
-    let validCards    = 0;
-
-    cards.forEach(card => {
-      const select = card.querySelector('select[name="task_id"]');
-      const qty    = card.querySelector('input[name="quantity"]');
-      if (select && select.value && qty && parseInt(qty.value) > 0) {
-        totalPersonas += parseInt(qty.value) || 0;
-        validCards++;
-      }
-    });
-
-    document.getElementById('total-partidas').textContent  = validCards;
-    document.getElementById('total-personas').textContent  = totalPersonas;
-    document.getElementById('btn-iniciar').disabled = validCards === 0;
-  }
-
-  // Agregar primera partida automáticamente
-  if (TASKS.length > 0) {
-    addPartida();
-  }
-  {% endif %}
-
   // Formato RUT
   const rutInput = document.getElementById('rut');
   if (rutInput) {

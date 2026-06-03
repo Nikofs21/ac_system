@@ -109,13 +109,12 @@ def subcontract_create(request):
 
         if not errors:
             sub = Subcontract.objects.create(
-                company          = site.company,
-                site             = site,
-                name             = name,
-                code             = code,
-                rut              = rut or None,
-                reserved_stage_id = reserved_stage_id or None,
-                notes            = notes or None,
+                company = site.company,
+                site    = site,
+                name    = name,
+                code    = code,
+                rut     = rut or None,
+                notes   = notes or None,
             )
             messages.success(request, f'Subcontrato "{sub.name}" creado correctamente.')
             return redirect('subcontracts:subcontract_list')
@@ -150,7 +149,6 @@ def subcontract_edit(request, subcontract_id):
         name              = request.POST.get('name', '').strip()
         code              = request.POST.get('code', '').strip().upper()
         rut               = request.POST.get('rut', '').strip()
-        reserved_stage_id = request.POST.get('reserved_stage_id', '').strip()
         notes             = request.POST.get('notes', '').strip()
         post_data         = request.POST
 
@@ -214,7 +212,7 @@ def subcontract_qr(request, subcontract_id):
     return JsonResponse({
         'name':   sub.name,
         'code':   sub.code,
-        'stage':  sub.reserved_stage.name if sub.reserved_stage else None,
+        'stage': None,
         'qr_url': qr_url,
     })
 
@@ -318,17 +316,19 @@ def subcontract_form(request, subcontract_uid):
 
 def _get_tasks(subcontract, site):
     """Retorna las partidas disponibles para el subcontrato."""
-    if not subcontract.reserved_stage:
+    from subcontracts.models import SubcontractTaskAssignment
+    
+    assignments = SubcontractTaskAssignment.objects.filter(
+        subcontract=subcontract,
+        is_active=True,
+    ).select_related('task', 'reserved_stage').order_by('reserved_stage__name', 'task__name')
+    
+    if not assignments.exists():
         return []
-    return list(
-        StageTask.objects.filter(
-            site=site,
-            stage=subcontract.reserved_stage,
-            is_active=True,
-            task__status='ACTIVE',
-        ).select_related('task').order_by('task__name')
-    )
-
+    
+    # Retornar lista de StageTask-like objects para compatibilidad con el template
+    # Cada assignment tiene task y reserved_stage
+    return list(assignments)
 
 def _handle_start(request, subcontract, site):
     """Inicia una nueva sesion con sus partidas y slots iniciales."""

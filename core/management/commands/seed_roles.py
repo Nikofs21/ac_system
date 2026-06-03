@@ -37,6 +37,7 @@ class Command(BaseCommand):
             'bulk_close':        'OPERACION',
             'organigram':        'ORGANIGRAMA',
             'system':            'CONFIGURACION_ESTRUCTURAL',
+            'subcontracts':      'SUBCONTRATOS',
         }
 
         level_map = {
@@ -59,6 +60,8 @@ class Command(BaseCommand):
             'organigram.edit':             'ADMIN',
             'system.manage_companies':     'SENSITIVE',
             'system.manage_users':         'SENSITIVE',
+            'subcontracts.view_list':      'VIEW',
+            'subcontracts.operate':        'OPERATE',
         }
 
         created = 0
