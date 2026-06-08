@@ -1,0 +1,450 @@
+{% extends 'base.html' %}
+{% block title %}Panel del prestador{% endblock %}
+
+{% block extra_css %}
+<style>
+  .provider-wrap {
+    display: flex; height: calc(100vh - var(--ni-topbar-h));
+    overflow: hidden;
+  }
+
+  /* ── Sidebar empresas ── */
+  .company-sidebar {
+    width: 220px; flex-shrink: 0;
+    background: var(--ni-light);
+    border-right: 0.5px solid var(--ni-border);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .cs-header {
+    padding: 14px 12px 8px;
+    font-size: 10px; font-family: var(--font-mono);
+    color: var(--ni-text-sub); letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .company-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; cursor: pointer;
+    text-decoration: none; border-radius: var(--radius);
+    margin: 0 6px 2px;
+  }
+  .company-item:hover { background: rgba(0,0,0,0.04); }
+  .company-item.active { background: var(--ni-white); border: 0.5px solid var(--ni-border); }
+  .co-avatar {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--ni-blue-soft); color: var(--ni-blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+    flex-shrink: 0;
+  }
+  .co-name { font-size: 12px; color: var(--ni-text); font-weight: 500; }
+  .co-code { font-size: 10px; color: var(--ni-text-sub); font-family: var(--font-mono); }
+  .cs-add {
+    display: flex; align-items: center; gap: 6px;
+    margin: 6px 8px; padding: 8px 10px;
+    border: 0.5px dashed var(--ni-border); border-radius: var(--radius);
+    font-size: 12px; color: var(--ni-text-sub); cursor: pointer;
+    text-decoration: none;
+  }
+  .cs-add:hover { border-color: var(--ni-blue); color: var(--ni-blue); }
+
+  /* ── Panel principal ── */
+  .provider-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .pm-header {
+    padding: 14px 20px; background: var(--ni-white);
+    border-bottom: 0.5px solid var(--ni-border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .pm-title { font-size: 15px; font-weight: 600; color: var(--ni-dark); }
+  .pm-sub { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
+
+  /* ── Tabs ── */
+  .pm-tabs {
+    display: flex; background: var(--ni-white);
+    border-bottom: 0.5px solid var(--ni-border); flex-shrink: 0;
+    padding: 0 20px;
+  }
+  .pm-tab {
+    padding: 10px 14px; font-size: 13px; color: var(--ni-text-sub);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -0.5px; text-decoration: none;
+    transition: color 0.12s;
+  }
+  .pm-tab:hover { color: var(--ni-dark); }
+  .pm-tab.active { color: var(--ni-blue); border-bottom-color: var(--ni-blue); font-weight: 500; }
+
+  /* ── Contenido tabs ── */
+  .pm-content { flex: 1; overflow-y: auto; padding: 20px; }
+
+  /* ── Obras ── */
+  .site-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius); margin-bottom: 6px;
+    background: var(--ni-white); text-decoration: none;
+    transition: border-color 0.12s;
+  }
+  .site-row:hover { border-color: var(--ni-blue); }
+  .site-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-ACTIVE   { background: #4caf50; }
+  .dot-PLANNED  { background: #ff9800; }
+  .dot-PAUSED   { background: #ff9800; }
+  .dot-CLOSED   { background: #aaa; }
+  .site-name-text { font-size: 13px; color: var(--ni-text); flex: 1; }
+  .site-code-text { font-size: 11px; color: var(--ni-text-sub); font-family: var(--font-mono); }
+
+  .status-badge {
+    font-size: 10px; border-radius: 20px; padding: 2px 9px;
+    font-family: var(--font-mono);
+  }
+  .status-ACTIVE  { background: #e8f5ee; color: #2e7d32; }
+  .status-PLANNED { background: #fff3e0; color: #e65100; }
+  .status-PAUSED  { background: #fff3e0; color: #e65100; }
+  .status-CLOSED  { background: #f0f0f0; color: #888; }
+
+  /* ── Feature flags ── */
+  .flags-section { margin-top: 20px; }
+  .flags-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .flag-card {
+    border: 0.5px solid var(--ni-border); border-radius: var(--radius);
+    padding: 10px 12px; display: flex; align-items: center;
+    justify-content: space-between; background: var(--ni-white);
+  }
+  .flag-label { font-size: 13px; color: var(--ni-text); }
+  .flag-sub { font-size: 11px; color: var(--ni-text-sub); margin-top: 2px; }
+  .toggle-wrap {
+    position: relative; width: 36px; height: 20px;
+    border-radius: 10px; flex-shrink: 0; cursor: default;
+  }
+  .toggle-on  { background: var(--ni-blue); }
+  .toggle-off { background: var(--ni-border); }
+  .toggle-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: white; position: absolute; top: 2px;
+  }
+  .thumb-on  { left: 18px; }
+  .thumb-off { left: 2px; }
+
+  /* ── Sección title ── */
+  .section-hd {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .section-label {
+    font-size: 11px; font-weight: 500; color: var(--ni-text-sub);
+    text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono);
+  }
+
+  /* ── Botones ── */
+  .btn-sm {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius); font-size: 12px;
+    color: var(--ni-text-sub); background: var(--ni-white);
+    cursor: pointer; text-decoration: none;
+    font-family: var(--font-main);
+  }
+  .btn-sm:hover { border-color: var(--ni-blue); color: var(--ni-blue); }
+  .btn-sm-danger:hover { border-color: #c0392b; color: #c0392b; }
+
+  .empty-state { padding: 32px; text-align: center; color: var(--ni-text-sub); }
+  .empty-state i { font-size: 32px; color: #ddd; display: block; margin-bottom: 8px; }
+
+  /* ── Toast ── */
+  #p-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ni-dark); color: white; border-radius: var(--radius);
+    padding: 10px 18px; font-size: 13px; z-index: 2000;
+    display: none; align-items: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  #p-toast.visible { display: flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="provider-wrap">
+
+  <!-- ── Sidebar ── -->
+  <div class="company-sidebar">
+    <div class="cs-header">Empresas</div>
+    {% for company in companies %}
+      <a href="?company={{ company.id }}"
+         class="company-item {% if selected_company and selected_company.id == company.id %}active{% endif %}">
+        <div class="co-avatar">{{ company.code|slice:":2" }}</div>
+        <div>
+          <div class="co-name">{{ company.name|truncatechars:20 }}</div>
+          <div class="co-code">{{ company.code }}</div>
+        </div>
+      </a>
+    {% empty %}
+      <div style="padding:16px; font-size:12px; color:var(--ni-text-sub);">Sin empresas aún.</div>
+    {% endfor %}
+    <a href="{% url 'provider:company_create' %}" class="cs-add">
+      <i class="ti ti-plus" style="font-size:14px;" aria-hidden="true"></i>
+      Nueva empresa
+    </a>
+  </div>
+
+  <!-- ── Panel principal ── -->
+  {% if selected_company %}
+  <div class="provider-main">
+
+    <!-- Header -->
+    <div class="pm-header">
+      <div>
+        <div class="pm-title">{{ selected_company.name }}</div>
+        <div class="pm-sub">
+          {{ selected_company.code }}
+          {% if selected_company.tax_id %}&nbsp;·&nbsp;{{ selected_company.tax_id }}{% endif %}
+          &nbsp;·&nbsp;
+          <span class="status-badge status-{{ selected_company.status }}">{{ selected_company.get_status_display }}</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <a href="{% url 'provider:company_edit' selected_company.id %}" class="btn-sm">
+          <i class="ti ti-pencil" style="font-size:13px;" aria-hidden="true"></i> Editar
+        </a>
+        {% if selected_company.status == 'ACTIVE' %}
+          <button class="btn-sm btn-sm-danger"
+                  onclick="toggleCompany({{ selected_company.id }}, 'desactivar', '{{ selected_company.name|escapejs }}')">
+            <i class="ti ti-ban" style="font-size:13px;" aria-hidden="true"></i> Desactivar
+          </button>
+        {% else %}
+          <button class="btn-sm"
+                  onclick="toggleCompany({{ selected_company.id }}, 'activar', '{{ selected_company.name|escapejs }}')">
+            <i class="ti ti-check" style="font-size:13px;" aria-hidden="true"></i> Activar
+          </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="pm-tabs">
+      <a href="?company={{ selected_company.id }}&tab=obras"
+         class="pm-tab {% if active_tab == 'obras' %}active{% endif %}">Obras</a>
+      <a href="?company={{ selected_company.id }}&tab=modulos"
+         class="pm-tab {% if active_tab == 'modulos' %}active{% endif %}">Módulos empresa</a>
+      <a href="?company={{ selected_company.id }}&tab=usuarios"
+         class="pm-tab {% if active_tab == 'usuarios' %}active{% endif %}">Usuarios</a>
+    </div>
+
+    <!-- Contenido -->
+    <div class="pm-content">
+
+      {% if active_tab == 'obras' %}
+      <!-- ── Tab Obras ── -->
+      <div class="section-hd">
+        <span class="section-label">Obras ({{ sites|length }})</span>
+        <a href="{% url 'provider:site_create' selected_company.id %}" class="btn-sm">
+          <i class="ti ti-plus" style="font-size:13px;" aria-hidden="true"></i> Nueva obra
+        </a>
+      </div>
+
+      {% for site in sites %}
+        <div class="site-row">
+          <div class="site-dot dot-{{ site.status }}"></div>
+          <div style="flex:1;">
+            <div class="site-name-text">{{ site.name }}</div>
+            <div class="site-code-text">{{ site.code }}{% if site.address %}&nbsp;·&nbsp;{{ site.address|truncatechars:40 }}{% endif %}</div>
+          </div>
+          <span class="status-badge status-{{ site.status }}">{{ site.get_status_display }}</span>
+          <a href="{% url 'provider:site_edit' site.id %}" class="btn-sm" style="margin-left:6px;">
+            <i class="ti ti-pencil" style="font-size:12px;" aria-hidden="true"></i>
+          </a>
+          <a href="{% url 'provider:site_users' site.id %}" class="btn-sm"
+             onclick="loadSiteUsers({{ site.id }}, '{{ site.name|escapejs }}'); return false;">
+            <i class="ti ti-users" style="font-size:12px;" aria-hidden="true"></i>
+          </a>
+        </div>
+      {% empty %}
+        <div class="empty-state">
+          <i class="ti ti-building-off" aria-hidden="true"></i>
+          <p>Sin obras registradas.</p>
+        </div>
+      {% endfor %}
+
+      {% elif active_tab == 'modulos' %}
+      <!-- ── Tab Módulos empresa ── -->
+      <p class="section-label" style="margin-bottom:12px;">Módulos habilitados para esta empresa</p>
+      <p style="font-size:12px; color:var(--ni-text-sub); margin-bottom:16px;">
+        Los módulos desactivados aquí no pueden habilitarse en ninguna obra de esta empresa.
+      </p>
+
+      {% if company_config %}
+        <div class="flags-grid">
+          {% with flags=company_config %}
+          <div class="flag-card">
+            <div><div class="flag-label">Subcontratos</div></div>
+            <div class="toggle-wrap {% if flags.allow_subcontracts %}toggle-on{% else %}toggle-off{% endif %}">
+              <div class="toggle-thumb {% if flags.allow_subcontracts %}thumb-on{% else %}thumb-off{% endif %}"></div>
+            </div>
+          </div>
+          <div class="flag-card">
+            <div><div class="flag-label">Maquinarias</div></div>
+            <div class="toggle-wrap {% if flags.allow_machinery %}toggle-on{% else %}toggle-off{% endif %}">
+              <div class="toggle-thumb {% if flags.allow_machinery %}thumb-on{% else %}thumb-off{% endif %}"></div>
+            </div>
+          </div>
+          <div class="flag-card">
+            <div><div class="flag-label">Planificación</div></div>
+            <div class="toggle-wrap {% if flags.allow_planning %}toggle-on{% else %}toggle-off{% endif %}">
+              <div class="toggle-thumb {% if flags.allow_planning %}thumb-on{% else %}thumb-off{% endif %}"></div>
+            </div>
+          </div>
+          <div class="flag-card">
+            <div><div class="flag-label">Organigrama</div></div>
+            <div class="toggle-wrap {% if flags.allow_orgchart %}toggle-on{% else %}toggle-off{% endif %}">
+              <div class="toggle-thumb {% if flags.allow_orgchart %}thumb-on{% else %}thumb-off{% endif %}"></div>
+            </div>
+          </div>
+          <div class="flag-card">
+            <div><div class="flag-label">Asistencia</div></div>
+            <div class="toggle-wrap {% if flags.allow_assistance %}toggle-on{% else %}toggle-off{% endif %}">
+              <div class="toggle-thumb {% if flags.allow_assistance %}thumb-on{% else %}thumb-off{% endif %}"></div>
+            </div>
+          </div>
+          {% endwith %}
+        </div>
+        <div style="margin-top:12px;">
+          <a href="{% url 'provider:company_edit' selected_company.id %}" class="btn-sm">
+            <i class="ti ti-pencil" style="font-size:13px;" aria-hidden="true"></i> Editar módulos
+          </a>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <i class="ti ti-settings-off" aria-hidden="true"></i>
+          <p>Sin configuración. <a href="{% url 'provider:company_edit' selected_company.id %}">Configura la empresa</a>.</p>
+        </div>
+      {% endif %}
+
+      {% elif active_tab == 'usuarios' %}
+      <!-- ── Tab Usuarios ── -->
+      <p class="section-label" style="margin-bottom:12px;">Selecciona una obra para ver sus usuarios</p>
+      {% for site in sites %}
+        <div class="site-row" style="cursor:pointer;"
+             onclick="loadSiteUsers({{ site.id }}, '{{ site.name|escapejs }}')">
+          <div class="site-dot dot-{{ site.status }}"></div>
+          <div class="site-name-text">{{ site.name }}</div>
+          <span class="status-badge status-{{ site.status }}">{{ site.get_status_display }}</span>
+          <i class="ti ti-chevron-right" style="font-size:14px; color:var(--ni-text-sub);" aria-hidden="true"></i>
+        </div>
+      {% empty %}
+        <div class="empty-state">
+          <i class="ti ti-building-off" aria-hidden="true"></i>
+          <p>Sin obras registradas.</p>
+        </div>
+      {% endfor %}
+
+      {% endif %}
+
+    </div>
+  </div>
+  {% else %}
+  <div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--ni-text-sub);">
+    <div style="text-align:center;">
+      <i class="ti ti-building" style="font-size:48px; display:block; margin-bottom:12px; color:#ddd;" aria-hidden="true"></i>
+      <p>Selecciona una empresa para comenzar</p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Modal usuarios de obra -->
+<div id="users-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center;"
+     onclick="if(event.target===this)closeUsersModal()">
+  <div style="background:var(--ni-white); border-radius:var(--radius-lg); width:560px; max-width:90vw; max-height:80vh; display:flex; flex-direction:column; overflow:hidden;">
+    <div style="padding:16px 20px; border-bottom:0.5px solid var(--ni-border); display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <div style="font-size:15px; font-weight:600; color:var(--ni-dark);" id="modal-site-name">Usuarios</div>
+        <div style="font-size:12px; color:var(--ni-text-sub);">Membresías activas en esta obra</div>
+      </div>
+      <button onclick="closeUsersModal()" style="background:none; border:none; cursor:pointer; font-size:20px; color:var(--ni-text-sub);">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div id="modal-users-content" style="flex:1; overflow-y:auto; padding:12px 16px;">
+      <div style="text-align:center; padding:24px; color:var(--ni-text-sub);">Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<div id="p-toast">
+  <i class="ti ti-check" aria-hidden="true"></i>
+  <span id="p-toast-msg"></span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+
+function toggleCompany(id, action, name) {
+  if (!confirm(`¿${action === 'desactivar' ? 'Desactivar' : 'Activar'} la empresa "${name}"?`)) return;
+  const url = action === 'desactivar'
+    ? `/prestador/empresa/${id}/desactivar/`
+    : `/prestador/empresa/${id}/activar/`;
+  fetch(url, { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+    .then(r => r.json())
+    .then(d => { showToast(d.message); setTimeout(() => location.reload(), 1200); })
+    .catch(() => showToast('Error.'));
+}
+
+function loadSiteUsers(siteId, siteName) {
+  document.getElementById('modal-site-name').textContent = siteName;
+  document.getElementById('modal-users-content').innerHTML = '<div style="text-align:center;padding:24px;color:var(--ni-text-sub);">Cargando...</div>';
+  document.getElementById('users-modal-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  fetch(`/prestador/obra/${siteId}/usuarios/`, { headers: { 'X-CSRFToken': CSRF } })
+    .then(r => r.json())
+    .then(data => renderUsersModal(data, siteId))
+    .catch(() => {
+      document.getElementById('modal-users-content').innerHTML = '<div style="padding:16px;color:#c0392b;">Error al cargar usuarios.</div>';
+    });
+}
+
+function renderUsersModal(data, siteId) {
+  const container = document.getElementById('modal-users-content');
+  if (!data.users.length) {
+    container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--ni-text-sub);">Sin usuarios en esta obra.</div>';
+    return;
+  }
+  let html = '';
+  data.users.forEach(u => {
+    const initials = u.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
+    const activeStyle = u.is_active ? '' : 'opacity:0.5;';
+    html += `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:0.5px solid var(--ni-border);${activeStyle}">
+        <div style="width:34px;height:34px;border-radius:50%;background:var(--ni-blue-soft);color:var(--ni-blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;">${initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;color:var(--ni-text);">${u.name}</div>
+          <div style="font-size:11px;color:var(--ni-text-sub);font-family:var(--font-mono);">${u.email}</div>
+        </div>
+        <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--ni-blue-soft);color:var(--ni-blue);font-family:var(--font-mono);">${u.role}</span>
+        <a href="/prestador/membresia/${u.membership_id}/permisos/" style="display:flex;align-items:center;gap:4px;padding:5px 10px;border:0.5px solid var(--ni-border);border-radius:var(--radius);font-size:11px;color:var(--ni-text-sub);text-decoration:none;">
+          <i class="ti ti-shield" style="font-size:12px;" aria-hidden="true"></i> Permisos
+        </a>
+      </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function closeUsersModal() {
+  document.getElementById('users-modal-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('p-toast');
+  document.getElementById('p-toast-msg').textContent = msg;
+  t.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('visible'), 3000);
+}
+</script>
+{% endblock %}

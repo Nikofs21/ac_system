@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .perm-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 0.5px solid var(--ni-border);
+    font-size: 13px;
+  }
+  .perm-row:last-child { border-bottom: none; }
+  .perm-name { flex: 1; color: var(--ni-text); }
+  .perm-module {
+    font-size: 10px; color: var(--ni-text-sub);
+    background: var(--ni-light); border-radius: 4px;
+    padding: 2px 7px; font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+  .perm-select {
+    border: 0.5px solid var(--ni-border); border-radius: var(--radius);
+    padding: 4px 8px; font-size: 12px; background: var(--ni-white);
+    color: var(--ni-text); cursor: pointer; font-family: var(--font-main);
+  }
+  .perm-select.override-on  { border-color: #4caf50; color: #2e7d32; background: #e8f5ee; }
+  .perm-select.override-off { border-color: #e53935; color: #c0392b; background: #fce8e8; }
+  .perm-select.role-on      { border-color: var(--ni-border); color: var(--ni-text-sub); }
+
+  .user-header {
+    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius-lg); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .user-av {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--ni-blue-soft); color: var(--ni-blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; flex-shrink: 0;
+  }
+  .module-group { margin-bottom: 20px; }
+  .module-label {
+    font-size: 10px; font-weight: 500; color: var(--ni-text-sub);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-family: var(--font-mono); padding: 8px 14px;
+    background: var(--ni-light); border-bottom: 0.5px solid var(--ni-border);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">{{ page_title }}</h1>
+    <p class="ni-page-sub">{{ site.name }}</p>
+  </div>
+  <a href="{% url 'provider:panel' %}?company={{ site.company.id }}&tab=usuarios"
+     class="ni-btn ni-btn-secondary" style="width:auto; padding:9px 16px; font-size:13px;">
+    <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver
+  </a>
+</div>
+
+<div style="max-width:720px; margin:0 auto; padding:20px 16px;">
+
+  <div class="user-header">
+    <div class="user-av">
+      {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+    </div>
+    <div>
+      <div style="font-size:15px; font-weight:600; color:var(--ni-dark);">{{ user.get_full_name }}</div>
+      <div style="font-size:12px; color:var(--ni-text-sub);">{{ user.email }}</div>
+      <div style="font-size:12px; color:var(--ni-text-sub); margin-top:2px;">
+        Rol base: <strong>{{ membership.role.name }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="ni-alert ni-alert-info" style="margin-bottom:16px;">
+    <i class="ti ti-info-circle" aria-hidden="true"></i>
+    <span style="font-size:12px;">
+      <strong>Predeterminado</strong> usa el permiso del rol base.
+      <strong>Activar</strong> agrega el permiso aunque el rol no lo tenga.
+      <strong>Desactivar</strong> quita el permiso aunque el rol lo tenga.
+    </span>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% regroup perms_data by perm.module as module_groups %}
+    {% for group in module_groups %}
+      <div class="ni-card module-group">
+        <div class="module-label">{{ group.grouper }}</div>
+        {% for item in group.list %}
+          <div class="perm-row">
+            <span class="perm-name">{{ item.perm.name }}</span>
+            <span style="font-size:10px; color:var(--ni-text-sub); font-family:var(--font-mono);">
+              {% if item.status == 'role_on' %}✓ Rol{% elif item.status == 'role_off' %}— Rol{% endif %}
+            </span>
+            <select name="perm_{{ item.perm.code }}"
+                    class="perm-select {% if item.status == 'override_on' %}override-on{% elif item.status == 'override_off' %}override-off{% endif %}"
+                    onchange="updateStyle(this)">
+              <option value="default"
+                {% if item.status == 'role_on' or item.status == 'role_off' %}selected{% endif %}>
+                Predeterminado {% if item.status == 'role_on' %}(activo){% else %}(inactivo){% endif %}
+              </option>
+              <option value="on" {% if item.status == 'override_on' %}selected{% endif %}>Activar</option>
+              <option value="off" {% if item.status == 'override_off' %}selected{% endif %}>Desactivar</option>
+            </select>
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+      <button type="submit" class="ni-btn ni-btn-primary">
+        <i class="ti ti-check" aria-hidden="true"></i> Guardar permisos
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateStyle(select) {
+  select.classList.remove('override-on', 'override-off');
+  if (select.value === 'on')  select.classList.add('override-on');
+  if (select.value === 'off') select.classList.add('override-off');
+}
+</script>
+{% endblock %}

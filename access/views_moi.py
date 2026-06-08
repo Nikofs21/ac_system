@@ -175,15 +175,16 @@ def _handle_moi_create(request, site, roles):
                 user.save()
         else:
             # Crear usuario nuevo con contraseña temporal
-            user = User.objects.create_user(
+            user = User(
                 email=email,
-                password='prueba1234',
                 first_name=first_name,
                 last_name=last_name,
                 rut=rut or None,
                 actor_type='CLIENT',
                 is_active=True,
             )
+            user.set_unusable_password()
+            user.save()
 
         # Asegurar membresía de empresa
         CompanyMembership.objects.get_or_create(

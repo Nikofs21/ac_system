@@ -150,13 +150,6 @@ def _generate_qr_pdf(resources, site, request):
 
         c.drawImage(qr_img, qr_x, qr_y, qr_size, qr_size, preserveAspectRatio=True)
 
-        # ── Logo pequeño debajo del QR ────────────────────────────────────
-        # (texto de marca en vez de imagen para no depender de archivo)
-        c.setFont('Helvetica-Bold', 5.5)
-        c.setFillColorRGB(0, 0.15, 0.93)  # --ni-blue
-        brand_y = qr_y - 0.35 * cm
-        c.drawCentredString(cell_x + cell_w / 2, brand_y, 'NOVUS IMPERIUM')
-
         # ── Nombre del trabajador ─────────────────────────────────────────
         name = resource.display_name
         # Truncar si es muy largo
@@ -165,7 +158,7 @@ def _generate_qr_pdf(resources, site, request):
 
         c.setFont('Helvetica-Bold', 7.5)
         c.setFillColorRGB(0.07, 0.11, 0.28)  # --ni-dark
-        name_y = brand_y - 0.45 * cm
+        name_y = qr_y - 0.45 * cm
         c.drawCentredString(cell_x + cell_w / 2, name_y, name)
 
         # ── Cargo ─────────────────────────────────────────────────────────

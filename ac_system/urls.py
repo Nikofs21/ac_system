@@ -13,10 +13,11 @@ urlpatterns = [
     path('work/', include('work.urls')),
     path('resources/', include('resources.urls')),
     path('tracking/', include('tracking.urls')),
-    # Ruta publica del QR — corta y memorable para imprimir en credenciales
-    path('r/<str:uid>/', include('resources.urls_qr')),
+    path('r/<str:uid>/', include('resources.urls_qr')),       # Ruta publica del QR — corta y memorable para imprimir en credenciales
     path('', lambda request: redirect('dashboard'), name='home'),
     path('access/', include('access.urls')),
     path('subcontracts/', include('subcontracts.urls')),
     path('subcontratos/<str:subcontract_uid>/', subcontracts_views.subcontract_form, name='subcontract_form_qr'),
+    path('accounts/', include('allauth.urls')),
+    path('prestador/', include('companies.urls_provider')),
 ]

@@ -199,3 +199,55 @@ class RolePermission(models.Model):
 
     def __str__(self):
         return f'{self.role.name} - {self.permission.name}'
+    
+class SiteMembershipPermissionOverride(models.Model):
+    """
+    Sobrescribe permisos del rol estandar para un usuario especifico en una obra.
+
+    granted=True  → agrega el permiso aunque el rol no lo tenga
+    granted=False → quita el permiso aunque el rol lo tenga
+
+    Ejemplos de uso:
+    - Supervisor que necesita ver subcontratos en una obra especifica:
+        site_membership=supervisor_membership, permission=subcontracts.view_list, granted=True
+    - Jefe de terreno al que se le quita edicion de sesiones en una obra:
+        site_membership=jefe_membership, permission=sessions_review.edit_today, granted=False
+
+    Solo el prestador puede crear/editar estos overrides.
+    """
+    site_membership = models.ForeignKey(
+        'companies.SiteMembership',
+        on_delete=models.CASCADE,
+        related_name='permission_overrides',
+    )
+    permission = models.ForeignKey(
+        'access.Permission',
+        on_delete=models.CASCADE,
+        related_name='membership_overrides',
+    )
+    granted    = models.BooleanField(
+        help_text='True = agregar permiso, False = quitar permiso'
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='permission_overrides_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'access_membership_permission_override'
+        verbose_name = 'Override de permiso por membresia'
+        verbose_name_plural = 'Overrides de permiso por membresia'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['site_membership', 'permission'],
+                name='unique_override_per_membership_permission'
+            )
+        ]
+
+    def __str__(self):
+        action = 'AGREGA' if self.granted else 'QUITA'
+        return f'{action} {self.permission.code} → {self.site_membership}'

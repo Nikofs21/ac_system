@@ -455,3 +455,66 @@ class OvertimePolicy(models.Model):
         dia  = dias[self.weekday] if 0 <= self.weekday <= 6 else str(self.weekday)
         return f'{self.site.name} — {dia} | fin: {self.normal_end_time} | cierre auto: {self.auto_close_time}'
 
+class ChilePublicHoliday(models.Model):
+    """
+    Feriados nacionales de Chile.
+    Se siembran via comando seed_holidays.
+    Los fijos se repiten cada año, los variables (Semana Santa) cambian.
+    """
+    date         = models.DateField(unique=True)
+    name         = models.CharField(max_length=120)
+    year         = models.SmallIntegerField()
+    is_recurring = models.BooleanField(
+        default=True,
+        help_text='True = feriado fijo que se repite cada año. False = variable (Semana Santa, etc.)'
+    )
+
+    class Meta:
+        db_table = 'work_chile_public_holiday'
+        verbose_name = 'Feriado nacional Chile'
+        verbose_name_plural = 'Feriados nacionales Chile'
+        ordering = ['date']
+
+    def __str__(self):
+        return f'{self.name} ({self.date})'
+
+
+class SiteHoliday(models.Model):
+    """
+    Dias no laborables adicionales por obra.
+    Para sandwiches, dias de faena, feriados regionales, etc.
+    Solo el prestador puede crear estos dias.
+    """
+    site        = models.ForeignKey(
+        'companies.Site',
+        on_delete=models.CASCADE,
+        related_name='holidays'
+    )
+    date        = models.DateField()
+    description = models.CharField(
+        max_length=180,
+        help_text='Ej: Viernes sandwich feriado 18 de septiembre'
+    )
+    is_active   = models.BooleanField(default=True)
+    created_by  = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='site_holidays_created'
+    )
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'work_site_holiday'
+        verbose_name = 'Dia no laborable por obra'
+        verbose_name_plural = 'Dias no laborables por obra'
+        ordering = ['site', 'date']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['site', 'date'],
+                name='unique_site_holiday_per_date'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.site.name} — {self.date} ({self.description})'

@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">{{ page_title }}</h1>
+    <p class="ni-page-sub">Panel del prestador</p>
+  </div>
+</div>
+
+<div style="max-width:560px; margin:0 auto; padding:20px 16px;">
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="ni-card" style="margin-bottom:16px;">
+      <div class="ni-card-header"><span class="ni-card-title">Datos de la empresa</span></div>
+      <div class="ni-card-body">
+
+        <div class="ni-field">
+          <label class="ni-label">Nombre</label>
+          <input class="ni-input {% if errors.name %}error{% endif %}"
+                 type="text" name="name"
+                 value="{% if post_data %}{{ post_data.name }}{% elif company %}{{ company.name }}{% endif %}"
+                 placeholder="Ej: Constructora Martínez SpA" required>
+          {% if errors.name %}<div style="font-size:11px;color:#c0392b;margin-top:4px;">{{ errors.name }}</div>{% endif %}
+        </div>
+
+        <div class="ni-field">
+          <label class="ni-label">Código</label>
+          <input class="ni-input {% if errors.code %}error{% endif %}"
+                 type="text" name="code"
+                 value="{% if post_data %}{{ post_data.code }}{% elif company %}{{ company.code }}{% endif %}"
+                 placeholder="Ej: CMZ-001" style="text-transform:uppercase;" required>
+          {% if errors.code %}<div style="font-size:11px;color:#c0392b;margin-top:4px;">{{ errors.code }}</div>{% endif %}
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="ni-field" style="margin-bottom:0;">
+            <label class="ni-label">RUT empresa</label>
+            <input class="ni-input" type="text" name="tax_id"
+                   value="{% if post_data %}{{ post_data.tax_id }}{% elif company %}{{ company.tax_id|default:'' }}{% endif %}"
+                   placeholder="76.123.456-7">
+          </div>
+          <div class="ni-field" style="margin-bottom:0;">
+            <label class="ni-label">Estado</label>
+            <select class="ni-select" name="status">
+              {% for val, label in status_choices %}
+                <option value="{{ val }}"
+                  {% if post_data and post_data.status == val %}selected
+                  {% elif company and company.status == val %}selected
+                  {% elif not post_data and not company and val == 'ACTIVE' %}selected
+                  {% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;">
+          <div class="ni-field" style="margin-bottom:0;">
+            <label class="ni-label">Email de contacto</label>
+            <input class="ni-input" type="email" name="contact_email"
+                   value="{% if post_data %}{{ post_data.contact_email }}{% elif company %}{{ company.contact_email|default:'' }}{% endif %}"
+                   placeholder="contacto@empresa.cl">
+          </div>
+          <div class="ni-field" style="margin-bottom:0;">
+            <label class="ni-label">Teléfono</label>
+            <input class="ni-input" type="text" name="contact_phone"
+                   value="{% if post_data %}{{ post_data.contact_phone }}{% elif company %}{{ company.contact_phone|default:'' }}{% endif %}"
+                   placeholder="+56 9 1234 5678">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="ni-card" style="margin-bottom:20px;">
+      <div class="ni-card-header"><span class="ni-card-title">Módulos habilitados</span></div>
+      <div class="ni-card-body">
+        <p style="font-size:12px; color:var(--ni-text-sub); margin-bottom:14px;">
+          Los módulos desactivados no estarán disponibles en ninguna obra de esta empresa.
+        </p>
+
+        {% for field_name, label, is_checked in module_flags %}
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:0.5px solid var(--ni-border);">
+          <span style="font-size:13px; color:var(--ni-text);">{{ label }}</span>
+          <input type="checkbox" name="{{ field_name }}"
+                 {% if is_checked %}checked{% endif %}
+                 style="accent-color:var(--ni-blue); width:16px; height:16px; cursor:pointer;">
+        </div>
+        {% endfor %}
+
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button type="submit" class="ni-btn ni-btn-primary">
+        <i class="ti ti-{% if mode == 'create' %}plus{% else %}check{% endif %}" aria-hidden="true"></i>
+        {% if mode == 'create' %}Crear empresa{% else %}Guardar cambios{% endif %}
+      </button>
+      <a href="{% url 'provider:panel' %}{% if company %}?company={{ company.id }}{% endif %}"
+         class="ni-btn ni-btn-secondary" style="text-align:center;">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

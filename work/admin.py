@@ -5,6 +5,7 @@ from .models import (
     WorkSession, WorkSessionChangeLog, MassCloseBatch,
     MassCloseBatchItem, OvertimePolicy
 )
+from work.models import ChilePublicHoliday, SiteHoliday
 
 
 
@@ -93,3 +94,18 @@ class SupervisorTaskPermissionAdmin(admin.ModelAdmin):
     def get_site(self, obj):
         return obj.site_membership.site.name
     get_site.short_description = 'Obra'
+
+@admin.register(ChilePublicHoliday)
+class ChilePublicHolidayAdmin(admin.ModelAdmin):
+    list_display  = ('date', 'name', 'year', 'is_recurring')
+    list_filter   = ('year', 'is_recurring')
+    ordering      = ('date',)
+    search_fields = ('name',)
+
+
+@admin.register(SiteHoliday)
+class SiteHolidayAdmin(admin.ModelAdmin):
+    list_display  = ('site', 'date', 'description', 'is_active', 'created_by')
+    list_filter   = ('is_active', 'site')
+    ordering      = ('site', 'date')
+    search_fields = ('description', 'site__name')

@@ -4,7 +4,6 @@
 
 {% block extra_css %}
 <style>
-  /* ── filtros ── */
   .filter-bar {
     display: flex; gap: 6px; padding: 10px 16px;
     background: var(--ni-white); border-bottom: 0.5px solid var(--ni-border);
@@ -19,7 +18,14 @@
   }
   .filter-btn.active { background: var(--ni-blue); border-color: var(--ni-blue); color: #fff; }
 
-  /* ── acciones masivas ── */
+  .select-all-bar {
+    padding: 8px 16px;
+    background: #fafafa; border-bottom: 0.5px solid var(--ni-border);
+    font-size: 12px; color: var(--ni-text-sub);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .select-all-check { accent-color: var(--ni-blue); width: 16px; height: 16px; cursor: pointer; }
+
   .bulk-bar {
     display: none; align-items: center; gap: 10px;
     padding: 8px 16px;
@@ -31,26 +37,22 @@
   .bulk-actions { margin-left: auto; display: flex; gap: 8px; }
   .btn-bulk {
     height: 32px; border-radius: var(--radius);
-    border: 1px solid var(--ni-blue);
-    background: var(--ni-white); color: var(--ni-blue);
+    border: 1px solid var(--ni-blue); background: var(--ni-white); color: var(--ni-blue);
     font-size: 12px; cursor: pointer; padding: 0 12px;
     display: flex; align-items: center; gap: 5px;
     font-family: var(--font-main); white-space: nowrap;
   }
   .btn-bulk:hover { background: var(--ni-blue); color: #fff; }
-  .btn-bulk-deselect {
+  .btn-bulk-cancel {
     height: 32px; border-radius: var(--radius);
-    border: none; background: none;
-    color: var(--ni-blue); font-size: 12px;
-    cursor: pointer; padding: 0 8px;
+    border: none; background: none; color: var(--ni-blue);
+    font-size: 12px; cursor: pointer; padding: 0 8px;
     font-family: var(--font-main);
   }
 
-  /* ── filas ── */
   .worker-row {
     display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px;
-    border-bottom: 0.5px solid var(--ni-border);
+    padding: 10px 14px; border-bottom: 0.5px solid var(--ni-border);
     transition: background 0.1s;
   }
   .worker-row:last-child { border-bottom: none; }
@@ -59,9 +61,7 @@
   .row-check {
     width: 18px; height: 18px; flex-shrink: 0;
     accent-color: var(--ni-blue); cursor: pointer;
-    display: none;  /* oculto por defecto, visible en pestaña activos */
   }
-  .show-checks .row-check { display: block; }
 
   .worker-avatar {
     width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
@@ -76,12 +76,6 @@
   .worker-name { font-size: 14px; font-weight: 500; color: var(--ni-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .worker-meta { font-size: 11px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 2px; }
 
-  .worker-status { flex-shrink: 0; }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .dot-active   { background: #4caf50; }
-  .dot-inactive { background: #ccc; }
-  .dot-session  { background: var(--ni-blue); }
-
   .row-actions { flex-shrink: 0; display: flex; gap: 6px; }
   .btn-row {
     height: 30px; border-radius: var(--radius);
@@ -92,21 +86,43 @@
   }
   .btn-row:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); color: var(--ni-blue); }
 
-  /* ── select all ── */
-  .select-all-bar {
-    display: none; padding: 8px 16px;
-    background: #fafafa; border-bottom: 0.5px solid var(--ni-border);
-    font-size: 12px; color: var(--ni-text-sub);
-    align-items: center; gap: 8px;
-  }
-  .select-all-bar.visible { display: flex; }
-  .select-all-check { accent-color: var(--ni-blue); width: 16px; height: 16px; cursor: pointer; }
-
   .empty-state { padding: 40px 24px; text-align: center; color: var(--ni-text-sub); }
   .empty-state i { font-size: 36px; color: #ddd; display: block; margin-bottom: 8px; }
 
-  /* toast */
-  #qr-toast {
+  /* QR Modal */
+  .qr-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 1000;
+    align-items: flex-end; justify-content: center;
+  }
+  .qr-overlay.visible { display: flex; }
+  .qr-sheet {
+    background: var(--ni-white); border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 420px; padding: 0 0 32px;
+    animation: slideUp 0.2s ease;
+  }
+  @media (min-width: 600px) {
+    .qr-overlay { align-items: center; padding: 16px; }
+    .qr-sheet { border-radius: var(--radius-lg); }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .qr-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--ni-border); margin: 10px auto 16px; }
+  @media (min-width: 600px) { .qr-handle { display: none; } }
+  .qr-header { padding: 0 20px 16px; border-bottom: 0.5px solid var(--ni-border); text-align: center; }
+  .qr-body   { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .qr-container {
+    background: var(--ni-white); border: 1.5px solid var(--ni-border);
+    border-radius: var(--radius-lg); padding: 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;
+  }
+  .qr-brand { display: flex; align-items: center; gap: 6px; font-family: var(--font-brand); font-weight: 800; font-size: 11px; color: var(--ni-dark); }
+  .qr-footer { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+  .qr-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--ni-text-sub); font-size: 13px; gap: 8px; }
+
+  #dl-toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: var(--ni-dark); color: var(--ni-white);
     border-radius: var(--radius); padding: 10px 18px;
@@ -114,7 +130,7 @@
     align-items: center; gap: 8px; max-width: 90vw;
     box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   }
-  #qr-toast.visible { display: flex; }
+  #dl-toast.visible { display: flex; }
 </style>
 {% endblock %}
 
@@ -133,64 +149,52 @@
 </div>
 
 <!-- Filtros -->
-<div class="filter-bar" role="tablist">
-  <button class="filter-btn {% if active_filter == 'active' %}active{% endif %}"
-          onclick="setFilter('active')" role="tab">
+<div class="filter-bar">
+  <button class="filter-btn {% if active_filter == 'active' %}active{% endif %}" onclick="setFilter('active')">
     Activos <span style="opacity:.6;">({{ counts.active }})</span>
   </button>
-  <button class="filter-btn {% if active_filter == 'with_session' %}active{% endif %}"
-          onclick="setFilter('with_session')" role="tab">
+  <button class="filter-btn {% if active_filter == 'with_session' %}active{% endif %}" onclick="setFilter('with_session')">
     Con sesión <span style="opacity:.6;">({{ counts.with_session }})</span>
   </button>
-  <button class="filter-btn {% if active_filter == 'without_session' %}active{% endif %}"
-          onclick="setFilter('without_session')" role="tab">
+  <button class="filter-btn {% if active_filter == 'without_session' %}active{% endif %}" onclick="setFilter('without_session')">
     Sin sesión <span style="opacity:.6;">({{ counts.without_session }})</span>
   </button>
-  <button class="filter-btn {% if active_filter == 'inactive' %}active{% endif %}"
-          onclick="setFilter('inactive')" role="tab">
+  <button class="filter-btn {% if active_filter == 'inactive' %}active{% endif %}" onclick="setFilter('inactive')">
     Inactivos <span style="opacity:.6;">({{ counts.inactive }})</span>
   </button>
 </div>
 
-<!-- Select all bar — solo visible en pestaña activos -->
 {% if active_filter == 'active' %}
+<!-- Seleccionar todos -->
 <div class="select-all-bar" id="select-all-bar">
   <input type="checkbox" class="select-all-check" id="check-all" onchange="toggleAll(this)">
-  <label for="check-all" style="cursor:pointer;">Seleccionar todos</label>
+  <label for="check-all" style="cursor:pointer;">Seleccionar todos ({{ counts.active }})</label>
 </div>
-{% endif %}
 
-<!-- Barra de acciones masivas -->
+<!-- Barra acciones masivas -->
 <div class="bulk-bar" id="bulk-bar">
   <span class="bulk-count" id="bulk-count">0</span>
   <span>seleccionados</span>
   <div class="bulk-actions">
-    {% if perms_ctx.can_view_qr and active_filter == 'active' %}
+    {% if perms_ctx.can_view_qr %}
       <button class="btn-bulk" onclick="downloadQRs()">
         <i class="ti ti-qrcode" aria-hidden="true"></i> Descargar QRs
       </button>
     {% endif %}
-    <button class="btn-bulk-deselect" onclick="clearSelection()">
-      Deseleccionar
-    </button>
+    <button class="btn-bulk-cancel" onclick="clearSelection()">✕ Deseleccionar</button>
   </div>
 </div>
+{% endif %}
 
 <!-- Lista -->
-<div class="ni-card" style="margin: 12px 16px 24px;" id="worker-list"
-     {% if active_filter == 'active' %}class="ni-card show-checks"{% endif %}>
+<div class="ni-card" style="margin: 12px 16px 24px;">
   {% if workers %}
     {% for worker in workers %}
       <div class="worker-row" id="wrow-{{ worker.id }}">
 
         {% if active_filter == 'active' %}
-          <input
-            type="checkbox"
-            class="row-check worker-check"
-            value="{{ worker.id }}"
-            onchange="updateBulkBar()"
-            aria-label="Seleccionar {{ worker.display_name }}"
-          >
+          <input type="checkbox" class="row-check" value="{{ worker.id }}"
+                 onchange="onCheckChange(this)" aria-label="Seleccionar {{ worker.display_name }}">
         {% endif %}
 
         <div class="worker-avatar {% if not worker.is_active_assignment %}inactive{% elif worker.has_open_session %}session{% endif %}">
@@ -205,22 +209,14 @@
           </div>
         </div>
 
-        <div class="worker-status">
-          <div class="status-dot
-            {% if worker.has_open_session %}dot-session
-            {% elif worker.is_active_assignment %}dot-active
-            {% else %}dot-inactive{% endif %}">
-          </div>
-        </div>
-
         <div class="row-actions">
           {% if perms_ctx.can_view_qr %}
-            <a href="{% url 'resources:resource_qr' worker.id %}" class="btn-row" title="Ver QR">
+            <button class="btn-row" onclick="openQRModal({{ worker.id }})" title="Ver QR">
               <i class="ti ti-qrcode" aria-hidden="true"></i>
-            </a>
+            </button>
           {% endif %}
           {% if perms_ctx.can_start_people and worker.is_active_assignment and not worker.has_open_session %}
-            <a href="{% url 'work:assignment_preload' worker.id %}" ...> class="btn-row" title="Asignar partida">
+            <a href="{% url 'work:assignment_preload' worker.id %}" class="btn-row" title="Asignar partida">
               <i class="ti ti-plus" aria-hidden="true"></i> Asignar
             </a>
           {% endif %}
@@ -241,18 +237,48 @@
   {% endif %}
 </div>
 
-<!-- Toast -->
-<div id="qr-toast">
-  <i class="ti ti-loader" id="toast-icon" aria-hidden="true"></i>
-  <span id="toast-msg">Generando PDF...</span>
+<!-- Modal QR -->
+<div class="qr-overlay" id="qr-overlay" onclick="if(event.target===this)closeQRModal()">
+  <div class="qr-sheet" id="qr-sheet">
+    <div class="qr-handle"></div>
+    <div id="qr-loading" class="qr-loading"><i class="ti ti-loader" aria-hidden="true"></i> Cargando...</div>
+    <div id="qr-content" style="display:none;">
+      <div class="qr-header">
+        <div style="font-size:16px; font-weight:600; color:var(--ni-dark);" id="qr-worker-name"></div>
+        <div style="font-size:12px; color:var(--ni-text-sub); margin-top:2px;" id="qr-worker-cargo"></div>
+        <div style="font-size:11px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:2px;" id="qr-worker-rut"></div>
+      </div>
+      <div class="qr-body">
+        <div class="qr-container">
+          <div id="qr-code-display"></div>
+          <div style="font-family:var(--font-mono); font-size:10px; color:#bbb;" id="qr-worker-uid"></div>
+        </div>
+      </div>
+      <div class="qr-footer">
+        <button onclick="printWorkerQR()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px;">
+          <i class="ti ti-printer" aria-hidden="true"></i> Imprimir / Guardar
+        </button>
+        <button onclick="closeQRModal()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px; color:var(--ni-text-sub);">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast descarga -->
+<div id="dl-toast">
+  <i class="ti ti-loader" aria-hidden="true"></i>
+  <span id="dl-toast-msg">Generando PDF...</span>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-const CSRF    = "{{ csrf_token }}";
-const FILTER  = "{{ active_filter }}";
+const CSRF   = "{{ csrf_token }}";
+const FILTER = "{{ active_filter }}";
 
 // ── Filtros ───────────────────────────────────────────────────────────────
 function setFilter(filter) {
@@ -261,105 +287,141 @@ function setFilter(filter) {
   window.location = url.toString();
 }
 
-// ── Selección ─────────────────────────────────────────────────────────────
-function updateBulkBar() {
-  const checked = document.querySelectorAll('.worker-check:checked');
-  const bulkBar = document.getElementById('bulk-bar');
-  const countEl = document.getElementById('bulk-count');
-  const selectAllBar = document.getElementById('select-all-bar');
-
-  // Highlight filas seleccionadas
-  document.querySelectorAll('.worker-check').forEach(cb => {
-    cb.closest('.worker-row').classList.toggle('selected', cb.checked);
-  });
-
-  if (checked.length > 0) {
-    bulkBar.classList.add('visible');
-    countEl.textContent = checked.length;
-    if (selectAllBar) selectAllBar.classList.add('visible');
-  } else {
-    bulkBar.classList.remove('visible');
-    if (selectAllBar) selectAllBar.classList.remove('visible');
-  }
+// ── Checkboxes ────────────────────────────────────────────────────────────
+function onCheckChange(cb) {
+  cb.closest('.worker-row').classList.toggle('selected', cb.checked);
+  syncMasterCheck();
+  updateBulkBar();
 }
 
-function toggleAll(masterCheck) {
-  document.querySelectorAll('.worker-check').forEach(cb => {
-    cb.checked = masterCheck.checked;
+function toggleAll(masterCb) {
+  document.querySelectorAll('.row-check').forEach(cb => {
+    cb.checked = masterCb.checked;
+    cb.closest('.worker-row').classList.toggle('selected', masterCb.checked);
   });
   updateBulkBar();
 }
 
 function clearSelection() {
-  document.querySelectorAll('.worker-check').forEach(cb => cb.checked = false);
-  const masterCheck = document.getElementById('check-all');
-  if (masterCheck) masterCheck.checked = false;
+  document.querySelectorAll('.row-check').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.worker-row').classList.remove('selected');
+  });
+  const master = document.getElementById('check-all');
+  if (master) master.checked = false;
+  updateBulkBar();
+}
+
+function syncMasterCheck() {
+  const all     = document.querySelectorAll('.row-check');
+  const checked = document.querySelectorAll('.row-check:checked');
+  const master  = document.getElementById('check-all');
+  if (!master) return;
+  master.indeterminate = checked.length > 0 && checked.length < all.length;
+  master.checked       = checked.length === all.length && all.length > 0;
+}
+
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.row-check:checked');
+  const bulkBar = document.getElementById('bulk-bar');
+  const countEl = document.getElementById('bulk-count');
+  if (!bulkBar) return;
+
   if (checked.length > 0) {
-      bulkBar.classList.add('visible');
-      countEl.textContent = checked.length;
+    bulkBar.classList.add('visible');
+    countEl.textContent = checked.length;
   } else {
-      bulkBar.classList.remove('visible');
-      // NO ocultar selectAllBar aquí
+    bulkBar.classList.remove('visible');
   }
 }
 
-// ── Descarga de QRs ───────────────────────────────────────────────────────
+// ── Descarga QRs PDF ──────────────────────────────────────────────────────
 function downloadQRs() {
-  const checked  = document.querySelectorAll('.worker-check:checked');
-  const ids      = Array.from(checked).map(cb => cb.value);
+  const ids = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+  if (ids.length === 0) return;
 
-  if (ids.length === 0) {
-    showToast('Selecciona al menos un trabajador.', 'warn');
-    return;
-  }
-
-  showToast(`Generando PDF con ${ids.length} QR${ids.length > 1 ? 's' : ''}...`, 'loading');
+  const toast = document.getElementById('dl-toast');
+  document.getElementById('dl-toast-msg').textContent = `Generando PDF con ${ids.length} QR${ids.length > 1 ? 's' : ''}...`;
+  toast.classList.add('visible');
 
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = '{% url "resources:download_qr_pdf" %}';
 
   const csrf = document.createElement('input');
-  csrf.type  = 'hidden';
-  csrf.name  = 'csrfmiddlewaretoken';
-  csrf.value = CSRF;
+  csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = CSRF;
   form.appendChild(csrf);
 
   ids.forEach(id => {
-    const input = document.createElement('input');
-    input.type  = 'hidden';
-    input.name  = 'resource_ids[]';
-    input.value = id;
-    form.appendChild(input);
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'resource_ids[]'; inp.value = id;
+    form.appendChild(inp);
   });
 
   document.body.appendChild(form);
   form.submit();
   document.body.removeChild(form);
-
-  // El PDF se descarga automáticamente — ocultar toast después
-  setTimeout(() => hideToast(), 3000);
+  setTimeout(() => toast.classList.remove('visible'), 4000);
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────
-let toastTimer = null;
-function showToast(msg, type = 'loading') {
-  const toast   = document.getElementById('qr-toast');
-  const icon    = document.getElementById('toast-icon');
-  const msgEl   = document.getElementById('toast-msg');
-  icon.className = type === 'loading' ? 'ti ti-loader' : 'ti ti-alert-circle';
-  msgEl.textContent = msg;
-  toast.classList.add('visible');
-  clearTimeout(toastTimer);
-}
-function hideToast() {
-  document.getElementById('qr-toast').classList.remove('visible');
+// ── Modal QR individual ───────────────────────────────────────────────────
+function openQRModal(resourceId) {
+  document.getElementById('qr-loading').style.display  = 'flex';
+  document.getElementById('qr-content').style.display  = 'none';
+  document.getElementById('qr-overlay').classList.add('visible');
+  document.body.style.overflow = 'hidden';
+
+  fetch(`/resources/qr/${resourceId}/`, { headers: { 'X-CSRFToken': CSRF } })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('qr-worker-name').textContent  = data.name;
+    document.getElementById('qr-worker-cargo').textContent = data.cargo;
+    document.getElementById('qr-worker-rut').textContent   = data.rut;
+    document.getElementById('qr-worker-uid').textContent   = data.uid.slice(0, 16) + '…';
+
+    const container = document.getElementById('qr-code-display');
+    container.innerHTML = '';
+    new QRCode(container, {
+      text: data.qr_url, width: 200, height: 200,
+      colorDark: '#131d47', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+
+    document.getElementById('qr-loading').style.display = 'none';
+    document.getElementById('qr-content').style.display = 'block';
+  })
+  .catch(() => closeQRModal());
 }
 
-// Inicializar select-all-bar visible si hay checkboxes
-if (FILTER === 'active') {
-  const bar = document.getElementById('select-all-bar');
-  if (bar) bar.classList.add('visible');
+function closeQRModal() {
+  document.getElementById('qr-overlay').classList.remove('visible');
+  document.body.style.overflow = '';
 }
+
+function printWorkerQR() {
+  const name  = document.getElementById('qr-worker-name').textContent;
+  const cargo = document.getElementById('qr-worker-cargo').textContent;
+  const rut   = document.getElementById('qr-worker-rut').textContent;
+  const canvas = document.querySelector('#qr-code-display canvas');
+  if (!canvas) return;
+  const dataUrl = canvas.toDataURL('image/png');
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>QR — ${name}</title>
+    <style>body{font-family:Arial,sans-serif;text-align:center;padding:40px;}
+    .card{display:inline-block;border:2px solid #e0e0e0;border-radius:12px;padding:24px 32px;}
+    img{display:block;margin:0 auto 12px;}h2{font-size:18px;margin:0 0 4px;color:#131d47;}
+    p{font-size:13px;color:#666;margin:2px 0;}
+    .brand{font-size:10px;color:#0025ec;font-weight:bold;margin-top:12px;letter-spacing:.05em;}</style>
+    </head><body><div class="card"><img src="${dataUrl}" width="200" height="200">
+    <h2>${name}</h2>${cargo ? `<p>${cargo}</p>` : ''}${rut ? `<p>${rut}</p>` : ''}
+    <p class="brand">NOVUS IMPERIUM</p></div>
+    <script>window.onload=()=>window.print();<\/script></body></html>`);
+  win.document.close();
+}
+
+// Swipe para cerrar modal
+let touchStartY = 0;
+document.getElementById('qr-sheet').addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+document.getElementById('qr-sheet').addEventListener('touchend', e => { if (e.changedTouches[0].clientY - touchStartY > 80) closeQRModal(); }, { passive: true });
 </script>
 {% endblock %}

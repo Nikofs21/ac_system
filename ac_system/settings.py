@@ -14,12 +14,17 @@ DJANGO_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
 ]
 
 THIRD_PARTY_APPS = [
     'rest_framework',
     'django_htmx',
     'django_celery_beat',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 LOCAL_APPS = [
@@ -46,6 +51,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'ac_system.urls'
@@ -132,3 +138,35 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 15 * 60,  # cada 15 minutos
     },
 }
+
+# ── Allauth ───────────────────────────────────────────────────────────────
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+SITE_ID = 1
+
+ACCOUNT_LOGIN_METHODS         = {'email'}
+ACCOUNT_SIGNUP_FIELDS         = ['email*']
+ACCOUNT_EMAIL_VERIFICATION    = 'none'
+ACCOUNT_SIGNUP_DISABLED       = True
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USER_MODEL_EMAIL_FIELD    = 'email'
+ACCOUNT_ADAPTER               = 'access.adapters.NoSignupAccountAdapter'
+
+SOCIALACCOUNT_AUTO_SIGNUP     = False
+SOCIALACCOUNT_EMAIL_REQUIRED  = True
+SOCIALACCOUNT_LOGIN_ON_GET    = True
+SOCIALACCOUNT_ADAPTER         = 'access.adapters.NoNewUsersAdapter'
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'OAUTH_PKCE_ENABLED': True,
+    }
+}
+
+LOGIN_REDIRECT_URL  = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/login/'
