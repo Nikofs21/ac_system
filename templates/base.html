@@ -257,6 +257,13 @@
       </a>
     {% endif %}
 
+    {% if perms_ctx.can_manage_companies %}
+      <a href="{% url 'work:partidas_panel' %}" class="ni-sb-item {% block nav_partidas %}{% endblock %}">
+        <i class="ti ti-clipboard-text" aria-hidden="true"></i>
+        <span>Partidas y etapas</span>
+      </a>
+    {% endif %}
+
     {% if features.subcontracts and perms_ctx.can_view_subcontracts %}
       <a href="{% url 'subcontracts:subcontract_list' %}" class="ni-sb-item">
         <i class="ti ti-building-factory" aria-hidden="true"></i>

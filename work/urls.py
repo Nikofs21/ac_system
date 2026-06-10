@@ -2,6 +2,7 @@
 from django.urls import path
 from . import views
 from . import views_review
+from work import views_partidas
 
 app_name = 'work'
 
@@ -23,4 +24,11 @@ urlpatterns = [
     # Revision de partidas
     path('revision/', views_review.session_review, name='session_review'),
     path('revision/editar/<int:session_id>/', views_review.session_edit, name='session_edit'),
+
+    # Gestión de partidas (prestador)
+    path('partidas/',                                  views_partidas.partidas_panel,        name='partidas_panel'),
+    path('partidas/upload/<int:site_id>/',             views_partidas.partidas_upload,       name='partidas_upload'),
+    path('partidas/<int:stagetask_id>/editar/',        views_partidas.partida_edit,          name='partida_edit'),
+    path('partidas/<int:stagetask_id>/toggle-tipo/',   views_partidas.partida_toggle_tipo,   name='partida_toggle_tipo'),
+    path('partidas/<int:stagetask_id>/toggle-estado/', views_partidas.partida_toggle_estado, name='partida_toggle_estado'),
 ]

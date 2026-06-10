@@ -101,6 +101,14 @@ class TaskCatalog(models.Model):
 
 class StageTask(models.Model):
 
+    class Tipo(models.TextChoices):
+        CASA         = 'casa',         'Casa'
+        SUBCONTRATO  = 'subcontrato',  'Subcontrato'
+
+    class EstadoPartida(models.TextChoices):
+        ACTIVA   = 'activa',   'Activa'
+        INACTIVA = 'inactiva', 'Inactiva'
+
     site = models.ForeignKey(
         'companies.Site',
         on_delete=models.PROTECT,
@@ -116,8 +124,49 @@ class StageTask(models.Model):
         on_delete=models.PROTECT,
         related_name='stage_tasks'
     )
-    is_active = models.BooleanField(default=True)
+    is_active     = models.BooleanField(default=True)
     display_order = models.IntegerField(null=True, blank=True)
+
+    # ── Campos nuevos ────────────────────────────────────────────────────────
+    subetapa = models.CharField(
+        max_length=180, blank=True, null=True,
+        help_text='Nombre de la subetapa. Ej: 1.2.3.3. ARMADURAS DE ACERO'
+    )
+    partida_cod = models.CharField(
+        max_length=360, blank=True, null=True,
+        help_text='Concatenacion subetapa|partida para compatibilidad con Excel RRA'
+    )
+    cantidad_presupuesto = models.DecimalField(
+        max_digits=14, decimal_places=4,
+        null=True, blank=True,
+        help_text='Cantidad presupuestada en unidad de medida de la partida'
+    )
+    unidad_medida = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text='Unidad de medida. Ej: m2, ml, un'
+    )
+    presupuesto_total = models.DecimalField(
+        max_digits=16, decimal_places=2,
+        null=True, blank=True,
+        help_text='Presupuesto total de la partida (MO + materiales + otros)'
+    )
+    presupuesto_mo = models.DecimalField(
+        max_digits=16, decimal_places=2,
+        null=True, blank=True,
+        help_text='Presupuesto de mano obra directa en pesos'
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=Tipo.choices,
+        default=Tipo.CASA,
+        help_text='Casa = MOD propia. Subcontrato = mano de obra tercerizada.'
+    )
+    estado_partida = models.CharField(
+        max_length=20,
+        choices=EstadoPartida.choices,
+        default=EstadoPartida.ACTIVA,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -132,6 +181,16 @@ class StageTask(models.Model):
                 name='unique_stage_task_per_site'
             )
         ]
+
+    def save(self, *args, **kwargs):
+        # Auto-calcular partida_cod si tiene subetapa
+        if self.subetapa and self.task_id:
+            task_name = self.task.name if hasattr(self, '_task_cache') else TaskCatalog.objects.get(pk=self.task_id).name
+            self.partida_cod = f'{self.subetapa}|{task_name}'
+        elif self.task_id:
+            task_name = self.task.name if hasattr(self, '_task_cache') else TaskCatalog.objects.get(pk=self.task_id).name
+            self.partida_cod = task_name
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.stage.name} - {self.task.name} ({self.site.name})'

@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .partidas-wrap { padding: 20px 24px; }
+
+  .site-selector {
+    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius-lg); padding: 16px 20px;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-bar {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+
+  /* Tabla */
+  .partidas-table { width: 100%; border-collapse: collapse; }
+  .partidas-table th {
+    font-size: 10px; font-family: var(--font-mono); font-weight: 500;
+    color: var(--ni-text-sub); text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 8px 12px; border-bottom: 0.5px solid var(--ni-border);
+    text-align: left; background: var(--ni-light);
+    position: sticky; top: 0; z-index: 1;
+  }
+  .partidas-table td {
+    padding: 9px 12px; border-bottom: 0.5px solid var(--ni-border);
+    font-size: 12px; color: var(--ni-text); vertical-align: middle;
+  }
+  .partidas-table tr:last-child td { border-bottom: none; }
+  .partidas-table tr:hover td { background: var(--ni-light); }
+
+  .etapa-row td {
+    background: var(--ni-light); font-size: 11px; font-weight: 600;
+    color: var(--ni-text-sub); font-family: var(--font-mono);
+    padding: 6px 12px; border-bottom: 0.5px solid var(--ni-border);
+  }
+
+  .tipo-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    font-family: var(--font-mono); cursor: pointer; border: none;
+    font-weight: 500;
+  }
+  .tipo-casa        { background: var(--ni-blue-soft); color: var(--ni-blue); }
+  .tipo-subcontrato { background: #fff3e0; color: #e65100; }
+
+  .estado-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    font-family: var(--font-mono); cursor: pointer; border: none;
+    font-weight: 500;
+  }
+  .estado-activa   { background: #e8f5ee; color: #2e7d32; }
+  .estado-inactiva { background: #f0f0f0; color: #888; }
+
+  .subetapa-label {
+    font-size: 10px; color: var(--ni-text-sub); font-family: var(--font-mono);
+  }
+
+  .table-wrap {
+    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    max-height: calc(100vh - 320px); overflow-y: auto;
+  }
+
+  .stats-mini {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .stat-mini {
+    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius); padding: 8px 14px;
+    font-size: 12px; color: var(--ni-text-sub);
+  }
+  .stat-mini strong { color: var(--ni-dark); font-family: var(--font-mono); }
+
+  #toast-partidas {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--ni-dark); color: white;
+    border-radius: var(--radius); padding: 10px 18px;
+    font-size: 13px; z-index: 2000; display: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="partidas-wrap">
+
+  <div class="ni-page-header" style="margin-bottom:16px;">
+    <div>
+      <h1 class="ni-page-title">{{ page_title }}</h1>
+      <p class="ni-page-sub">Carga masiva y edición de partidas por obra</p>
+    </div>
+  </div>
+
+  <!-- Selector de empresa/obra -->
+  <div class="site-selector">
+    <i class="ti ti-building-factory" style="font-size:18px; color:var(--ni-text-sub);" aria-hidden="true"></i>
+    <select id="company-select" class="ni-select" style="width:220px; font-size:13px;"
+            onchange="filterSites()">
+      <option value="">Selecciona empresa</option>
+      {% for company in companies %}
+        <option value="{{ company.id }}"
+          {% if selected_site and selected_site.company.id == company.id %}selected{% endif %}>
+          {{ company.name }}
+        </option>
+      {% endfor %}
+    </select>
+    <select id="site-select" class="ni-select" style="width:220px; font-size:13px;"
+            onchange="goToSite()">
+      <option value="">Selecciona obra</option>
+      {% if selected_site %}
+        <option value="{{ selected_site.id }}" selected>{{ selected_site.name }}</option>
+      {% endif %}
+    </select>
+    {% if selected_site %}
+      <a href="{% url 'work:partidas_upload' selected_site.id %}"
+         class="ni-btn ni-btn-primary" style="width:auto; padding:9px 16px; font-size:13px;">
+        <i class="ti ti-upload" aria-hidden="true"></i> Cargar Excel
+      </a>
+    {% endif %}
+  </div>
+
+  {% if selected_site %}
+
+  <!-- Stats mini -->
+  <div class="stats-mini">
+    <div class="stat-mini"><strong>{{ total }}</strong> partidas</div>
+    <div class="stat-mini"><strong>{{ activas }}</strong> activas</div>
+    <div class="stat-mini"><strong>{{ casa }}</strong> casa</div>
+    <div class="stat-mini"><strong>{{ subcontrato }}</strong> subcontrato</div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filter-bar">
+    <input type="text" id="search-partida" class="ni-input"
+           placeholder="Buscar partida..." style="width:260px; font-size:13px;"
+           oninput="filterTable()">
+    <select id="filter-tipo" class="ni-select" style="width:140px; font-size:13px;"
+            onchange="filterTable()">
+      <option value="">Todos los tipos</option>
+      <option value="casa">Casa</option>
+      <option value="subcontrato">Subcontrato</option>
+    </select>
+    <select id="filter-estado" class="ni-select" style="width:140px; font-size:13px;"
+            onchange="filterTable()">
+      <option value="">Todos los estados</option>
+      <option value="activa">Activa</option>
+      <option value="inactiva">Inactiva</option>
+    </select>
+  </div>
+
+  <!-- Tabla -->
+  {% if stage_tasks %}
+  <div class="table-wrap">
+    <table class="partidas-table" id="partidas-table">
+      <thead>
+        <tr>
+          <th>Etapa / Subetapa</th>
+          <th>Partida</th>
+          <th style="text-align:right;">Cantidad</th>
+          <th>U.M.</th>
+          <th style="text-align:right;">Ppto. MO</th>
+          <th>Tipo</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% regroup stage_tasks by stage as stage_list %}
+        {% for stage_group in stage_list %}
+          <tr class="etapa-row">
+            <td colspan="8">{{ stage_group.grouper.name }}</td>
+          </tr>
+          {% for st in stage_group.list %}
+          <tr data-tipo="{{ st.tipo }}" data-estado="{{ st.estado_partida }}"
+              data-nombre="{{ st.task.name|lower }}" data-subetapa="{{ st.subetapa|lower|default:'' }}">
+            <td>
+              {% if st.subetapa %}
+                <span class="subetapa-label">{{ st.subetapa }}</span>
+              {% else %}
+                <span style="color:#ccc; font-size:11px;">—</span>
+              {% endif %}
+            </td>
+            <td style="font-weight:500;">{{ st.task.name }}</td>
+            <td style="text-align:right; font-family:var(--font-mono);">
+              {% if st.cantidad_presupuesto %}{{ st.cantidad_presupuesto|floatformat:1 }}{% else %}—{% endif %}
+            </td>
+            <td style="font-family:var(--font-mono);">{{ st.unidad_medida|default:"—" }}</td>
+            <td style="text-align:right; font-family:var(--font-mono);">
+              {% if st.presupuesto_mo %}
+                ${{ st.presupuesto_mo|floatformat:0 }}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              <button class="tipo-badge tipo-{{ st.tipo }}"
+                      onclick="toggleTipo({{ st.id }}, this)"
+                      title="Click para cambiar">
+                {{ st.tipo }}
+              </button>
+            </td>
+            <td>
+              <button class="estado-badge estado-{{ st.estado_partida }}"
+                      onclick="toggleEstado({{ st.id }}, this)"
+                      title="Click para cambiar">
+                {{ st.estado_partida }}
+              </button>
+            </td>
+            <td>
+              <a href="{% url 'work:partida_edit' st.id %}"
+                 style="color:var(--ni-text-sub); font-size:13px; text-decoration:none;">
+                <i class="ti ti-pencil" aria-hidden="true"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:48px; color:var(--ni-text-sub);">
+    <i class="ti ti-clipboard-off" style="font-size:40px; display:block; margin-bottom:10px; color:#ddd;" aria-hidden="true"></i>
+    <p style="font-size:14px;">Sin partidas cargadas para esta obra.</p>
+    <a href="{% url 'work:partidas_upload' selected_site.id %}"
+       class="ni-btn ni-btn-primary" style="width:auto; padding:10px 20px; margin-top:16px; display:inline-flex;">
+      <i class="ti ti-upload" aria-hidden="true"></i> Cargar partidas desde Excel
+    </a>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div style="text-align:center; padding:64px; color:var(--ni-text-sub);">
+    <i class="ti ti-building" style="font-size:48px; display:block; margin-bottom:12px; color:#ddd;" aria-hidden="true"></i>
+    <p>Selecciona una empresa y obra para comenzar.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<div id="toast-partidas"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+
+// ── Selector empresa/obra ─────────────────────────────────────────────────
+const sitesByCompany = {};
+{% for company in companies %}
+  sitesByCompany[{{ company.id }}] = [
+    {% for site in company.sites.all %}
+      {% if site.status != 'ARCHIVED' %}
+        { id: {{ site.id }}, name: "{{ site.name|escapejs }}" },
+      {% endif %}
+    {% endfor %}
+  ];
+{% endfor %}
+
+function filterSites() {
+  const companyId = document.getElementById('company-select').value;
+  const siteSelect = document.getElementById('site-select');
+  siteSelect.innerHTML = '<option value="">Selecciona obra</option>';
+  if (companyId && sitesByCompany[companyId]) {
+    sitesByCompany[companyId].forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      siteSelect.appendChild(opt);
+    });
+  }
+}
+
+function goToSite() {
+  const siteId = document.getElementById('site-select').value;
+  if (siteId) window.location.href = `/work/partidas/?site=${siteId}`;
+}
+
+// ── Filtro de tabla ───────────────────────────────────────────────────────
+function filterTable() {
+  const search  = document.getElementById('search-partida').value.toLowerCase();
+  const tipo    = document.getElementById('filter-tipo').value;
+  const estado  = document.getElementById('filter-estado').value;
+  const rows    = document.querySelectorAll('#partidas-table tbody tr:not(.etapa-row)');
+
+  rows.forEach(row => {
+    const nombre   = row.dataset.nombre   || '';
+    const subetapa = row.dataset.subetapa || '';
+    const rowTipo  = row.dataset.tipo     || '';
+    const rowEst   = row.dataset.estado   || '';
+
+    const matchSearch = !search || nombre.includes(search) || subetapa.includes(search);
+    const matchTipo   = !tipo   || rowTipo   === tipo;
+    const matchEst    = !estado || rowEst    === estado;
+
+    row.style.display = (matchSearch && matchTipo && matchEst) ? '' : 'none';
+  });
+}
+
+// ── Toggle tipo ───────────────────────────────────────────────────────────
+function toggleTipo(id, btn) {
+  fetch(`/partidas/${id}/toggle-tipo/`, {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF }
+  })
+  .then(r => r.json())
+  .then(d => {
+    btn.className = `tipo-badge tipo-${d.tipo}`;
+    btn.textContent = d.tipo;
+    btn.closest('tr').dataset.tipo = d.tipo;
+    showToast(`Tipo cambiado a "${d.tipo}"`);
+  });
+}
+
+// ── Toggle estado ─────────────────────────────────────────────────────────
+function toggleEstado(id, btn) {
+  fetch(`/partidas/${id}/toggle-estado/`, {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF }
+  })
+  .then(r => r.json())
+  .then(d => {
+    btn.className = `estado-badge estado-${d.estado}`;
+    btn.textContent = d.estado;
+    btn.closest('tr').dataset.estado = d.estado;
+    showToast(`Estado cambiado a "${d.estado}"`);
+  });
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast-partidas');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.display = 'none', 2500);
+}
+</script>
+{% endblock %}

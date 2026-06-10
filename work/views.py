@@ -110,7 +110,7 @@ def assignment_new(request):
         sid = st.stage.id
         if sid not in etapas:
             etapas[sid] = {'stage': st.stage, 'tasks': []}
-        etapas[sid]['tasks'].append(st.task)
+        etapas[sid]['tasks'].append(st)
 
     preloaded_name = request.session.get('assignment_preloaded_name', '')
 

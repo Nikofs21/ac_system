@@ -169,11 +169,11 @@
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
         <span style="font-size:13px; color:var(--ni-text-sub);">Partida</span>
-        <span style="font-size:13px; font-weight:500;">{{ task.name }}</span>
+        <span style="font-size:13px; font-weight:500;">{{ task.task.name }}</span>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
         <span style="font-size:13px; color:var(--ni-text-sub);">Riesgo</span>
-        {% if task.risk_level == 'HIGH_RISK' %}
+        {% if task.task.risk_level == 'HIGH_RISK' %}
           <span class="ni-badge" style="background:#fce8e8; color:#c0392b;">Alto riesgo</span>
         {% else %}
           <span class="ni-badge ni-badge-green">Normal</span>
@@ -270,7 +270,7 @@
 
     <div class="risk-body">
       <p class="risk-body-msg">
-        La partida <strong>{{ task.name }}</strong> esta clasificada como
+        La partida <strong>{{ task.task.name }}</strong> esta clasificada como
         <strong>alto riesgo</strong>. Los siguientes trabajadores quedarán
         asignados a esta partida:
       </p>
@@ -283,7 +283,7 @@
             </div>
             <div>
               <div class="risk-worker-name">{{ worker.display_name }}</div>
-              <div class="risk-worker-task">{{ task.name }} · {{ stage.name }}</div>
+              <div class="risk-worker-task">{{ task.task.name }} · {{ stage.name }}</div>
             </div>
           </div>
         {% endfor %}

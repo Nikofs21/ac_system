@@ -61,8 +61,8 @@
         <option value="">Primero selecciona una etapa...</option>
         {% for grupo in etapas %}
           {% for task in grupo.tasks %}
-            <option value="{{ task.id }}" data-stage="{{ grupo.stage.id }}" data-risk="{{ task.risk_level }}" style="display:none;">
-              {{ task.name }}{% if task.risk_level == 'HIGH_RISK' %} ⚠{% endif %}
+            <option value="{{ task.task.id }}" data-stage="{{ grupo.stage.id }}" data-risk="{{ task.task.risk_level }}" style="display:none;">
+              {% if task.task.subetapa %}{{ task.task.subetapa }} — {% endif %}{{ task.task.name }}{% if task.task.risk_level == 'HIGH_RISK' %} ⚠{% endif %}
             </option>
           {% endfor %}
         {% endfor %}

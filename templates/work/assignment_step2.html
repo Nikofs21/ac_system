@@ -123,9 +123,9 @@
   </a>
   <div style="display:flex; align-items:center; gap:8px; background:var(--ni-blue-soft); border-radius:var(--radius); padding:6px 12px;">
     <span style="font-size:10px; color:#666; font-family:var(--font-mono);">Partida:</span>
-    <span style="font-size:12px; font-weight:500; color:var(--ni-dark);">{{ task.name }}</span>
+    <span style="font-size:12px; font-weight:500; color:var(--ni-dark);">{{ task.task.name }}</span>
     <span style="font-size:11px; color:#888;">· {{ stage.name }}</span>
-    {% if task.risk_level == 'HIGH_RISK' %}
+    {% if task.task.risk_level == 'HIGH_RISK' %}
       <span style="font-size:10px; background:#fce8e8; color:#c0392b; border-radius:20px; padding:2px 8px;">Alto riesgo</span>
     {% endif %}
   </div>
