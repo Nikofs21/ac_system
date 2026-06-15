@@ -304,6 +304,14 @@
   <button type="submit" class="ni-btn ni-btn-primary" style="width:auto; padding:0 14px; height:36px; font-size:13px;">
     <i class="ti ti-search" aria-hidden="true"></i>
   </button>
+  {% if perms_ctx.can_review_sessions %}
+  <a href="#" onclick="openExportModal(); return false;"
+    class="ni-btn ni-btn-secondary"
+    style="width:auto; padding:0 14px; height:36px; font-size:13px; display:flex; align-items:center; gap:6px; text-decoration:none;">
+    <i class="ti ti-file-export" aria-hidden="true"></i>
+    Exportar
+  </a>
+  {% endif %}
 </form>
 
 <div class="stats-bar">
@@ -505,6 +513,42 @@
 <div id="review-toast">
   <i class="ti ti-check" aria-hidden="true"></i>
   <span id="toast-msg"></span>
+</div>
+
+<!-- MODAL EXPORTAR -->
+<div class="edit-overlay" id="export-overlay" onclick="if(event.target===this)closeExportModal()">
+  <div class="edit-sheet" style="max-height:auto;">
+    <div class="edit-handle"></div>
+    <div class="edit-header">
+      <div class="edit-title">Exportar sesiones</div>
+      <div class="edit-sub">Selecciona el rango de fechas</div>
+    </div>
+    <div class="edit-body">
+      <div class="ni-field">
+        <label class="ni-label">Desde</label>
+        <input type="date" id="export-desde" class="ni-input"
+               value="{{ today|date:'Y-m-d' }}"
+               max="{{ today|date:'Y-m-d' }}">
+      </div>
+      <div class="ni-field" style="margin-bottom:0;">
+        <label class="ni-label">Hasta</label>
+        <input type="date" id="export-hasta" class="ni-input"
+               value="{{ today|date:'Y-m-d' }}"
+               max="{{ today|date:'Y-m-d' }}">
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button onclick="setRange(7)"  class="ni-btn ni-btn-secondary" style="width:auto; padding:6px 12px; font-size:12px;">Última semana</button>
+        <button onclick="setRange(15)" class="ni-btn ni-btn-secondary" style="width:auto; padding:6px 12px; font-size:12px;">15 días</button>
+        <button onclick="setRange(30)" class="ni-btn ni-btn-secondary" style="width:auto; padding:6px 12px; font-size:12px;">Último mes</button>
+      </div>
+    </div>
+    <div class="edit-footer">
+      <button class="btn-cancel-edit" onclick="closeExportModal()">Cancelar</button>
+      <button class="btn-confirm-edit" onclick="doExport()">
+        <i class="ti ti-download" aria-hidden="true"></i> Descargar
+      </button>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
@@ -797,6 +841,29 @@
     toast.classList.add('visible');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove('visible'), 3000);
+  }
+
+  function openExportModal() {
+    document.getElementById('export-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeExportModal() {
+    document.getElementById('export-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+  function setRange(days) {
+    const today = new Date();
+    const desde = new Date(today);
+    desde.setDate(today.getDate() - days);
+    document.getElementById('export-desde').value = desde.toISOString().split('T')[0];
+    document.getElementById('export-hasta').value = today.toISOString().split('T')[0];
+  }
+  function doExport() {
+    const desde = document.getElementById('export-desde').value;
+    const hasta = document.getElementById('export-hasta').value;
+    if (!desde || !hasta) return;
+    window.location.href = `{% url 'work:session_review_export' %}?fecha_desde=${desde}&fecha_hasta=${hasta}`;
+    closeExportModal();
   }
 </script>
 {% endblock %}

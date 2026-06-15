@@ -52,6 +52,9 @@ def require_active_site(view_func):
 def subcontract_list(request):
     site = get_active_site(request)
 
+    from core.permissions import site_feature_enabled
+    if not site_feature_enabled(site, 'subcontracts'):
+        return redirect('access_denied')
     if not user_has_permission(request.user, 'subcontracts.view_list', site):
         return redirect('access_denied')
 
@@ -82,6 +85,9 @@ def subcontract_list(request):
 def subcontract_create(request):
     site = get_active_site(request)
 
+    from core.permissions import site_feature_enabled
+    if not site_feature_enabled(site, 'subcontracts'):
+        return redirect('access_denied')
     if request.user.actor_type != 'PROVIDER':
         return redirect('access_denied')
 
@@ -134,6 +140,9 @@ def subcontract_create(request):
 def subcontract_edit(request, subcontract_id):
     site = get_active_site(request)
 
+    from core.permissions import site_feature_enabled
+    if not site_feature_enabled(site, 'subcontracts'):
+        return redirect('access_denied')
     if request.user.actor_type != 'PROVIDER':
         return redirect('access_denied')
 

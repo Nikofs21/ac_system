@@ -162,6 +162,13 @@
   <button class="filter-btn {% if active_filter == 'inactive' %}active{% endif %}" onclick="setFilter('inactive')">
     Inactivos <span style="opacity:.6;">({{ counts.inactive }})</span>
   </button>
+  <div style="position:relative; margin-left:auto; flex-shrink:0;">
+    <i class="ti ti-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--ni-text-sub); pointer-events:none;" aria-hidden="true"></i>
+    <input type="text" id="worker-search" class="filter-btn"
+           placeholder="Buscar..."
+           style="padding-left:30px; border-radius:20px; width:160px; cursor:text;"
+           oninput="filterWorkers(this.value)">
+  </div>
 </div>
 
 {% if active_filter == 'active' %}
@@ -423,5 +430,13 @@ function printWorkerQR() {
 let touchStartY = 0;
 document.getElementById('qr-sheet').addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
 document.getElementById('qr-sheet').addEventListener('touchend', e => { if (e.changedTouches[0].clientY - touchStartY > 80) closeQRModal(); }, { passive: true });
+function filterWorkers(query) {
+  const q = query.toLowerCase().trim();
+  document.querySelectorAll('.worker-row').forEach(row => {
+    const name = row.querySelector('.worker-name')?.textContent.toLowerCase() || '';
+    const meta = row.querySelector('.worker-meta')?.textContent.toLowerCase() || '';
+    row.style.display = (!q || name.includes(q) || meta.includes(q)) ? '' : 'none';
+  });
+}
 </script>
 {% endblock %}

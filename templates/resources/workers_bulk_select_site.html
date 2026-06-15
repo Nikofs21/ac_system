@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">{{ page_title }}</h1>
+    <p class="ni-page-sub">Selecciona la empresa y obra destino</p>
+  </div>
+</div>
+
+<div style="max-width:480px; margin:0 auto; padding:20px 16px;">
+  <div class="ni-card">
+    <div class="ni-card-header"><span class="ni-card-title">Seleccionar obra</span></div>
+    <div class="ni-card-body">
+
+      <div class="ni-field">
+        <label class="ni-label">Empresa</label>
+        <select id="company-select" class="ni-select" onchange="loadSites()">
+          <option value="">Selecciona una empresa...</option>
+          {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="ni-field" id="site-field" style="display:none;">
+        <label class="ni-label">Obra</label>
+        <select id="site-select" class="ni-select">
+          <option value="">Selecciona una obra...</option>
+        </select>
+      </div>
+
+      <button onclick="goToUpload()" id="btn-go"
+              class="ni-btn ni-btn-primary" disabled
+              style="opacity:0.4; pointer-events:none;">
+        <i class="ti ti-upload" aria-hidden="true"></i>
+        Continuar a carga masiva
+      </button>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const sitesByCompany = {};
+{% for company in companies %}
+  sitesByCompany[{{ company.id }}] = [
+    {% for site in company.sites.all %}
+      {% if site.status != 'ARCHIVED' %}
+        { id: {{ site.id }}, name: "{{ site.name|escapejs }}" },
+      {% endif %}
+    {% endfor %}
+  ];
+{% endfor %}
+
+function loadSites() {
+  const companyId  = document.getElementById('company-select').value;
+  const siteSelect = document.getElementById('site-select');
+  const siteField  = document.getElementById('site-field');
+  const btn        = document.getElementById('btn-go');
+
+  siteSelect.innerHTML = '<option value="">Selecciona una obra...</option>';
+  siteField.style.display = 'none';
+  btn.disabled = true;
+  btn.style.opacity = '0.4';
+  btn.style.pointerEvents = 'none';
+
+  if (companyId && sitesByCompany[companyId] && sitesByCompany[companyId].length) {
+    sitesByCompany[companyId].forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      siteSelect.appendChild(opt);
+    });
+    siteField.style.display = 'block';
+    siteSelect.onchange = checkReady;
+  }
+}
+
+function checkReady() {
+  const siteId = document.getElementById('site-select').value;
+  const btn    = document.getElementById('btn-go');
+  if (siteId) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.style.pointerEvents = 'none';
+  }
+}
+
+function goToUpload() {
+  const siteId = document.getElementById('site-select').value;
+  if (siteId) window.location.href = `/resources/carga-masiva/${siteId}/`;
+}
+</script>
+{% endblock %}

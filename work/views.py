@@ -99,6 +99,7 @@ def assignment_new(request):
     ).filter(
         site=site,
         is_active=True,
+        estado_partida='activa',
         stage__is_active=True,
         task__status='ACTIVE',
         stage__stage_type='NORMAL',
@@ -279,6 +280,11 @@ def remove_from_group(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Metodo no permitido'}, status=405)
 
+    site = get_active_site(request)
+    if not user_has_permission(request.user, 'sessions.start_people', site) and \
+       not user_has_permission(request.user, 'sessions.start_machines', site):
+        return JsonResponse({'error': 'Sin permiso.'}, status=403)
+
     worker_id  = int(request.POST.get('worker_id', 0))
     worker_ids = request.session.get('assignment_workers', [])
 
@@ -358,8 +364,14 @@ def assignment_confirm(request):
     if not stage_id or not task_id or not worker_ids:
         return redirect('work:assignment_new')
 
-    stage   = get_object_or_404(Stage, id=stage_id, site=site)
-    task    = get_object_or_404(TaskCatalog, id=task_id)
+    stage        = get_object_or_404(Stage, id=stage_id, site=site)
+    task_catalog = get_object_or_404(TaskCatalog, id=task_id)
+    stage_task   = StageTask.objects.filter(
+        site=site, stage=stage, task=task_catalog
+    ).first()
+    if not stage_task:
+        messages.error(request, 'No se encontró la partida en esta obra.')
+        return redirect('work:assignment_new')
     workers = Resource.objects.filter(id__in=worker_ids).select_related('job_title')
 
     # Mantener flag de flujo activo en el paso 3
@@ -428,11 +440,11 @@ def assignment_confirm(request):
                     resource=worker,
                     resource_assignment=assignment,
                     stage=stage,
-                    task=task,
+                    task=task_catalog,
                     stage_name_snapshot=stage.name,
-                    task_code_snapshot=task.code,
-                    task_name_snapshot=task.name,
-                    risk_level_snapshot=task.risk_level,
+                    task_code_snapshot=task_catalog.code,
+                    task_name_snapshot=task_catalog.name,
+                    risk_level_snapshot=task_catalog.risk_level,
                     started_at=now,
                     status='OPEN',
                     started_by=request.user,
@@ -444,7 +456,7 @@ def assignment_confirm(request):
         # Flujo completado — limpiar todo
         _clear_assignment_session(request)
 
-        msg = f'{sessions_created} sesiones iniciadas en {task.name}.'
+        msg = f'{sessions_created} sesiones iniciadas en {task_catalog.name}.'
         if sessions_replaced:
             msg += f' ({sessions_replaced} sesion{"es" if sessions_replaced > 1 else ""} anterior{"es" if sessions_replaced > 1 else ""} cerrada{"s" if sessions_replaced > 1 else ""})'
         messages.success(request, msg)
@@ -452,11 +464,12 @@ def assignment_confirm(request):
 
     return render(request, 'work/assignment_step3.html', {
         'stage':                stage,
-        'task':                 task,
+        'task':                 stage_task,      # StageTask — para mostrar subetapa en template
+        'task_catalog':         task_catalog,    # TaskCatalog — acceso directo si se necesita
         'workers':              workers,
         'workers_with_session': workers_with_session,
         'no_on_site_workers':   no_on_site_workers,
-        'has_high_risk':        task.risk_level == 'HIGH_RISK',
+        'has_high_risk':        task_catalog.risk_level == 'HIGH_RISK',
         'site':                 site,
         'page_title':           'Confirmar asignacion',
         'step':                 3,

@@ -277,3 +277,91 @@ class SiteMembership(models.Model):
 
     def __str__(self):
         return f'{self.user.get_full_name()} - {self.site.name} ({self.role.name})'
+
+class SiteWeekConfig(models.Model):
+    """
+    Configuracion de semanas ISA por obra.
+    Define desde cuando empieza a contar el sistema y que numero de semana corresponde.
+    Ejemplo: lunes 04-05-2026 = semana 20.
+    A partir de ahi el sistema calcula automaticamente la semana de cada sesion.
+    """
+    site        = models.OneToOneField(
+        Site,
+        on_delete=models.CASCADE,
+        related_name='week_config'
+    )
+    base_monday = models.DateField(
+        help_text='Lunes de la semana base. Ej: 04-05-2026'
+    )
+    base_week   = models.PositiveIntegerField(
+        help_text='Numero de semana ISA que corresponde a ese lunes. Ej: 20'
+    )
+    prefix      = models.CharField(
+        max_length=20,
+        default='sem ',
+        help_text='Prefijo para el nombre de semana. Default: "sem "'
+    )
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table     = 'companies_site_week_config'
+        verbose_name = 'Configuracion de semanas ISA'
+        verbose_name_plural = 'Configuraciones de semanas ISA'
+
+    def get_week_for_date(self, date):
+        """Retorna el numero de semana ISA para una fecha dada."""
+        from datetime import timedelta
+        # Obtener lunes de la semana de la fecha
+        days_since_monday = date.weekday()
+        week_monday = date - timedelta(days=days_since_monday)
+        # Calcular diferencia en semanas respecto al lunes base
+        diff_days  = (week_monday - self.base_monday).days
+        diff_weeks = diff_days // 7
+        return self.base_week + diff_weeks
+
+    def get_week_label_for_date(self, date):
+        """Retorna el label de semana para una fecha. Ej: 'sem 23'"""
+        return f'{self.prefix}{self.get_week_for_date(date)}'
+
+    def __str__(self):
+        return f'{self.site.name} — base: {self.base_monday} = {self.prefix}{self.base_week}'
+
+
+class SiteCargoValor(models.Model):
+    """
+    Valor de HH por cargo en una obra especifica.
+    Se usa para calcular costo HH en el Excel de exportacion RRA.
+    Varia por obra y puede actualizarse cuando llega el Libro de Remuneraciones.
+    """
+    site       = models.ForeignKey(
+        Site,
+        on_delete=models.CASCADE,
+        related_name='cargo_valores'
+    )
+    cargo      = models.CharField(
+        max_length=120,
+        help_text='Nombre del cargo exactamente como aparece en las sesiones'
+    )
+    valor_hh   = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        help_text='Valor en pesos por hora hombre'
+    )
+    is_active  = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table     = 'companies_site_cargo_valor'
+        verbose_name = 'Valor HH por cargo'
+        verbose_name_plural = 'Valores HH por cargo'
+        ordering     = ['site', 'cargo']
+        constraints  = [
+            models.UniqueConstraint(
+                fields=['site', 'cargo'],
+                name='unique_cargo_valor_per_site'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.site.name} — {self.cargo}: ${self.valor_hh}/HH'

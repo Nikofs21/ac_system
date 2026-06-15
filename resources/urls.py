@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 from . import views_crud
 from . import views_qr_pdf
+from resources import views_bulk_upload
 
 
 app_name = 'resources'
@@ -23,4 +24,11 @@ urlpatterns = [
 
     # Cargo inline
     path('cargos/crear/', views_crud.job_title_create_inline, name='job_title_create'),
+
+    #Carga masiva Trabajadores
+    path('carga-masiva/<int:site_id>/', views_bulk_upload.workers_bulk_upload, name='workers_bulk_upload'),
+    path('carga-masiva/', views_bulk_upload.workers_bulk_select_site, name='workers_bulk_select'),
+
+    #Otros
+    path('cargos/eliminar/', views_crud.job_title_delete, name='job_title_delete'),
 ]

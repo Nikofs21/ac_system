@@ -298,7 +298,7 @@ def partida_edit(request, stagetask_id):
 
         st.save()
         messages.success(request, f'"{st.task.name}" actualizada.')
-        return redirect(f'/partidas/?site={site.id}')
+        return redirect(f'/work/partidas/?site={site.id}')
 
     return render(request, 'work/partida_edit.html', {
         'st':         st,
@@ -314,8 +314,7 @@ def partida_edit(request, stagetask_id):
 @require_provider
 @require_POST
 def partida_toggle_tipo(request, stagetask_id):
-    """Cambia tipo casa↔subcontrato vía AJAX."""
-    st = get_object_or_404(StageTask, id=stagetask_id)
+    st = get_object_or_404(StageTask, id=stagetask_id, site__company__memberships__user=request.user)
     st.tipo = 'subcontrato' if st.tipo == 'casa' else 'casa'
     st.save()
     return JsonResponse({'status': 'ok', 'tipo': st.tipo})
@@ -324,8 +323,7 @@ def partida_toggle_tipo(request, stagetask_id):
 @require_provider
 @require_POST
 def partida_toggle_estado(request, stagetask_id):
-    """Cambia estado activa↔inactiva vía AJAX."""
-    st = get_object_or_404(StageTask, id=stagetask_id)
+    st = get_object_or_404(StageTask, id=stagetask_id, site__company__memberships__user=request.user)
     st.estado_partida = 'inactiva' if st.estado_partida == 'activa' else 'activa'
     st.save()
     return JsonResponse({'status': 'ok', 'estado': st.estado_partida})

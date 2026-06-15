@@ -209,6 +209,9 @@
           <button type="button" class="btn-add-cargo" onclick="openCargoModal('PERSON')" title="Agregar nuevo cargo">
             <i class="ti ti-plus" aria-hidden="true"></i>
           </button>
+          <button type="button" class="btn-add-cargo" onclick="openDeleteCargoModal('PERSON')" title="Eliminar cargo">
+            <i class="ti ti-trash" style="color:#c0392b;" aria-hidden="true"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -251,6 +254,9 @@
           </select>
           <button type="button" class="btn-add-cargo" onclick="openCargoModal('MACHINERY')" title="Agregar nuevo tipo">
             <i class="ti ti-plus" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="btn-add-cargo" onclick="openDeleteCargoModal('MACHINERY')" title="Eliminar cargo">
+            <i class="ti ti-trash" style="color:#c0392b;" aria-hidden="true"></i>
           </button>
         </div>
       </div>
@@ -339,6 +345,31 @@
   </div>
 </div>
 {% endif %}
+
+<!-- MODAL ELIMINAR CARGO -->
+<div class="cargo-overlay" id="delete-cargo-overlay" onclick="if(event.target===this)closeDeleteCargoModal()">
+  <div class="cargo-sheet">
+    <div class="cargo-header">
+      <div class="cargo-title">Eliminar cargo</div>
+      <div class="cargo-sub">Solo se pueden eliminar cargos sin trabajadores asignados</div>
+    </div>
+    <div class="cargo-body">
+      <div class="ni-field" style="margin-bottom:0;">
+        <label class="ni-label">Selecciona el cargo a eliminar</label>
+        <select class="ni-select" id="delete-cargo-select">
+          <option value="">Selecciona un cargo...</option>
+        </select>
+        <div id="delete-cargo-error" style="font-size:11px; color:#c0392b; margin-top:4px; display:none;"></div>
+      </div>
+    </div>
+    <div class="cargo-footer">
+      <button class="btn-cargo-cancel" onclick="closeDeleteCargoModal()">Cancelar</button>
+      <button class="btn-cargo-confirm" style="background:#c0392b;" onclick="confirmDeleteCargo()">
+        <i class="ti ti-trash" aria-hidden="true"></i> Eliminar
+      </button>
+    </div>
+  </div>
+</div>
 
 {% endblock %}
 
@@ -515,5 +546,69 @@
     .catch(() => alert('Error de conexion.'));
   }
   {% endif %}
+
+  const DELETE_CARGO_URL = "{% url 'resources:job_title_delete' %}";
+  let deleteCargoType = 'PERSON';
+
+  function openDeleteCargoModal(type) {
+    deleteCargoType = type;
+    const select = document.getElementById('delete-cargo-select');
+    const source = type === 'PERSON'
+      ? document.getElementById('job_title_select')
+      : document.getElementById('machine_title_select');
+
+    select.innerHTML = '<option value="">Selecciona un cargo...</option>';
+    Array.from(source.options).forEach(opt => {
+      if (opt.value) {
+        const o = document.createElement('option');
+        o.value = opt.value;
+        o.textContent = opt.textContent;
+        select.appendChild(o);
+      }
+    });
+
+    document.getElementById('delete-cargo-error').style.display = 'none';
+    document.getElementById('delete-cargo-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDeleteCargoModal() {
+    document.getElementById('delete-cargo-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+
+  function confirmDeleteCargo() {
+    const cargoId = document.getElementById('delete-cargo-select').value;
+    const errEl   = document.getElementById('delete-cargo-error');
+    if (!cargoId) {
+      errEl.textContent   = 'Selecciona un cargo.';
+      errEl.style.display = 'block';
+      return;
+    }
+    fetch(DELETE_CARGO_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ job_title_id: cargoId }).toString(),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        // Quitar del select original
+        const source = deleteCargoType === 'PERSON'
+          ? document.getElementById('job_title_select')
+          : document.getElementById('machine_title_select');
+        const opt = source.querySelector(`option[value="${cargoId}"]`);
+        if (opt) opt.remove();
+        closeDeleteCargoModal();
+      } else {
+        errEl.textContent   = data.error || 'Error al eliminar.';
+        errEl.style.display = 'block';
+      }
+    })
+    .catch(() => {
+      errEl.textContent   = 'Error de conexión.';
+      errEl.style.display = 'block';
+    });
+  }
 </script>
 {% endblock %}

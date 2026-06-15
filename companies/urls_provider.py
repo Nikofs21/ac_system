@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.urls import path
 from . import views_provider
+from companies import views_rra
 
 app_name = 'provider'
 
@@ -21,4 +22,11 @@ urlpatterns = [
 
     # Permisos por membresía
     path('membresia/<int:membership_id>/permisos/', views_provider.membership_overrides, name='membership_overrides'),
+
+    #RRA
+    path('rra/<int:site_id>/',                    views_rra.rra_config,             name='rra_config'),
+    path('rra/<int:site_id>/semanas/',            views_rra.rra_week_config_save,   name='rra_week_config_save'),
+    path('rra/<int:site_id>/cargo-valor/',        views_rra.rra_cargo_valor_save,   name='rra_cargo_valor_save'),
+    path('rra/cargo-valor/<int:valor_id>/eliminar/', views_rra.rra_cargo_valor_delete, name='rra_cargo_valor_delete'),
+    path('rra/<int:site_id>/exportar/',           views_rra.rra_export,             name='rra_export'),
 ]

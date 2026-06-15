@@ -31,4 +31,5 @@ urlpatterns = [
     path('partidas/<int:stagetask_id>/editar/',        views_partidas.partida_edit,          name='partida_edit'),
     path('partidas/<int:stagetask_id>/toggle-tipo/',   views_partidas.partida_toggle_tipo,   name='partida_toggle_tipo'),
     path('partidas/<int:stagetask_id>/toggle-estado/', views_partidas.partida_toggle_estado, name='partida_toggle_estado'),
+    path('revision/exportar/',                         views_review.session_review_export,   name='session_review_export'),
 ]

@@ -289,3 +289,160 @@ def session_edit(request, session_id):
         })
 
     return JsonResponse({'error': 'Metodo no permitido.'}, status=405)
+
+@require_active_site
+def session_review_export(request):
+    """
+    Exporta sesiones en rango de fechas al formato Excel de revision de partidas.
+    """
+    import io
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    import pytz
+
+    site = get_active_site(request)
+
+    if not user_has_permission(request.user, 'sessions_review.view', site):
+        return redirect('access_denied')
+
+    # Rango de fechas
+    date_from_str = request.GET.get('fecha_desde', '')
+    date_to_str   = request.GET.get('fecha_hasta', '')
+
+    try:
+        date_from = date.fromisoformat(date_from_str)
+    except ValueError:
+        date_from = timezone.localdate() - timedelta(days=7)
+
+    try:
+        date_to = date.fromisoformat(date_to_str)
+    except ValueError:
+        date_to = timezone.localdate()
+
+    # No permitir rangos mayores a 90 días
+    if (date_to - date_from).days > 90:
+        date_from = date_to - timedelta(days=90)
+
+    site_tz = pytz.timezone(site.timezone or 'America/Santiago')
+
+    # Obtener sesiones del rango
+    from work.models import StageTask
+    sessions = WorkSession.objects.filter(
+        site=site,
+        started_at__date__gte=date_from,
+        started_at__date__lte=date_to,
+        status__in=['CLOSED', 'AUTO_CLOSED'],
+    ).select_related(
+        'resource', 'resource__job_title',
+        'stage', 'task',
+        'responsible_supervisor',
+    ).order_by('started_at', 'resource__display_name')
+
+    # Cache StageTask para subetapa
+    st_cache = {}
+    for st in StageTask.objects.filter(site=site).select_related('stage', 'task'):
+        st_cache[(st.stage_id, st.task_id)] = st
+
+    # Construir Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Sesiones'
+
+    # Estilos
+    header_fill = PatternFill(start_color="0025EC", end_color="0025EC", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=10)
+    header_aln  = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    thin        = Side(style='thin', color="DDDDDD")
+    border      = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    headers = [
+        'Fecha', 'Nombre', 'Cargo', 'Etapa',
+        'Subetapa', 'Partida',
+        'Inicio', 'Término', 'Duración (min)',
+        'Supervisor', 'Estado', 'Subetapa — Partida',
+    ]
+
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.fill      = header_fill
+        cell.font      = header_font
+        cell.alignment = header_aln
+        cell.border    = border
+
+    for row_idx, s in enumerate(sessions, start=2):
+        inicio_local = s.started_at.astimezone(site_tz)
+        fin_local    = s.ended_at.astimezone(site_tz) if s.ended_at else None
+        fecha_local  = inicio_local.date()
+
+        nombre = s.resource.display_name
+        cargo  = s.resource.job_title.name if s.resource.job_title else ''
+        etapa  = s.stage_name_snapshot
+        partida = s.task_name_snapshot
+
+        st = st_cache.get((s.stage_id, s.task_id))
+        subetapa = st.subetapa if st and st.subetapa else ''
+
+        supervisor = ''
+        if s.responsible_supervisor:
+            supervisor = s.responsible_supervisor.get_full_name() or s.responsible_supervisor.email
+
+        dur_min = s.duration_minutes or (
+            int((s.ended_at - s.started_at).total_seconds() / 60)
+            if s.ended_at else ''
+        )
+
+        estado = 'Cerrada' if s.status == 'CLOSED' else 'Cierre automático'
+
+        concat = f'{subetapa} — {partida}' if subetapa else partida
+
+        row = [
+            fecha_local,
+            nombre,
+            cargo,
+            etapa,
+            subetapa,
+            partida,
+            inicio_local.replace(tzinfo=None),
+            fin_local.replace(tzinfo=None) if fin_local else '',
+            dur_min,
+            supervisor,
+            estado,
+            concat,
+        ]
+
+        for col_idx, val in enumerate(row, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.border = border
+            if row_idx % 2 == 0:
+                cell.fill = PatternFill(
+                    start_color="F9F9FF", end_color="F9F9FF", fill_type="solid"
+                )
+
+    # Formatos de fecha y hora
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        row[0].number_format = 'DD/MM/YYYY'
+        row[6].number_format = 'DD/MM/YYYY HH:MM'
+        row[7].number_format = 'DD/MM/YYYY HH:MM'
+
+    # Anchos de columna
+    widths = [12, 28, 20, 30, 35, 45, 18, 18, 14, 22, 16, 55]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    ws.row_dimensions[1].height = 30
+    ws.freeze_panes = 'A2'
+
+    # Descargar
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    from django.http import HttpResponse
+    filename = f'Revision_{site.code}_{date_from}_{date_to}.xlsx'
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response

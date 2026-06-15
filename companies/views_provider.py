@@ -17,6 +17,7 @@ from .models import (
     Site, SiteConfig, SiteMembership,
 )
 from access.models import Role, Permission, SiteMembershipPermissionOverride
+from core.permissions import is_novus_super
 
 User = get_user_model()
 
@@ -30,6 +31,15 @@ def require_provider(view_func):
             return redirect('access_denied')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def _check_company_access(request, company):
+    """Verifica que el prestador tenga membresía en esta empresa."""
+    return CompanyMembership.objects.filter(
+        user=request.user,
+        company=company,
+        is_active=True,
+    ).exists()
 
 
 def _company_module_flags(config=None):
@@ -58,7 +68,10 @@ def _site_module_flags(config=None):
 
 @require_provider
 def provider_panel(request):
-    companies = Company.objects.exclude(status='ARCHIVED').order_by('name')
+    companies = Company.objects.filter(
+        memberships__user=request.user,
+        memberships__is_active=True,
+    ).exclude(status='ARCHIVED').order_by('name')
 
     company_id = request.GET.get('company')
     selected_company = None
@@ -67,6 +80,8 @@ def provider_panel(request):
 
     if company_id:
         selected_company = get_object_or_404(Company, id=company_id)
+        if not _check_company_access(request, selected_company):
+            return redirect('access_denied')
         sites = Site.objects.filter(
             company=selected_company
         ).exclude(status='ARCHIVED').order_by('name')
@@ -108,6 +123,10 @@ def company_create(request):
 @require_provider
 def company_edit(request, company_id):
     company = get_object_or_404(Company, id=company_id)
+
+    if not _check_company_access(request, company):
+        return redirect('access_denied')
+
     try:
         config = company.config
     except CompanyConfig.DoesNotExist:
@@ -203,6 +222,8 @@ def _handle_company_save(request, company):
 @require_POST
 def company_deactivate(request, company_id):
     company = get_object_or_404(Company, id=company_id)
+    if not _check_company_access(request, company):
+        return JsonResponse({'error': 'Sin acceso a esta empresa.'}, status=403)
     company.status = 'INACTIVE'
     company.save()
     return JsonResponse({'status': 'ok', 'message': f'"{company.name}" desactivada.'})
@@ -212,6 +233,8 @@ def company_deactivate(request, company_id):
 @require_POST
 def company_activate(request, company_id):
     company = get_object_or_404(Company, id=company_id)
+    if not _check_company_access(request, company):
+        return JsonResponse({'error': 'Sin acceso a esta empresa.'}, status=403)
     company.status = 'ACTIVE'
     company.save()
     return JsonResponse({'status': 'ok', 'message': f'"{company.name}" activada.'})
@@ -224,6 +247,9 @@ def company_activate(request, company_id):
 @require_provider
 def site_create(request, company_id):
     company = get_object_or_404(Company, id=company_id)
+
+    if not _check_company_access(request, company):
+        return redirect('access_denied')
 
     if request.method == 'POST':
         return _handle_site_save(request, company, None)
@@ -239,6 +265,10 @@ def site_create(request, company_id):
 @require_provider
 def site_edit(request, site_id):
     site = get_object_or_404(Site, id=site_id)
+
+    if not _check_company_access(request, site.company):
+        return redirect('access_denied')
+
     try:
         config = site.config
     except SiteConfig.DoesNotExist:
@@ -343,6 +373,10 @@ def _handle_site_save(request, company, site):
 @require_provider
 def site_users(request, site_id):
     site = get_object_or_404(Site, id=site_id)
+
+    if not _check_company_access(request, site.company):
+        return JsonResponse({'error': 'Sin acceso a esta empresa.'}, status=403)
+
     memberships = SiteMembership.objects.filter(
         site=site
     ).select_related('user', 'role').order_by('user__first_name')
@@ -371,6 +405,9 @@ def membership_overrides(request, membership_id):
     membership = get_object_or_404(SiteMembership, id=membership_id)
     site       = membership.site
     user       = membership.user
+
+    if not _check_company_access(request, site.company):
+        return redirect('access_denied')
 
     from access.models import RolePermission
     role_perms = set(

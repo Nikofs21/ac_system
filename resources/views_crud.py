@@ -61,6 +61,13 @@ def resource_create(request):
     can_people   = user_has_permission(request.user, 'resources.crud_people', site)
     can_machines = user_has_permission(request.user, 'resources.crud_machines', site)
 
+    # Respetar feature flags de la obra
+    from core.permissions import site_feature_enabled
+    if not site_feature_enabled(site, 'machinery'):
+        can_machines = False
+    if not site_feature_enabled(site, 'people'):
+        can_people = False
+
     if not can_people and not can_machines:
         return redirect('access_denied')
 
@@ -221,17 +228,29 @@ def resource_edit(request, resource_id):
     is_person    = resource.resource_category.resource_type == 'PERSON'
     is_machinery = resource.resource_category.resource_type == 'MACHINERY'
 
-    if is_person and not user_has_permission(request.user, 'resources.crud_people', site):
-        return redirect('access_denied')
-    if is_machinery and not user_has_permission(request.user, 'resources.crud_machines', site):
-        return redirect('access_denied')
-
     can_people   = user_has_permission(request.user, 'resources.crud_people', site)
     can_machines = user_has_permission(request.user, 'resources.crud_machines', site)
 
+    # Respetar feature flags de la obra
+    from core.permissions import site_feature_enabled
+    if not site_feature_enabled(site, 'machinery'):
+        can_machines = False
+    if not site_feature_enabled(site, 'people'):
+        can_people = False
+
+    # Verificar acceso con flags aplicados
+    if is_person and not can_people:
+        return redirect('access_denied')
+    if is_machinery and not can_machines:
+        return redirect('access_denied')
+
     job_titles = JobTitle.for_site(site).filter(
-        Q(resource_type=resource.resource_category.resource_type) | Q(resource_type='BOTH')
-    )
+        Q(resource_type='PERSON') | Q(resource_type='BOTH')
+    ) if can_people else JobTitle.objects.none()
+
+    machine_titles = JobTitle.for_site(site).filter(
+        Q(resource_type='MACHINERY') | Q(resource_type='BOTH')
+    ) if can_machines else JobTitle.objects.none()
 
     if request.method == 'POST':
         display_name  = request.POST.get('display_name', '').strip()
@@ -284,27 +303,29 @@ def resource_edit(request, resource_id):
             return redirect('resources:worker_list')
 
         return render(request, 'resources/resource_form.html', {
-            'mode':        'edit',
-            'resource':    resource,
-            'site':        site,
-            'job_titles':  job_titles,
-            'can_people':  can_people,
-            'can_machines': can_machines,
-            'errors':      errors,
-            'post_data':   request.POST,
-            'page_title':  f'Editar — {resource.display_name}',
-            'perms_ctx':   get_user_context_permissions(request.user, site),
+            'mode':          'edit',
+            'resource':      resource,
+            'site':          site,
+            'job_titles':    job_titles,
+            'machine_titles': machine_titles,
+            'can_people':    can_people,
+            'can_machines':  can_machines,
+            'errors':        errors,
+            'post_data':     request.POST,
+            'page_title':    f'Editar — {resource.display_name}',
+            'perms_ctx':     get_user_context_permissions(request.user, site),
         })
 
     return render(request, 'resources/resource_form.html', {
-        'mode':        'edit',
-        'resource':    resource,
-        'site':        site,
-        'job_titles':  job_titles,
-        'can_people':  can_people,
-        'can_machines': can_machines,
-        'page_title':  f'Editar — {resource.display_name}',
-        'perms_ctx':   get_user_context_permissions(request.user, site),
+        'mode':          'edit',
+        'resource':      resource,
+        'site':          site,
+        'job_titles':    job_titles,
+        'machine_titles': machine_titles,
+        'can_people':    can_people,
+        'can_machines':  can_machines,
+        'page_title':    f'Editar — {resource.display_name}',
+        'perms_ctx':     get_user_context_permissions(request.user, site),
     })
 
 
@@ -433,7 +454,7 @@ def job_title_create_inline(request):
     if not can_people and not can_machines:
         return JsonResponse({'error': 'Sin permiso.'}, status=403)
 
-    name          = request.POST.get('name', '').strip()
+    name = request.POST.get('name', '').strip().upper()
     resource_type = request.POST.get('resource_type', 'PERSON')
 
     if not name:
@@ -466,3 +487,21 @@ def job_title_create_inline(request):
         'id':   job_title.id,
         'name': job_title.name,
     })
+
+@login_required
+@require_POST
+def job_title_delete(request):
+    from django.db.models import ProtectedError
+    job_title_id = request.POST.get('job_title_id')
+    if not job_title_id:
+        return JsonResponse({'error': 'ID obligatorio.'}, status=400)
+    try:
+        jt = JobTitle.objects.get(id=job_title_id)
+        if jt.resources.filter(status='ACTIVE').exists():
+            return JsonResponse({'error': f'"{jt.name}" tiene trabajadores activos asignados.'}, status=400)
+        jt.delete()
+        return JsonResponse({'status': 'ok'})
+    except JobTitle.DoesNotExist:
+        return JsonResponse({'error': 'Cargo no encontrado.'}, status=404)
+    except ProtectedError:
+        return JsonResponse({'error': 'No se puede eliminar, tiene registros asociados.'}, status=400)

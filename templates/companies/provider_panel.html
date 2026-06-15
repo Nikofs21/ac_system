@@ -257,6 +257,9 @@
              onclick="loadSiteUsers({{ site.id }}, '{{ site.name|escapejs }}'); return false;">
             <i class="ti ti-users" style="font-size:12px;" aria-hidden="true"></i>
           </a>
+          <a href="/prestador/rra/{{ site.id }}/" class="btn-sm">
+            <i class="ti ti-file-export" style="font-size:12px;" aria-hidden="true"></i>
+          </a>
         </div>
       {% empty %}
         <div class="empty-state">
