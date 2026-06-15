@@ -17,21 +17,12 @@ from .models import (
 from companies.models import Site, SiteMembership
 from work.models import StageTask, TaskCatalog
 from core.permissions import user_has_permission, get_user_context_permissions
+from core.utils import get_active_site
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
-
-def get_active_site(request):
-    pref = getattr(request.user, 'preference', None)
-    if pref and pref.last_site:
-        return pref.last_site
-    membership = SiteMembership.objects.filter(
-        user=request.user, is_active=True
-    ).select_related('site').first()
-    return membership.site if membership else None
-
 
 def require_active_site(view_func):
     def wrapper(request, *args, **kwargs):

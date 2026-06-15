@@ -19,18 +19,12 @@ from core.permissions import (
     get_user_context_permissions,
 )
 from core.task_permissions import get_allowed_tasks_for_user
+from core.utils import get_active_site
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
-
-def get_active_site(request):
-    try:
-        return request.user.preference.last_site
-    except Exception:
-        return None
-
 
 def require_active_site(view_func):
     from functools import wraps

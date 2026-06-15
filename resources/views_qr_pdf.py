@@ -20,13 +20,7 @@ from reportlab.lib.utils import ImageReader
 from companies.models import SiteMembership
 from resources.models import Resource, ResourceSiteAssignment
 from core.permissions import user_has_permission
-
-
-def get_active_site(request):
-    try:
-        return request.user.preference.last_site
-    except Exception:
-        return None
+from core.utils import get_active_site
 
 
 @login_required

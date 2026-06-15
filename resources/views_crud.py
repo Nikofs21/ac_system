@@ -13,13 +13,7 @@ from django.db.models import Q
 
 from .models import Resource, ResourceSiteAssignment, JobTitle, ResourceCategory
 from core.permissions import user_has_permission, get_user_context_permissions
-
-
-def get_active_site(request):
-    try:
-        return request.user.preference.last_site
-    except Exception:
-        return None
+from core.utils import get_active_site
 
 
 def require_active_site(view_func):

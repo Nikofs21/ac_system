@@ -4,6 +4,7 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
 from subcontracts import views as subcontracts_views
+from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -13,11 +14,16 @@ urlpatterns = [
     path('work/', include('work.urls')),
     path('resources/', include('resources.urls')),
     path('tracking/', include('tracking.urls')),
-    path('r/<str:uid>/', include('resources.urls_qr')),       # Ruta publica del QR — corta y memorable para imprimir en credenciales
+    path('r/<str:uid>/', include('resources.urls_qr')),
     path('', lambda request: redirect('dashboard'), name='home'),
     path('access/', include('access.urls')),
     path('subcontracts/', include('subcontracts.urls')),
     path('subcontratos/<str:subcontract_uid>/', subcontracts_views.subcontract_form, name='subcontract_form_qr'),
-    path('accounts/', include('allauth.urls')),
     path('prestador/', include('companies.urls_provider')),
+    # Bloquear páginas por defecto de allauth ANTES de incluir allauth.urls
+    path('accounts/signup/', RedirectView.as_view(url='/login/', permanent=False)),
+    path('accounts/login/', RedirectView.as_view(url='/login/', permanent=False)),
+    path('accounts/password/', RedirectView.as_view(url='/login/', permanent=False)),
+    # allauth al final para que el flujo de Google siga funcionando
+    path('accounts/', include('allauth.urls')),
 ]

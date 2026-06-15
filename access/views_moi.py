@@ -13,20 +13,13 @@ from django.db import transaction
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
+from core.utils import get_active_site
 
 from companies.models import SiteMembership, CompanyMembership
 from access.models import Role
 from core.permissions import user_has_permission, get_user_context_permissions
 
 User = get_user_model()
-
-
-def get_active_site(request):
-    try:
-        return request.user.preference.last_site
-    except Exception:
-        return None
-
 
 def require_active_site(view_func):
     from functools import wraps
