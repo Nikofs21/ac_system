@@ -146,11 +146,11 @@ def subcontract_edit(request, subcontract_id):
     post_data = None
 
     if request.method == 'POST':
-        name              = request.POST.get('name', '').strip()
-        code              = request.POST.get('code', '').strip().upper()
-        rut               = request.POST.get('rut', '').strip()
-        notes             = request.POST.get('notes', '').strip()
-        post_data         = request.POST
+        name      = request.POST.get('name', '').strip()
+        code      = request.POST.get('code', '').strip().upper()
+        rut       = request.POST.get('rut', '').strip()
+        notes     = request.POST.get('notes', '').strip()
+        post_data = request.POST
 
         if not name:
             errors['name'] = 'El nombre es obligatorio.'
@@ -160,11 +160,10 @@ def subcontract_edit(request, subcontract_id):
             errors['code'] = 'Ya existe un subcontrato con ese codigo en esta obra.'
 
         if not errors:
-            subcontract.name              = name
-            subcontract.code              = code
-            subcontract.rut               = rut or None
-            subcontract.reserved_stage_id = reserved_stage_id or None
-            subcontract.notes             = notes or None
+            subcontract.name  = name
+            subcontract.code  = code
+            subcontract.rut   = rut or None
+            subcontract.notes = notes or None
             subcontract.save()
             messages.success(request, 'Cambios guardados.')
             return redirect('subcontracts:subcontract_list')

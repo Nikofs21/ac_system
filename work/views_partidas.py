@@ -13,7 +13,7 @@ from django.http import JsonResponse
 from django.db import transaction
 from django.contrib import messages
 
-from companies.models import Site
+from companies.models import Site, CompanyMembership
 from work.models import Stage, TaskCatalog, StageTask
 
 
@@ -26,6 +26,15 @@ def require_provider(view_func):
             return redirect('access_denied')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def _check_company_access(request, company):
+    """Verifica que el prestador tenga membresía activa en la empresa."""
+    return CompanyMembership.objects.filter(
+        user=request.user,
+        company=company,
+        is_active=True,
+    ).exists()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -44,6 +53,8 @@ def partidas_panel(request):
 
     if site_id:
         selected_site = get_object_or_404(Site, id=site_id)
+        if not _check_company_access(request, selected_site.company):
+            return redirect('access_denied')
         stage_tasks = StageTask.objects.filter(
             site=selected_site
         ).select_related(
@@ -70,10 +81,12 @@ def partidas_panel(request):
 def partidas_upload(request, site_id):
     """Carga masiva de partidas desde Excel."""
     site = get_object_or_404(Site, id=site_id)
+    if not _check_company_access(request, site.company):
+        return redirect('access_denied')
 
     if request.method == 'POST':
         return _handle_upload(request, site)
-    
+
     formato_cols = [
         ('etapa',          'Nombre de la etapa',                       True),
         ('subetapa',       'Nombre de la subetapa',                    False),
@@ -86,8 +99,9 @@ def partidas_upload(request, site_id):
     ]
 
     return render(request, 'work/partidas_upload.html', {
-        'site':       site,
-        'page_title': f'Cargar partidas — {site.name}',
+        'site':         site,
+        'page_title':   f'Cargar partidas — {site.name}',
+        'formato_cols': formato_cols,
     })
 
 
@@ -111,10 +125,8 @@ def _handle_upload(request, site):
             messages.error(request, f'Error al leer el archivo: {e}')
             return redirect(f'/work/partidas/upload/{site.id}/')
 
-    # Normalizar nombres de columnas
     df.columns = [str(c).strip().lower() for c in df.columns]
 
-    # Mapeo flexible de nombres de columnas
     col_map = {
         'etapa':             ['etapa'],
         'subetapa':          ['subetapa', 'sub etapa', 'sub_etapa'],
@@ -136,15 +148,15 @@ def _handle_upload(request, site):
                 return c
         return None
 
-    col_etapa       = find_col(df, col_map['etapa'])
-    col_subetapa    = find_col(df, col_map['subetapa'])
-    col_partida     = find_col(df, col_map['partida'])
-    col_cantidad    = find_col(df, col_map['cantidad'])
-    col_um          = find_col(df, col_map['unidad_medida'])
-    col_ppto_total  = find_col(df, col_map['presupuesto_total'])
-    col_ppto_mo     = find_col(df, col_map['presupuesto_mo'])
-    col_tipo        = find_col(df, col_map['tipo'])
-    col_estado      = find_col(df, col_map['estado'])
+    col_etapa      = find_col(df, col_map['etapa'])
+    col_subetapa   = find_col(df, col_map['subetapa'])
+    col_partida    = find_col(df, col_map['partida'])
+    col_cantidad   = find_col(df, col_map['cantidad'])
+    col_um         = find_col(df, col_map['unidad_medida'])
+    col_ppto_total = find_col(df, col_map['presupuesto_total'])
+    col_ppto_mo    = find_col(df, col_map['presupuesto_mo'])
+    col_tipo       = find_col(df, col_map['tipo'])
+    col_estado     = find_col(df, col_map['estado'])
 
     if not col_etapa or not col_partida:
         messages.error(request, 'El archivo debe tener columnas "etapa" y "partida".')
@@ -158,9 +170,9 @@ def _handle_upload(request, site):
         for i, row in df.iterrows():
             linea = i + 2
 
-            etapa_nombre    = str(row.get(col_etapa,   '') or '').strip()
-            subetapa_nombre = str(row.get(col_subetapa,'') or '').strip() if col_subetapa else ''
-            partida_nombre  = str(row.get(col_partida, '') or '').strip()
+            etapa_nombre    = str(row.get(col_etapa,    '') or '').strip()
+            subetapa_nombre = str(row.get(col_subetapa, '') or '').strip() if col_subetapa else ''
+            partida_nombre  = str(row.get(col_partida,  '') or '').strip()
 
             if not etapa_nombre or not partida_nombre:
                 continue
@@ -180,9 +192,9 @@ def _handle_upload(request, site):
             except (ValueError, TypeError):
                 ppto_mo = None
 
-            um     = str(row.get(col_um,    '') or '').strip() if col_um    else None
-            tipo   = str(row.get(col_tipo,  '') or '').strip().lower() if col_tipo  else 'casa'
-            estado = str(row.get(col_estado,'') or '').strip().lower() if col_estado else 'activa'
+            um     = str(row.get(col_um,     '') or '').strip() if col_um    else None
+            tipo   = str(row.get(col_tipo,   '') or '').strip().lower() if col_tipo   else 'casa'
+            estado = str(row.get(col_estado, '') or '').strip().lower() if col_estado else 'activa'
 
             if tipo not in ('casa', 'subcontrato', ''):
                 tipo = 'casa'
@@ -272,6 +284,8 @@ def partida_edit(request, stagetask_id):
     """Editar una partida individual — principalmente tipo y estado."""
     st   = get_object_or_404(StageTask, id=stagetask_id)
     site = st.site
+    if not _check_company_access(request, site.company):
+        return redirect('access_denied')
 
     if request.method == 'POST':
         tipo           = request.POST.get('tipo', 'casa')
@@ -308,13 +322,15 @@ def partida_edit(request, stagetask_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CAMBIO RÁPIDO DE TIPO (AJAX)
+# CAMBIO RÁPIDO DE TIPO Y ESTADO (AJAX)
 # ─────────────────────────────────────────────────────────────────────────────
 
 @require_provider
 @require_POST
 def partida_toggle_tipo(request, stagetask_id):
-    st = get_object_or_404(StageTask, id=stagetask_id, site__company__memberships__user=request.user)
+    st = get_object_or_404(StageTask, id=stagetask_id)
+    if not _check_company_access(request, st.site.company):
+        return JsonResponse({'error': 'Sin acceso.'}, status=403)
     st.tipo = 'subcontrato' if st.tipo == 'casa' else 'casa'
     st.save()
     return JsonResponse({'status': 'ok', 'tipo': st.tipo})
@@ -323,7 +339,9 @@ def partida_toggle_tipo(request, stagetask_id):
 @require_provider
 @require_POST
 def partida_toggle_estado(request, stagetask_id):
-    st = get_object_or_404(StageTask, id=stagetask_id, site__company__memberships__user=request.user)
+    st = get_object_or_404(StageTask, id=stagetask_id)
+    if not _check_company_access(request, st.site.company):
+        return JsonResponse({'error': 'Sin acceso.'}, status=403)
     st.estado_partida = 'inactiva' if st.estado_partida == 'activa' else 'activa'
     st.save()
     return JsonResponse({'status': 'ok', 'estado': st.estado_partida})

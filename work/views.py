@@ -22,10 +22,6 @@ from core.task_permissions import get_allowed_tasks_for_user
 from core.utils import get_active_site
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────────────────────────────────────
-
 def require_active_site(view_func):
     from functools import wraps
     @wraps(view_func)
@@ -44,29 +40,14 @@ def _clear_assignment_session(request):
         'assignment_workers',
         'assignment_preloaded_name',
         'assignment_in_flow',
-        'assignment_from_preload',  # legacy
+        'assignment_from_preload',
     ]:
         request.session.pop(key, None)
     request.session.modified = True
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FLUJO DE ASIGNACION
-# ─────────────────────────────────────────────────────────────────────────────
-
 @require_active_site
 def assignment_new(request):
-    """
-    Paso 1: Seleccionar etapa y partida.
-
-    Logica de pre-carga:
-    - Si viene de assignment_preload: ya tiene assignment_workers con el
-      trabajador y assignment_in_flow=True. Se conserva.
-    - Si viene del paso 2 o 3 (dentro del flujo): assignment_in_flow=True.
-      Se conserva.
-    - Cualquier otro origen (sidebar, URL directa, listado sin pre-cargar):
-      assignment_in_flow no existe o es False. Se limpia todo.
-    """
     site = get_active_site(request)
 
     can_people   = user_has_permission(request.user, 'sessions.start_people', site)
@@ -75,14 +56,10 @@ def assignment_new(request):
     if not can_people and not can_machines:
         return redirect('access_denied')
 
-    # Si NO estamos dentro del flujo, limpiar estado anterior
     in_flow = request.session.get('assignment_in_flow', False)
     if not in_flow:
         _clear_assignment_session(request)
 
-    # Marcar que estamos activamente en el flujo
-    # Este flag persiste mientras el supervisor navegue por los 3 pasos.
-    # Se elimina solo cuando el flujo termina (confirmar) o se limpia.
     request.session['assignment_in_flow'] = True
     request.session.modified = True
 
@@ -148,12 +125,20 @@ def assignment_scan(request):
     stage = get_object_or_404(Stage, id=stage_id, site=site)
     task  = get_object_or_404(TaskCatalog, id=task_id)
 
+    # Verificar que la partida siga activa al llegar al paso 2
+    stage_task_check = StageTask.objects.filter(
+        site=site, stage=stage, task=task, is_active=True, estado_partida='activa'
+    ).first()
+    if not stage_task_check:
+        messages.error(request, f'La partida "{task.name}" ya no está disponible. Selecciona otra.')
+        _clear_assignment_session(request)
+        return redirect('work:assignment_new')
+
     worker_ids       = request.session.get('assignment_workers', [])
     workers_in_group = Resource.objects.filter(
         id__in=worker_ids
     ).select_related('job_title') if worker_ids else []
 
-    # Mantener el flag de flujo activo
     request.session['assignment_in_flow'] = True
     request.session.modified = True
 
@@ -162,7 +147,7 @@ def assignment_scan(request):
 
     return render(request, 'work/assignment_step2.html', {
         'stage':            stage,
-        'task':             task,
+        'task':             stage_task_check,
         'workers_in_group': workers_in_group,
         'site':             site,
         'page_title':       'Escanear trabajadores',
@@ -172,11 +157,6 @@ def assignment_scan(request):
 
 @require_active_site
 def scan_qr(request):
-    """
-    Procesa escaneo de QR o busqueda manual.
-    Si el recurso tiene sesion abierta, lo agrega igualmente al grupo
-    pero marca la advertencia. El cierre se hace al confirmar en paso 3.
-    """
     if request.method != 'POST':
         return JsonResponse({'error': 'Metodo no permitido'}, status=405)
 
@@ -292,7 +272,6 @@ def remove_from_group(request):
 
 @require_active_site
 def search_resources(request):
-    """Busqueda de recursos por nombre o RUT para el paso 2."""
     site = get_active_site(request)
 
     if not user_has_permission(request.user, 'sessions.start_people', site) and \
@@ -341,10 +320,7 @@ def search_resources(request):
 
 @require_active_site
 def assignment_confirm(request):
-    """
-    Paso 3: Confirmar e iniciar sesiones.
-    Si alguno del grupo tiene sesion abierta, la cierra antes de crear la nueva.
-    """
+    """Paso 3: Confirmar e iniciar sesiones."""
     site = get_active_site(request)
 
     if not user_has_permission(request.user, 'sessions.start_people', site) and \
@@ -365,10 +341,17 @@ def assignment_confirm(request):
     ).first()
     if not stage_task:
         messages.error(request, 'No se encontró la partida en esta obra.')
+        _clear_assignment_session(request)
         return redirect('work:assignment_new')
+
+    # Verificar que la partida siga activa al momento de confirmar
+    if stage_task.estado_partida != 'activa':
+        messages.error(request, f'La partida "{task_catalog.name}" fue inactivada. Selecciona otra partida.')
+        _clear_assignment_session(request)
+        return redirect('work:assignment_new')
+
     workers = Resource.objects.filter(id__in=worker_ids).select_related('job_title')
 
-    # Mantener flag de flujo activo en el paso 3
     request.session['assignment_in_flow'] = True
     request.session.modified = True
 
@@ -398,6 +381,13 @@ def assignment_confirm(request):
             })
 
     if request.method == 'POST' and 'start' in request.POST:
+        # Re-verificar al momento exacto de crear las sesiones
+        stage_task.refresh_from_db()
+        if stage_task.estado_partida != 'activa':
+            messages.error(request, f'La partida "{task_catalog.name}" fue inactivada justo antes de confirmar. Selecciona otra.')
+            _clear_assignment_session(request)
+            return redirect('work:assignment_new')
+
         now = timezone.now()
         sessions_created  = 0
         sessions_replaced = 0
@@ -447,7 +437,6 @@ def assignment_confirm(request):
                 )
                 sessions_created += 1
 
-        # Flujo completado — limpiar todo
         _clear_assignment_session(request)
 
         msg = f'{sessions_created} sesiones iniciadas en {task_catalog.name}.'
@@ -458,8 +447,8 @@ def assignment_confirm(request):
 
     return render(request, 'work/assignment_step3.html', {
         'stage':                stage,
-        'task':                 stage_task,      # StageTask — para mostrar subetapa en template
-        'task_catalog':         task_catalog,    # TaskCatalog — acceso directo si se necesita
+        'task':                 stage_task,
+        'task_catalog':         task_catalog,
         'workers':              workers,
         'workers_with_session': workers_with_session,
         'no_on_site_workers':   no_on_site_workers,
@@ -471,17 +460,8 @@ def assignment_confirm(request):
     })
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# TRABAJADORES ACTIVOS Y CIERRE
-# ─────────────────────────────────────────────────────────────────────────────
-
 @require_active_site
 def active_workers(request):
-    """
-    Vista de trabajadores activos con sesiones abiertas.
-    Supervisor y Bodeguero ven solo sus propias sesiones.
-    Jefe de terreno, AAC, Admin obra y superiores ven todas.
-    """
     site  = get_active_site(request)
     today = timezone.localdate()
 
@@ -515,11 +495,11 @@ def active_workers(request):
 
     closed_today = WorkSession.objects.filter(**closed_filter).count()
 
-    assigned_resources   = ResourceSiteAssignment.objects.filter(
+    assigned_resources  = ResourceSiteAssignment.objects.filter(
         site=site, status='ACTIVE'
     ).values_list('resource_id', flat=True)
 
-    resources_with_open  = open_sessions.values_list('resource_id', flat=True)
+    resources_with_open = open_sessions.values_list('resource_id', flat=True)
 
     no_on_site_today = NoOnSiteEvent.objects.filter(
         site=site, event_date=today, status='ACTIVE'
@@ -551,7 +531,6 @@ def active_workers(request):
 @require_active_site
 @require_POST
 def close_session(request, session_id):
-    """Cierra una sesion individual."""
     site = get_active_site(request)
 
     if not user_has_permission(request.user, 'sessions.start_people', site) and \
@@ -586,7 +565,6 @@ def close_session(request, session_id):
 @require_active_site
 @require_POST
 def mass_close(request):
-    """Cierre masivo de sesiones abiertas propias."""
     site = get_active_site(request)
 
     if not user_has_permission(request.user, 'bulk_close.own_sessions', site):
@@ -616,19 +594,8 @@ def mass_close(request):
     return redirect('work:active_workers')
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PRE-CARGA DESDE LISTADO O QR
-# ─────────────────────────────────────────────────────────────────────────────
-
 @require_active_site
 def assignment_preload(request, resource_id):
-    """
-    Inicia el flujo con un trabajador pre-cargado desde QR o listado.
-
-    Siempre limpia el estado anterior y establece el nuevo trabajador.
-    Marca assignment_in_flow=True para que assignment_new conserve el estado.
-    Si habia una pre-carga anterior, la reemplaza.
-    """
     site = get_active_site(request)
 
     if not user_has_permission(request.user, 'sessions.start_people', site) and \
@@ -664,8 +631,6 @@ def assignment_preload(request, resource_id):
         messages.error(request, 'Sin permiso para iniciar sesiones de maquinarias.')
         return redirect('resources:worker_list')
 
-    # Siempre limpiar estado anterior y establecer nueva pre-carga.
-    # assignment_in_flow=True le dice a assignment_new que conserve este estado.
     request.session['assignment_stage_id']       = None
     request.session['assignment_task_id']        = None
     request.session['assignment_workers']        = [resource.id]
