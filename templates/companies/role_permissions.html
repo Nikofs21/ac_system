@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .perm-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 0.5px solid var(--ni-border);
+    font-size: 13px;
+  }
+  .perm-row:last-child { border-bottom: none; }
+  .perm-name { flex: 1; color: var(--ni-text); }
+  .perm-level {
+    font-size: 10px; color: var(--ni-text-sub);
+    background: var(--ni-light); border-radius: 4px;
+    padding: 2px 7px; font-family: var(--font-mono);
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .perm-toggle {
+    flex-shrink: 0;
+    width: 40px; height: 22px; border-radius: 11px;
+    border: none; cursor: pointer; position: relative;
+    transition: background 0.2s;
+  }
+  .perm-toggle.on  { background: var(--ni-blue); }
+  .perm-toggle.off { background: var(--ni-border); }
+  .perm-toggle-thumb {
+    position: absolute; top: 3px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: white; transition: left 0.2s;
+    pointer-events: none;
+  }
+  .perm-toggle.on  .perm-toggle-thumb { left: 21px; }
+  .perm-toggle.off .perm-toggle-thumb { left: 3px; }
+
+  .module-label {
+    font-size: 10px; font-weight: 500; color: var(--ni-text-sub);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-family: var(--font-mono); padding: 8px 14px;
+    background: var(--ni-light); border-bottom: 0.5px solid var(--ni-border);
+  }
+  .module-group { margin-bottom: 16px; }
+
+  .role-header {
+    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius-lg); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .role-av {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--ni-blue-soft); color: var(--ni-blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; font-family: var(--font-mono);
+  }
+
+  .bulk-bar {
+    display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .btn-bulk {
+    font-size: 12px; border: 0.5px solid var(--ni-border);
+    border-radius: var(--radius); padding: 6px 12px;
+    background: var(--ni-white); color: var(--ni-text-sub);
+    cursor: pointer; font-family: var(--font-main);
+  }
+  .btn-bulk:hover { border-color: var(--ni-blue); color: var(--ni-blue); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ni-page-header">
+  <div>
+    <h1 class="ni-page-title">{{ page_title }}</h1>
+    <p class="ni-page-sub">Permisos base del rol — afecta a todos los usuarios con este rol</p>
+  </div>
+  <a href="{% url 'provider:role_list' %}" class="ni-btn ni-btn-secondary"
+     style="width:auto; padding:9px 16px; font-size:13px;">
+    <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver a roles
+  </a>
+</div>
+
+<div style="max-width:720px; margin:0 auto; padding:20px 16px;">
+
+  <div class="role-header">
+    <div class="role-av">{{ role.code|slice:":3"|upper }}</div>
+    <div>
+      <div style="font-size:15px; font-weight:600; color:var(--ni-dark);">{{ role.name }}</div>
+      <div style="font-size:12px; color:var(--ni-text-sub); font-family:var(--font-mono);">{{ role.code }}</div>
+    </div>
+  </div>
+
+  <div class="ni-alert ni-alert-warn" style="margin-bottom:16px;">
+    <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+    <span style="font-size:12px;">
+      Cambiar permisos de un rol afecta inmediatamente a todos los usuarios que lo tienen asignado.
+      Los overrides individuales por membresía tienen prioridad y no se ven afectados.
+    </span>
+  </div>
+
+  <div class="bulk-bar">
+    <button type="button" class="btn-bulk" onclick="toggleAll(true)">
+      <i class="ti ti-check" aria-hidden="true"></i> Activar todos
+    </button>
+    <button type="button" class="btn-bulk" onclick="toggleAll(false)">
+      <i class="ti ti-x" aria-hidden="true"></i> Desactivar todos
+    </button>
+  </div>
+
+  <form method="post" id="role-form">
+    {% csrf_token %}
+
+    {% regroup perms_data by perm.module as module_groups %}
+    {% for group in module_groups %}
+      <div class="ni-card module-group">
+        <div class="module-label">{{ group.grouper }}</div>
+        {% for item in group.list %}
+          <div class="perm-row">
+            <span class="perm-name">{{ item.perm.name }}</span>
+            <span class="perm-level">{{ item.perm.level }}</span>
+
+            {# Checkbox oculto que se envía en el POST #}
+            <input type="checkbox" name="perm_{{ item.perm.code }}"
+                   id="chk_{{ item.perm.code }}"
+                   {% if item.granted %}checked{% endif %}
+                   style="display:none;">
+
+            {# Toggle visual #}
+            <button type="button"
+                    class="perm-toggle {% if item.granted %}on{% else %}off{% endif %}"
+                    onclick="togglePerm('{{ item.perm.code }}', this)">
+              <div class="perm-toggle-thumb"></div>
+            </button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+      <button type="submit" class="ni-btn ni-btn-primary">
+        <i class="ti ti-check" aria-hidden="true"></i> Guardar permisos
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePerm(code, btn) {
+  const chk = document.getElementById('chk_' + code);
+  const isOn = btn.classList.contains('on');
+  if (isOn) {
+    btn.classList.replace('on', 'off');
+    chk.checked = false;
+  } else {
+    btn.classList.replace('off', 'on');
+    chk.checked = true;
+  }
+}
+
+function toggleAll(state) {
+  document.querySelectorAll('.perm-toggle').forEach(btn => {
+    const code = btn.previousElementSibling.id.replace('chk_', '');
+    const chk  = document.getElementById('chk_' + code);
+    if (state) {
+      btn.classList.replace('off', 'on');
+      if (chk) chk.checked = true;
+    } else {
+      btn.classList.replace('on', 'off');
+      if (chk) chk.checked = false;
+    }
+  });
+}
+</script>
+{% endblock %}

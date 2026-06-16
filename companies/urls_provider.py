@@ -23,10 +23,14 @@ urlpatterns = [
     # Permisos por membresía
     path('membresia/<int:membership_id>/permisos/', views_provider.membership_overrides, name='membership_overrides'),
 
-    #RRA
-    path('rra/<int:site_id>/',                    views_rra.rra_config,             name='rra_config'),
-    path('rra/<int:site_id>/semanas/',            views_rra.rra_week_config_save,   name='rra_week_config_save'),
-    path('rra/<int:site_id>/cargo-valor/',        views_rra.rra_cargo_valor_save,   name='rra_cargo_valor_save'),
+    # Gestión de roles (solo novus_super)
+    path('roles/', views_provider.role_list, name='role_list'),
+    path('roles/<int:role_id>/permisos/', views_provider.role_permissions, name='role_permissions'),
+
+    # RRA
+    path('rra/<int:site_id>/',                       views_rra.rra_config,             name='rra_config'),
+    path('rra/<int:site_id>/semanas/',               views_rra.rra_week_config_save,   name='rra_week_config_save'),
+    path('rra/<int:site_id>/cargo-valor/',           views_rra.rra_cargo_valor_save,   name='rra_cargo_valor_save'),
     path('rra/cargo-valor/<int:valor_id>/eliminar/', views_rra.rra_cargo_valor_delete, name='rra_cargo_valor_delete'),
-    path('rra/<int:site_id>/exportar/',           views_rra.rra_export,             name='rra_export'),
+    path('rra/<int:site_id>/exportar/',              views_rra.rra_export,             name='rra_export'),
 ]

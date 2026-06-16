@@ -16,7 +16,7 @@ from .models import (
     Company, CompanyConfig, CompanyMembership,
     Site, SiteConfig, SiteMembership,
 )
-from access.models import Role, Permission, SiteMembershipPermissionOverride
+from access.models import Role, Permission, RolePermission, SiteMembershipPermissionOverride
 from core.permissions import is_novus_super
 
 User = get_user_model()
@@ -28,6 +28,17 @@ def require_provider(view_func):
     @login_required
     def wrapper(request, *args, **kwargs):
         if request.user.actor_type != 'PROVIDER':
+            return redirect('access_denied')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def require_novus_super(view_func):
+    from functools import wraps
+    @wraps(view_func)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not is_novus_super(request.user):
             return redirect('access_denied')
         return view_func(request, *args, **kwargs)
     return wrapper
@@ -100,6 +111,7 @@ def provider_panel(request):
         'company_config':   company_config,
         'page_title':       'Panel del prestador',
         'active_tab':       request.GET.get('tab', 'obras'),
+        'is_novus_super':   is_novus_super(request.user),
     })
 
 
@@ -397,7 +409,7 @@ def site_users(request, site_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# OVERRIDES DE PERMISOS
+# OVERRIDES DE PERMISOS POR MEMBRESÍA
 # ─────────────────────────────────────────────────────────────────────────────
 
 @require_provider
@@ -409,7 +421,6 @@ def membership_overrides(request, membership_id):
     if not _check_company_access(request, site.company):
         return redirect('access_denied')
 
-    from access.models import RolePermission
     role_perms = set(
         RolePermission.objects.filter(
             role=membership.role, granted=True
@@ -478,3 +489,73 @@ def _handle_overrides_save(request, membership):
 
     messages.success(request, f'Permisos de {membership.user.get_full_name()} actualizados.')
     return redirect(f'/prestador/?company={membership.site.company.id}&tab=usuarios')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GESTIÓN DE ROLES (solo novus_super)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_novus_super
+def role_list(request):
+    """Lista todos los roles base con resumen de permisos."""
+    roles = Role.objects.filter(
+        is_active=True,
+        scope_type='GLOBAL_BASE',
+    ).order_by('name')
+
+    roles_data = []
+    for role in roles:
+        perm_count = RolePermission.objects.filter(role=role, granted=True).count()
+        roles_data.append({
+            'role':       role,
+            'perm_count': perm_count,
+        })
+
+    return render(request, 'companies/role_list.html', {
+        'roles_data': roles_data,
+        'page_title': 'Gestión de roles',
+    })
+
+
+@require_novus_super
+def role_permissions(request, role_id):
+    """Editar permisos de un rol base."""
+    role = get_object_or_404(Role, id=role_id, scope_type='GLOBAL_BASE')
+
+    all_permissions = Permission.objects.filter(is_active=True).order_by('module', 'name')
+
+    current_perms = set(
+        RolePermission.objects.filter(
+            role=role, granted=True
+        ).values_list('permission__code', flat=True)
+    )
+
+    if request.method == 'POST':
+        return _handle_role_permissions_save(request, role, all_permissions)
+
+    perms_data = []
+    for perm in all_permissions:
+        perms_data.append({
+            'perm':    perm,
+            'granted': perm.code in current_perms,
+        })
+
+    return render(request, 'companies/role_permissions.html', {
+        'role':       role,
+        'perms_data': perms_data,
+        'page_title': f'Permisos — {role.name}',
+    })
+
+
+def _handle_role_permissions_save(request, role, all_permissions):
+    with transaction.atomic():
+        for perm in all_permissions:
+            checked = request.POST.get(f'perm_{perm.code}') == 'on'
+            RolePermission.objects.update_or_create(
+                role=role,
+                permission=perm,
+                defaults={'granted': checked},
+            )
+
+    messages.success(request, f'Permisos de "{role.name}" actualizados.')
+    return redirect('provider:role_permissions', role_id=role.id)

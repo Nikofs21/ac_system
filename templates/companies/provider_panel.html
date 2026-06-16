@@ -185,6 +185,12 @@
       <i class="ti ti-plus" style="font-size:14px;" aria-hidden="true"></i>
       Nueva empresa
     </a>
+    {% if is_novus_super %}
+      <a href="{% url 'provider:role_list' %}" class="cs-add">
+        <i class="ti ti-shield" style="font-size:14px;" aria-hidden="true"></i>
+        Gestionar roles
+      </a>
+    {% endif %}
   </div>
 
   <!-- ── Panel principal ── -->
