@@ -3,27 +3,14 @@
 
 {% block extra_css %}
 <style>
-  .perm-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; border-bottom: 0.5px solid var(--ni-border);
-    font-size: 13px;
-  }
-  .perm-row:last-child { border-bottom: none; }
-  .perm-name { flex: 1; color: var(--ni-text); }
-  .perm-level {
-    font-size: 10px; color: var(--ni-text-sub);
-    background: var(--ni-light); border-radius: 4px;
-    padding: 2px 7px; font-family: var(--font-mono);
-    white-space: nowrap; flex-shrink: 0;
-  }
   .perm-toggle {
     flex-shrink: 0;
     width: 40px; height: 22px; border-radius: 11px;
     border: none; cursor: pointer; position: relative;
     transition: background 0.2s;
   }
-  .perm-toggle.on  { background: var(--ni-blue); }
-  .perm-toggle.off { background: var(--ni-border); }
+  .perm-toggle.on  { background: var(--ac-blue); }
+  .perm-toggle.off { background: var(--ac-border); }
   .perm-toggle-thumb {
     position: absolute; top: 3px;
     width: 16px; height: 16px; border-radius: 50%;
@@ -33,48 +20,42 @@
   .perm-toggle.on  .perm-toggle-thumb { left: 21px; }
   .perm-toggle.off .perm-toggle-thumb { left: 3px; }
 
-  .module-label {
-    font-size: 10px; font-weight: 500; color: var(--ni-text-sub);
-    text-transform: uppercase; letter-spacing: 0.06em;
-    font-family: var(--font-mono); padding: 8px 14px;
-    background: var(--ni-light); border-bottom: 0.5px solid var(--ni-border);
-  }
-  .module-group { margin-bottom: 16px; }
-
   .role-header {
-    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    background: var(--ac-white); border: 1px solid var(--ac-border);
     border-radius: var(--radius-lg); padding: 14px 16px;
     display: flex; align-items: center; gap: 12px;
     margin-bottom: 16px;
   }
   .role-av {
     width: 44px; height: 44px; border-radius: 12px;
-    background: var(--ni-blue-soft); color: var(--ni-blue);
+    background: var(--ac-blue-soft); color: var(--ac-blue);
     display: flex; align-items: center; justify-content: center;
     font-size: 13px; font-weight: 700; font-family: var(--font-mono);
   }
 
-  .bulk-bar {
-    display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
-  }
+  .bulk-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
   .btn-bulk {
-    font-size: 12px; border: 0.5px solid var(--ni-border);
+    font-size: 12px; border: 1px solid var(--ac-border);
     border-radius: var(--radius); padding: 6px 12px;
-    background: var(--ni-white); color: var(--ni-text-sub);
+    background: var(--ac-white); color: var(--ac-text-sub);
     cursor: pointer; font-family: var(--font-main);
   }
-  .btn-bulk:hover { border-color: var(--ni-blue); color: var(--ni-blue); }
+  .btn-bulk:hover { border-color: var(--ac-blue); color: var(--ac-blue); }
+  .btn-bulk:disabled,
+  .perm-toggle:disabled {
+    opacity: 0.45; cursor: not-allowed;
+  }
+  .perm-toggle:disabled:hover { border-color: var(--ac-border); color: var(--ac-text-sub); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">Permisos base del rol — afecta a todos los usuarios con este rol</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">Permisos base del rol — afecta a todos los usuarios con este rol</p>
   </div>
-  <a href="{% url 'provider:role_list' %}" class="ni-btn ni-btn-secondary"
-     style="width:auto; padding:9px 16px; font-size:13px;">
+  <a href="{% url 'provider:role_list' %}" class="ac-btn ac-btn-secondary ac-btn-sm">
     <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver a roles
   </a>
 </div>
@@ -84,24 +65,42 @@
   <div class="role-header">
     <div class="role-av">{{ role.code|slice:":3"|upper }}</div>
     <div>
-      <div style="font-size:15px; font-weight:600; color:var(--ni-dark);">{{ role.name }}</div>
-      <div style="font-size:12px; color:var(--ni-text-sub); font-family:var(--font-mono);">{{ role.code }}</div>
+      <div style="font-size:15px; font-weight:700; color:var(--ac-dark);">
+        {{ role.name }}
+        {% if role.is_protected %}
+          <span class="ac-badge ac-badge-purple" style="margin-left:6px;">
+            <i class="ti ti-shield-lock" style="font-size:10px; margin-right:3px;" aria-hidden="true"></i>
+            Protegido
+          </span>
+        {% endif %}
+      </div>
+      <div style="font-size:12px; color:var(--ac-text-sub); font-family:var(--font-mono);">{{ role.code }}</div>
     </div>
   </div>
 
-  <div class="ni-alert ni-alert-warn" style="margin-bottom:16px;">
-    <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-    <span style="font-size:12px;">
-      Cambiar permisos de un rol afecta inmediatamente a todos los usuarios que lo tienen asignado.
-      Los overrides individuales por membresía tienen prioridad y no se ven afectados.
-    </span>
-  </div>
+  {% if role.is_protected %}
+    <div class="ac-alert ac-alert-info" style="margin-bottom:16px;">
+      <i class="ti ti-lock" aria-hidden="true"></i>
+      <span style="font-size:12px;">
+        Este es un rol protegido del sistema. Siempre cuenta con acceso total y sus permisos
+        no pueden modificarse desde esta pantalla.
+      </span>
+    </div>
+  {% else %}
+    <div class="ac-alert ac-alert-warn" style="margin-bottom:16px;">
+      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+      <span style="font-size:12px;">
+        Cambiar permisos de un rol afecta inmediatamente a todos los usuarios que lo tienen asignado.
+        Los overrides individuales por membresía tienen prioridad y no se ven afectados.
+      </span>
+    </div>
+  {% endif %}
 
   <div class="bulk-bar">
-    <button type="button" class="btn-bulk" onclick="toggleAll(true)">
+    <button type="button" class="btn-bulk" onclick="toggleAll(true)" {% if role.is_protected %}disabled{% endif %}>
       <i class="ti ti-check" aria-hidden="true"></i> Activar todos
     </button>
-    <button type="button" class="btn-bulk" onclick="toggleAll(false)">
+    <button type="button" class="btn-bulk" onclick="toggleAll(false)" {% if role.is_protected %}disabled{% endif %}>
       <i class="ti ti-x" aria-hidden="true"></i> Desactivar todos
     </button>
   </div>
@@ -111,12 +110,12 @@
 
     {% regroup perms_data by perm.module as module_groups %}
     {% for group in module_groups %}
-      <div class="ni-card module-group">
-        <div class="module-label">{{ group.grouper }}</div>
+      <div class="ac-card" style="margin-bottom:16px;">
+        <div class="ac-module-label">{{ group.grouper }}</div>
         {% for item in group.list %}
-          <div class="perm-row">
-            <span class="perm-name">{{ item.perm.name }}</span>
-            <span class="perm-level">{{ item.perm.level }}</span>
+          <div class="ac-perm-row">
+            <span class="ac-perm-name">{{ item.perm.name }}</span>
+            <span class="ac-perm-level">{{ item.perm.level }}</span>
 
             {# Checkbox oculto que se envía en el POST #}
             <input type="checkbox" name="perm_{{ item.perm.code }}"
@@ -127,7 +126,8 @@
             {# Toggle visual #}
             <button type="button"
                     class="perm-toggle {% if item.granted %}on{% else %}off{% endif %}"
-                    onclick="togglePerm('{{ item.perm.code }}', this)">
+                    onclick="togglePerm('{{ item.perm.code }}', this)"
+                    {% if role.is_protected %}disabled{% endif %}>
               <div class="perm-toggle-thumb"></div>
             </button>
           </div>
@@ -136,8 +136,9 @@
     {% endfor %}
 
     <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
-      <button type="submit" class="ni-btn ni-btn-primary">
-        <i class="ti ti-check" aria-hidden="true"></i> Guardar permisos
+      <button type="submit" class="ac-btn ac-btn-primary ac-btn-full" {% if role.is_protected %}disabled{% endif %}>
+        <i class="ti ti-{% if role.is_protected %}lock{% else %}check{% endif %}" aria-hidden="true"></i>
+        {% if role.is_protected %}Rol protegido — no editable{% else %}Guardar permisos{% endif %}
       </button>
     </div>
   </form>
@@ -147,6 +148,7 @@
 {% block extra_js %}
 <script>
 function togglePerm(code, btn) {
+  if (btn.disabled) return;
   const chk = document.getElementById('chk_' + code);
   const isOn = btn.classList.contains('on');
   if (isOn) {
@@ -160,6 +162,7 @@ function togglePerm(code, btn) {
 
 function toggleAll(state) {
   document.querySelectorAll('.perm-toggle').forEach(btn => {
+    if (btn.disabled) return;
     const code = btn.previousElementSibling.id.replace('chk_', '');
     const chk  = document.getElementById('chk_' + code);
     if (state) {

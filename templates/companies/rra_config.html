@@ -6,39 +6,39 @@
   .rra-wrap { padding: 20px 24px; max-width: 700px; }
   .cargo-row {
     display: flex; align-items: center; gap: 10px;
-    padding: 9px 14px; border-bottom: 0.5px solid var(--ni-border);
+    padding: 9px 14px; border-bottom: 1px solid var(--ac-border);
     font-size: 13px;
   }
   .cargo-row:last-child { border-bottom: none; }
-  .cargo-name { flex: 1; font-weight: 500; color: var(--ni-text); }
+  .cargo-name { flex: 1; font-weight: 600; color: var(--ac-text); }
   .cargo-valor {
     font-family: var(--font-mono); font-size: 12px;
-    color: var(--ni-blue); background: var(--ni-blue-soft);
+    color: var(--ac-blue); background: var(--ac-blue-soft);
     border-radius: var(--radius); padding: 2px 10px;
   }
   .btn-del {
     background: none; border: none; cursor: pointer;
-    color: #ccc; font-size: 14px; padding: 4px;
+    color: var(--ac-text-hint); font-size: 14px; padding: 4px;
   }
-  .btn-del:hover { color: #c0392b; }
+  .btn-del:hover { color: var(--ac-danger); }
   .or-sep {
     display: flex; align-items: center; gap: 8px;
-    font-size: 11px; color: var(--ni-text-sub); margin: 8px 0;
+    font-size: 11px; color: var(--ac-text-sub); margin: 8px 0;
   }
   .or-sep::before, .or-sep::after {
-    content: ''; flex: 1; height: 0.5px; background: var(--ni-border);
+    content: ''; flex: 1; height: 1px; background: var(--ac-border);
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">{{ site.company.name }}</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">{{ site.company.name }}</p>
   </div>
   <a href="/prestador/?company={{ site.company.id }}"
-     class="ni-btn ni-btn-secondary" style="width:auto; padding:9px 16px; font-size:13px;">
+     class="ac-btn ac-btn-secondary ac-btn-sm">
     <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver
   </a>
 </div>
@@ -47,7 +47,7 @@
 
   {% if messages %}
     {% for msg in messages %}
-      <div class="ni-alert ni-alert-{% if msg.tags == 'error' %}warn{% else %}success{% endif %}"
+      <div class="ac-alert ac-alert-{% if msg.tags == 'error' %}warn{% else %}success{% endif %}"
            style="margin-bottom:12px;">
         <i class="ti ti-{% if msg.tags == 'error' %}alert-triangle{% else %}check{% endif %}"
            aria-hidden="true"></i>
@@ -57,28 +57,27 @@
   {% endif %}
 
   <!-- ── Descarga ── -->
-  <div class="ni-card" style="margin-bottom:16px;">
-    <div class="ni-card-header">
-      <span class="ni-card-title">Exportar Excel RRA</span>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Exportar Excel RRA</span>
     </div>
-    <div class="ni-card-body">
+    <div class="ac-card-body">
       {% if week_config %}
-        <p style="font-size:13px; color:var(--ni-text-sub); margin-bottom:14px;">
+        <p style="font-size:13px; color:var(--ac-text-sub); margin-bottom:14px;">
           Descarga el Excel con todas las sesiones procesadas y el catálogo de partidas.
           Las columnas <strong>Sem XX</strong> de avance físico se dejan vacías — se completan a mano cada semana.
         </p>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <a href="/prestador/rra/{{ site.id }}/exportar/"
-             class="ni-btn ni-btn-primary" style="width:auto; padding:10px 20px; display:inline-flex;">
+          <a href="/prestador/rra/{{ site.id }}/exportar/" class="ac-btn ac-btn-primary">
             <i class="ti ti-download" aria-hidden="true"></i>
             Descargar Excel RRA
           </a>
-          <span style="font-size:12px; color:var(--ni-text-sub);">
+          <span style="font-size:12px; color:var(--ac-text-sub);">
             Base: {{ week_config.prefix }}{{ week_config.base_week }} = {{ week_config.base_monday|date:"d/m/Y" }}
           </span>
         </div>
       {% else %}
-        <div class="ni-alert ni-alert-warn">
+        <div class="ac-alert ac-alert-warn">
           <i class="ti ti-alert-triangle" aria-hidden="true"></i>
           <span>Configura las semanas ISA antes de exportar.</span>
         </div>
@@ -87,42 +86,42 @@
   </div>
 
   <!-- ── Semanas ISA ── -->
-  <div class="ni-card" style="margin-bottom:16px;">
-    <div class="ni-card-header">
-      <span class="ni-card-title">Semanas ISA</span>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Semanas ISA</span>
       {% if week_config %}
-        <span style="font-size:11px; color:var(--ni-text-sub);">
+        <span style="font-size:11px; color:var(--ac-text-sub);">
           {{ week_config.base_monday|date:"d/m/Y" }} = {{ week_config.prefix }}{{ week_config.base_week }}
         </span>
       {% endif %}
     </div>
-    <div class="ni-card-body">
-      <p style="font-size:12px; color:var(--ni-text-sub); margin-bottom:14px;">
+    <div class="ac-card-body">
+      <p style="font-size:12px; color:var(--ac-text-sub); margin-bottom:14px;">
         Define el lunes base y qué número de semana ISA corresponde.
         Si la fecha ingresada no es lunes, se ajusta automáticamente.
       </p>
       <form method="post" action="/prestador/rra/{{ site.id }}/semanas/">
         {% csrf_token %}
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-          <div class="ni-field" style="margin-bottom:0;">
-            <label class="ni-label">Lunes base</label>
-            <input type="date" name="base_monday" class="ni-input"
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Lunes base</label>
+            <input type="date" name="base_monday" class="ac-input"
                    value="{{ week_config.base_monday|date:'Y-m-d'|default:'' }}" required>
           </div>
-          <div class="ni-field" style="margin-bottom:0;">
-            <label class="ni-label">Semana ISA base</label>
-            <input type="number" name="base_week" class="ni-input" min="1"
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Semana ISA base</label>
+            <input type="number" name="base_week" class="ac-input" min="1"
                    value="{{ week_config.base_week|default:'' }}"
                    placeholder="Ej: 20" required>
           </div>
-          <div class="ni-field" style="margin-bottom:0;">
-            <label class="ni-label">Prefijo</label>
-            <input type="text" name="prefix" class="ni-input"
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Prefijo</label>
+            <input type="text" name="prefix" class="ac-input"
                    value="{{ week_config.prefix|default:'sem ' }}"
                    placeholder="sem ">
           </div>
         </div>
-        <button type="submit" class="ni-btn ni-btn-primary" style="margin-top:12px;">
+        <button type="submit" class="ac-btn ac-btn-primary" style="margin-top:12px;">
           <i class="ti ti-check" aria-hidden="true"></i>
           {% if week_config %}Actualizar{% else %}Guardar{% endif %}
         </button>
@@ -131,10 +130,10 @@
   </div>
 
   <!-- ── Valores de cargo ── -->
-  <div class="ni-card">
-    <div class="ni-card-header">
-      <span class="ni-card-title">Valores HH por cargo</span>
-      <span class="ni-badge ni-badge-blue">{{ cargo_valores|length }} cargos</span>
+  <div class="ac-card">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Valores HH por cargo</span>
+      <span class="ac-badge ac-badge-blue">{{ cargo_valores|length }} cargos</span>
     </div>
 
     {% if cargo_valores %}
@@ -153,23 +152,23 @@
     </div>
     {% endif %}
 
-    <div style="padding:14px; border-top:0.5px solid var(--ni-border);">
-      <p style="font-size:11px; color:var(--ni-text-sub); margin-bottom:10px; font-family:var(--font-mono);">
+    <div style="padding:14px; border-top:1px solid var(--ac-border);">
+      <p style="font-size:11px; color:var(--ac-text-sub); margin-bottom:10px; font-family:var(--font-mono);">
         AGREGAR O ACTUALIZAR CARGO
       </p>
       <form method="post" action="/prestador/rra/{{ site.id }}/cargo-valor/">
         {% csrf_token %}
 
         <!-- Selector de cargos existentes -->
-        <div class="ni-field">
-          <label class="ni-label">Seleccionar cargo existente</label>
-          <select name="cargo_select" id="cargo-select" class="ni-select"
+        <div class="ac-field">
+          <label class="ac-label">Seleccionar cargo existente</label>
+          <select name="cargo_select" id="cargo-select" class="ac-select"
                   onchange="syncCargoInput(this)">
             <option value="">— Selecciona un cargo —</option>
             {% for jt in job_titles %}
               <option value="{{ jt.name|upper }}"
                 {% if jt.name|upper in cargos_configurados %}
-                  style="color:var(--ni-blue); font-weight:500;"
+                  style="color:var(--ac-blue); font-weight:600;"
                 {% endif %}>
                 {{ jt.name }}
                 {% if jt.name|upper in cargos_configurados %}✓{% endif %}
@@ -181,21 +180,21 @@
         <div class="or-sep">o ingresa un cargo nuevo</div>
 
         <!-- Campo libre para cargo nuevo -->
-        <div class="ni-field">
-          <label class="ni-label">Cargo nuevo</label>
-          <input type="text" name="cargo_libre" id="cargo-libre" class="ni-input"
+        <div class="ac-field">
+          <label class="ac-label">Cargo nuevo</label>
+          <input type="text" name="cargo_libre" id="cargo-libre" class="ac-input"
                  placeholder="Ej: CAPATAZ ESPECIALISTA"
                  style="text-transform:uppercase;"
                  oninput="clearSelect(this)">
         </div>
 
-        <div class="ni-field">
-          <label class="ni-label">Valor $/HH</label>
-          <input type="number" name="valor_hh" class="ni-input"
+        <div class="ac-field">
+          <label class="ac-label">Valor $/HH</label>
+          <input type="number" name="valor_hh" class="ac-input"
                  placeholder="Ej: 5800" step="1" min="0" required>
         </div>
 
-        <button type="submit" class="ni-btn ni-btn-primary">
+        <button type="submit" class="ac-btn ac-btn-primary">
           <i class="ti ti-plus" aria-hidden="true"></i> Guardar valor
         </button>
       </form>
@@ -204,10 +203,7 @@
 
 </div>
 
-<div id="p-toast" style="position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-     background:var(--ni-dark); color:white; border-radius:var(--radius); padding:10px 18px;
-     font-size:13px; z-index:2000; display:none; box-shadow:0 4px 16px rgba(0,0,0,0.2);">
-</div>
+<div class="ac-toast" id="p-toast"></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -215,14 +211,12 @@
 const CSRF = "{{ csrf_token }}";
 
 function syncCargoInput(select) {
-  // Al seleccionar del dropdown, limpiar el campo libre
   if (select.value) {
     document.getElementById('cargo-libre').value = '';
   }
 }
 
 function clearSelect(input) {
-  // Al escribir en campo libre, limpiar el dropdown
   if (input.value) {
     document.getElementById('cargo-select').value = '';
   }
@@ -241,9 +235,9 @@ let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('p-toast');
   t.textContent = msg;
-  t.style.display = 'block';
+  t.classList.add('visible');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.style.display = 'none', 2500);
+  toastTimer = setTimeout(() => t.classList.remove('visible'), 2500);
 }
 </script>
 {% endblock %}

@@ -6,13 +6,13 @@
   .partidas-wrap { padding: 20px 24px; }
 
   .site-selector {
-    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    background: var(--ac-white); border: 1px solid var(--ac-border);
     border-radius: var(--radius-lg); padding: 16px 20px;
     margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
     flex-wrap: wrap;
   }
 
-  .filter-bar {
+  .filter-bar-local {
     display: flex; align-items: center; gap: 8px;
     margin-bottom: 14px; flex-wrap: wrap;
   }
@@ -20,47 +20,47 @@
   /* Tabla */
   .partidas-table { width: 100%; border-collapse: collapse; }
   .partidas-table th {
-    font-size: 10px; font-family: var(--font-mono); font-weight: 500;
-    color: var(--ni-text-sub); text-transform: uppercase; letter-spacing: 0.05em;
-    padding: 8px 12px; border-bottom: 0.5px solid var(--ni-border);
-    text-align: left; background: var(--ni-light);
+    font-size: 10px; font-family: var(--font-mono); font-weight: 600;
+    color: var(--ac-text-sub); text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 8px 12px; border-bottom: 1px solid var(--ac-border);
+    text-align: left; background: var(--ac-surface);
     position: sticky; top: 0; z-index: 1;
   }
   .partidas-table td {
-    padding: 9px 12px; border-bottom: 0.5px solid var(--ni-border);
-    font-size: 12px; color: var(--ni-text); vertical-align: middle;
+    padding: 9px 12px; border-bottom: 1px solid var(--ac-border);
+    font-size: 12px; color: var(--ac-text); vertical-align: middle;
   }
   .partidas-table tr:last-child td { border-bottom: none; }
-  .partidas-table tr:hover td { background: var(--ni-light); }
+  .partidas-table tr:hover td { background: var(--ac-surface); }
 
   .etapa-row td {
-    background: var(--ni-light); font-size: 11px; font-weight: 600;
-    color: var(--ni-text-sub); font-family: var(--font-mono);
-    padding: 6px 12px; border-bottom: 0.5px solid var(--ni-border);
+    background: var(--ac-surface); font-size: 11px; font-weight: 700;
+    color: var(--ac-text-sub); font-family: var(--font-mono);
+    padding: 6px 12px; border-bottom: 1px solid var(--ac-border);
   }
 
   .tipo-badge {
     font-size: 10px; padding: 2px 8px; border-radius: 20px;
     font-family: var(--font-mono); cursor: pointer; border: none;
-    font-weight: 500;
+    font-weight: 600;
   }
-  .tipo-casa        { background: var(--ni-blue-soft); color: var(--ni-blue); }
-  .tipo-subcontrato { background: #fff3e0; color: #e65100; }
+  .tipo-casa        { background: var(--ac-blue-soft); color: var(--ac-blue); }
+  .tipo-subcontrato { background: var(--ac-warn-bg);    color: var(--ac-warn-text); }
 
   .estado-badge {
     font-size: 10px; padding: 2px 8px; border-radius: 20px;
     font-family: var(--font-mono); cursor: pointer; border: none;
-    font-weight: 500;
+    font-weight: 600;
   }
-  .estado-activa   { background: #e8f5ee; color: #2e7d32; }
-  .estado-inactiva { background: #f0f0f0; color: #888; }
+  .estado-activa   { background: var(--ac-success-bg); color: var(--ac-success-text); }
+  .estado-inactiva { background: var(--ac-surface);     color: var(--ac-text-sub); }
 
   .subetapa-label {
-    font-size: 10px; color: var(--ni-text-sub); font-family: var(--font-mono);
+    font-size: 10px; color: var(--ac-text-sub); font-family: var(--font-mono);
   }
 
   .table-wrap {
-    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    background: var(--ac-white); border: 1px solid var(--ac-border);
     border-radius: var(--radius-lg); overflow: hidden;
     max-height: calc(100vh - 320px); overflow-y: auto;
   }
@@ -69,37 +69,28 @@
     display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
   }
   .stat-mini {
-    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    background: var(--ac-white); border: 1px solid var(--ac-border);
     border-radius: var(--radius); padding: 8px 14px;
-    font-size: 12px; color: var(--ni-text-sub);
+    font-size: 12px; color: var(--ac-text-sub);
   }
-  .stat-mini strong { color: var(--ni-dark); font-family: var(--font-mono); }
-
-  #toast-partidas {
-    position: fixed; bottom: 24px; left: 50%;
-    transform: translateX(-50%);
-    background: var(--ni-dark); color: white;
-    border-radius: var(--radius); padding: 10px 18px;
-    font-size: 13px; z-index: 2000; display: none;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  }
+  .stat-mini strong { color: var(--ac-dark); font-family: var(--font-mono); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="partidas-wrap">
 
-  <div class="ni-page-header" style="margin-bottom:16px;">
+  <div class="ac-page-header" style="margin-bottom:16px;">
     <div>
-      <h1 class="ni-page-title">{{ page_title }}</h1>
-      <p class="ni-page-sub">Carga masiva y edición de partidas por obra</p>
+      <h1 class="ac-page-title">{{ page_title }}</h1>
+      <p class="ac-page-sub">Carga masiva y edición de partidas por obra</p>
     </div>
   </div>
 
   <!-- Selector de empresa/obra -->
   <div class="site-selector">
-    <i class="ti ti-building-factory" style="font-size:18px; color:var(--ni-text-sub);" aria-hidden="true"></i>
-    <select id="company-select" class="ni-select" style="width:220px; font-size:13px;"
+    <i class="ti ti-building-factory" style="font-size:18px; color:var(--ac-text-sub);" aria-hidden="true"></i>
+    <select id="company-select" class="ac-select" style="width:220px; font-size:13px;"
             onchange="filterSites()">
       <option value="">Selecciona empresa</option>
       {% for company in companies %}
@@ -109,7 +100,7 @@
         </option>
       {% endfor %}
     </select>
-    <select id="site-select" class="ni-select" style="width:220px; font-size:13px;"
+    <select id="site-select" class="ac-select" style="width:220px; font-size:13px;"
             onchange="goToSite()">
       <option value="">Selecciona obra</option>
       {% if selected_site %}
@@ -117,8 +108,7 @@
       {% endif %}
     </select>
     {% if selected_site %}
-      <a href="{% url 'work:partidas_upload' selected_site.id %}"
-         class="ni-btn ni-btn-primary" style="width:auto; padding:9px 16px; font-size:13px;">
+      <a href="{% url 'work:partidas_upload' selected_site.id %}" class="ac-btn ac-btn-primary ac-btn-sm">
         <i class="ti ti-upload" aria-hidden="true"></i> Cargar Excel
       </a>
     {% endif %}
@@ -135,17 +125,17 @@
   </div>
 
   <!-- Filtros -->
-  <div class="filter-bar">
-    <input type="text" id="search-partida" class="ni-input"
+  <div class="filter-bar-local">
+    <input type="text" id="search-partida" class="ac-input"
            placeholder="Buscar partida..." style="width:260px; font-size:13px;"
            oninput="filterTable()">
-    <select id="filter-tipo" class="ni-select" style="width:140px; font-size:13px;"
+    <select id="filter-tipo" class="ac-select" style="width:140px; font-size:13px;"
             onchange="filterTable()">
       <option value="">Todos los tipos</option>
       <option value="casa">Casa</option>
       <option value="subcontrato">Subcontrato</option>
     </select>
-    <select id="filter-estado" class="ni-select" style="width:140px; font-size:13px;"
+    <select id="filter-estado" class="ac-select" style="width:140px; font-size:13px;"
             onchange="filterTable()">
       <option value="">Todos los estados</option>
       <option value="activa">Activa</option>
@@ -182,10 +172,10 @@
               {% if st.subetapa %}
                 <span class="subetapa-label">{{ st.subetapa }}</span>
               {% else %}
-                <span style="color:#ccc; font-size:11px;">—</span>
+                <span style="color:var(--ac-text-hint); font-size:11px;">—</span>
               {% endif %}
             </td>
-            <td style="font-weight:500;">{{ st.task.name }}</td>
+            <td style="font-weight:600;">{{ st.task.name }}</td>
             <td style="text-align:right; font-family:var(--font-mono);">
               {% if st.cantidad_presupuesto %}{{ st.cantidad_presupuesto|floatformat:1 }}{% else %}—{% endif %}
             </td>
@@ -211,7 +201,7 @@
             </td>
             <td>
               <a href="{% url 'work:partida_edit' st.id %}"
-                 style="color:var(--ni-text-sub); font-size:13px; text-decoration:none;">
+                 style="color:var(--ac-text-sub); font-size:13px; text-decoration:none;">
                 <i class="ti ti-pencil" aria-hidden="true"></i>
               </a>
             </td>
@@ -222,26 +212,26 @@
     </table>
   </div>
   {% else %}
-  <div style="text-align:center; padding:48px; color:var(--ni-text-sub);">
-    <i class="ti ti-clipboard-off" style="font-size:40px; display:block; margin-bottom:10px; color:#ddd;" aria-hidden="true"></i>
-    <p style="font-size:14px;">Sin partidas cargadas para esta obra.</p>
+  <div class="ac-empty">
+    <i class="ti ti-clipboard-off" aria-hidden="true"></i>
+    <div class="ac-empty-title">Sin partidas cargadas para esta obra</div>
     <a href="{% url 'work:partidas_upload' selected_site.id %}"
-       class="ni-btn ni-btn-primary" style="width:auto; padding:10px 20px; margin-top:16px; display:inline-flex;">
+       class="ac-btn ac-btn-primary" style="margin-top:16px; display:inline-flex;">
       <i class="ti ti-upload" aria-hidden="true"></i> Cargar partidas desde Excel
     </a>
   </div>
   {% endif %}
 
   {% else %}
-  <div style="text-align:center; padding:64px; color:var(--ni-text-sub);">
-    <i class="ti ti-building" style="font-size:48px; display:block; margin-bottom:12px; color:#ddd;" aria-hidden="true"></i>
-    <p>Selecciona una empresa y obra para comenzar.</p>
+  <div class="ac-empty">
+    <i class="ti ti-building" aria-hidden="true"></i>
+    <div class="ac-empty-title">Selecciona una empresa y obra para comenzar</div>
   </div>
   {% endif %}
 
 </div>
 
-<div id="toast-partidas"></div>
+<div class="ac-toast" id="toast-partidas"></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -333,9 +323,9 @@ let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast-partidas');
   t.textContent = msg;
-  t.style.display = 'block';
+  t.classList.add('visible');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.style.display = 'none', 2500);
+  toastTimer = setTimeout(() => t.classList.remove('visible'), 2500);
 }
 </script>
 {% endblock %}

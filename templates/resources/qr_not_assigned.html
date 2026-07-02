@@ -1,20 +1,20 @@
 {% extends 'base.html' %}
 {% block title %}Trabajador no asignado{% endblock %}
 {% block content %}
-<div style="min-height:calc(100vh - var(--ni-topbar-h)); display:flex; align-items:center; justify-content:center; padding:24px;">
+<div style="min-height:calc(100vh - var(--ac-topbar-h)); display:flex; align-items:center; justify-content:center; padding:24px;">
   <div style="max-width:380px; text-align:center;">
-    <div style="width:64px; height:64px; border-radius:50%; background:#fef3e2; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
-      <i class="ti ti-user-x" style="font-size:28px; color:var(--ni-warn);" aria-hidden="true"></i>
+    <div style="width:64px; height:64px; border-radius:50%; background:var(--ac-warn-bg); display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+      <i class="ti ti-user-x" style="font-size:28px; color:var(--ac-warn);" aria-hidden="true"></i>
     </div>
-    <h1 style="font-size:18px; font-weight:600; color:var(--ni-dark); margin-bottom:8px;">No asignado a esta obra</h1>
-    <p style="font-size:14px; color:var(--ni-text-sub); margin-bottom:6px;">
+    <h1 style="font-size:18px; font-weight:700; color:var(--ac-dark); margin-bottom:8px;">No asignado a esta obra</h1>
+    <p style="font-size:14px; color:var(--ac-text-sub); margin-bottom:6px;">
       <strong>{{ resource.display_name }}</strong>
     </p>
-    <p style="font-size:13px; color:var(--ni-text-sub); margin-bottom:24px; line-height:1.6;">
+    <p style="font-size:13px; color:var(--ac-text-sub); margin-bottom:24px; line-height:1.6;">
       Este trabajador no esta asignado activamente a <strong>{{ site.name }}</strong>.
       Contacta al administrativo para verificar su asignacion.
     </p>
-    <a href="{% url 'dashboard' %}" class="ni-btn ni-btn-secondary" style="width:auto; display:inline-flex; padding:10px 24px;">
+    <a href="{% url 'dashboard' %}" class="ac-btn ac-btn-secondary">
       <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver
     </a>
   </div>

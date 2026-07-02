@@ -1,86 +1,80 @@
 {% extends 'base.html' %}
 {% block title %}{{ page_title }}{% endblock %}
 
-{% block extra_css %}
-<style>
-  .form-wrap { max-width: 560px; margin: 0 auto; padding: 16px; }
-</style>
-{% endblock %}
-
 {% block content %}
 
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">{{ site.name }}</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">{{ site.name }}</p>
   </div>
 </div>
 
-<div class="form-wrap">
+<div style="max-width:560px; margin:0 auto; padding:16px;">
 
   <!-- ═══ FORMULARIO CRUD ═══ -->
   <form method="post">
     {% csrf_token %}
 
-    <div class="ni-field">
-      <label class="ni-label" for="name">Nombre del subcontrato</label>
+    <div class="ac-field">
+      <label class="ac-label" for="name">Nombre del subcontrato</label>
       <input
-        class="ni-input {% if errors.name %}error{% endif %}"
+        class="ac-input {% if errors.name %}error{% endif %}"
         type="text" name="name" id="name"
         value="{% if post_data %}{{ post_data.name }}{% elif subcontract %}{{ subcontract.name }}{% endif %}"
         placeholder="Ej: Yeseros Martínez SpA"
         autocomplete="off" required
       >
-      {% if errors.name %}<div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.name }}</div>{% endif %}
+      {% if errors.name %}<div class="ac-field-error">{{ errors.name }}</div>{% endif %}
     </div>
 
-    <div class="ni-field">
-      <label class="ni-label" for="code">Código</label>
+    <div class="ac-field">
+      <label class="ac-label" for="code">Código</label>
       <input
-        class="ni-input {% if errors.code %}error{% endif %}"
+        class="ac-input {% if errors.code %}error{% endif %}"
         type="text" name="code" id="code"
         value="{% if post_data %}{{ post_data.code }}{% elif subcontract %}{{ subcontract.code }}{% endif %}"
         placeholder="Ej: SUB-YES-01"
         autocomplete="off" required
         style="text-transform:uppercase;"
       >
-      {% if errors.code %}<div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.code }}</div>{% endif %}
-      <div style="font-size:11px; color:var(--ni-text-sub); margin-top:4px;">Código único en esta obra.</div>
+      {% if errors.code %}<div class="ac-field-error">{{ errors.code }}</div>{% endif %}
+      <div class="ac-field-hint">Código único en esta obra.</div>
     </div>
 
-    <div class="ni-field">
-      <label class="ni-label" for="rut">RUT del subcontrato</label>
+    <div class="ac-field">
+      <label class="ac-label" for="rut">RUT del subcontrato</label>
       <input
-        class="ni-input"
+        class="ac-input"
         type="text" name="rut" id="rut"
         value="{% if post_data %}{{ post_data.rut }}{% elif subcontract %}{{ subcontract.rut|default:'' }}{% endif %}"
         placeholder="12345678-9"
         autocomplete="off"
       >
-      <div style="font-size:11px; color:var(--ni-text-sub); margin-top:4px;">Opcional.</div>
+      <div class="ac-field-hint">Opcional.</div>
     </div>
 
-    <div class="ni-field">
-      <label class="ni-label" for="notes">Notas (opcional)</label>
+    <div class="ac-field">
+      <label class="ac-label" for="notes">Notas (opcional)</label>
       <input
-        class="ni-input" type="text" name="notes" id="notes"
+        class="ac-input" type="text" name="notes" id="notes"
         value="{% if post_data %}{{ post_data.notes }}{% elif subcontract %}{{ subcontract.notes|default:'' }}{% endif %}"
         placeholder="Ej: subcontrato de yeso, activo desde marzo"
         maxlength="300" autocomplete="off"
       >
     </div>
 
-    <div style="margin-top:8px; padding:10px 14px; background:#f5f5f5; border-radius:var(--radius); font-size:12px; color:var(--ni-text-sub);">
+    <div class="ac-alert ac-alert-info" style="margin-top:8px; font-size:12px;">
       <i class="ti ti-info-circle" aria-hidden="true"></i>
       Las partidas y etapas reservadas se configuran desde el panel de administración una vez creado el subcontrato.
     </div>
 
     <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px;">
-      <button type="submit" class="ni-btn ni-btn-primary">
+      <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
         <i class="ti ti-{% if mode == 'create' %}plus{% else %}check{% endif %}" aria-hidden="true"></i>
         {% if mode == 'create' %}Crear subcontrato{% else %}Guardar cambios{% endif %}
       </button>
-      <a href="{% url 'subcontracts:subcontract_list' %}" class="ni-btn ni-btn-secondary" style="text-align:center;">
+      <a href="{% url 'subcontracts:subcontract_list' %}" class="ac-btn ac-btn-secondary ac-btn-full" style="text-align:center;">
         Cancelar
       </a>
     </div>

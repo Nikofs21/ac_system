@@ -3,58 +3,38 @@
 
 {% block extra_css %}
 <style>
-  .perm-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; border-bottom: 0.5px solid var(--ni-border);
-    font-size: 13px;
-  }
-  .perm-row:last-child { border-bottom: none; }
-  .perm-name { flex: 1; color: var(--ni-text); }
-  .perm-module {
-    font-size: 10px; color: var(--ni-text-sub);
-    background: var(--ni-light); border-radius: 4px;
-    padding: 2px 7px; font-family: var(--font-mono);
-    white-space: nowrap;
-  }
   .perm-select {
-    border: 0.5px solid var(--ni-border); border-radius: var(--radius);
-    padding: 4px 8px; font-size: 12px; background: var(--ni-white);
-    color: var(--ni-text); cursor: pointer; font-family: var(--font-main);
+    border: 1px solid var(--ac-border); border-radius: var(--radius);
+    padding: 4px 8px; font-size: 12px; background: var(--ac-white);
+    color: var(--ac-text); cursor: pointer; font-family: var(--font-main);
   }
-  .perm-select.override-on  { border-color: #4caf50; color: #2e7d32; background: #e8f5ee; }
-  .perm-select.override-off { border-color: #e53935; color: #c0392b; background: #fce8e8; }
-  .perm-select.role-on      { border-color: var(--ni-border); color: var(--ni-text-sub); }
+  .perm-select.override-on  { border-color: var(--ac-success); color: var(--ac-success-text); background: var(--ac-success-bg); }
+  .perm-select.override-off { border-color: var(--ac-danger);  color: var(--ac-danger-text);  background: var(--ac-danger-bg); }
+  .perm-select.role-on      { border-color: var(--ac-border);  color: var(--ac-text-sub); }
 
   .user-header {
-    background: var(--ni-white); border: 0.5px solid var(--ni-border);
+    background: var(--ac-white); border: 1px solid var(--ac-border);
     border-radius: var(--radius-lg); padding: 14px 16px;
     display: flex; align-items: center; gap: 12px;
     margin-bottom: 16px;
   }
   .user-av {
     width: 44px; height: 44px; border-radius: 50%;
-    background: var(--ni-blue-soft); color: var(--ni-blue);
+    background: var(--ac-blue-soft); color: var(--ac-blue);
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 600; flex-shrink: 0;
-  }
-  .module-group { margin-bottom: 20px; }
-  .module-label {
-    font-size: 10px; font-weight: 500; color: var(--ni-text-sub);
-    text-transform: uppercase; letter-spacing: 0.06em;
-    font-family: var(--font-mono); padding: 8px 14px;
-    background: var(--ni-light); border-bottom: 0.5px solid var(--ni-border);
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">{{ site.name }}</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">{{ site.name }}</p>
   </div>
   <a href="{% url 'provider:panel' %}?company={{ site.company.id }}&tab=usuarios"
-     class="ni-btn ni-btn-secondary" style="width:auto; padding:9px 16px; font-size:13px;">
+     class="ac-btn ac-btn-secondary ac-btn-sm">
     <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver
   </a>
 </div>
@@ -66,15 +46,15 @@
       {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
     </div>
     <div>
-      <div style="font-size:15px; font-weight:600; color:var(--ni-dark);">{{ user.get_full_name }}</div>
-      <div style="font-size:12px; color:var(--ni-text-sub);">{{ user.email }}</div>
-      <div style="font-size:12px; color:var(--ni-text-sub); margin-top:2px;">
+      <div style="font-size:15px; font-weight:700; color:var(--ac-dark);">{{ user.get_full_name }}</div>
+      <div style="font-size:12px; color:var(--ac-text-sub);">{{ user.email }}</div>
+      <div style="font-size:12px; color:var(--ac-text-sub); margin-top:2px;">
         Rol base: <strong>{{ membership.role.name }}</strong>
       </div>
     </div>
   </div>
 
-  <div class="ni-alert ni-alert-info" style="margin-bottom:16px;">
+  <div class="ac-alert ac-alert-info" style="margin-bottom:16px;">
     <i class="ti ti-info-circle" aria-hidden="true"></i>
     <span style="font-size:12px;">
       <strong>Predeterminado</strong> usa el permiso del rol base.
@@ -88,12 +68,12 @@
 
     {% regroup perms_data by perm.module as module_groups %}
     {% for group in module_groups %}
-      <div class="ni-card module-group">
-        <div class="module-label">{{ group.grouper }}</div>
+      <div class="ac-card" style="margin-bottom:16px;">
+        <div class="ac-module-label">{{ group.grouper }}</div>
         {% for item in group.list %}
-          <div class="perm-row">
-            <span class="perm-name">{{ item.perm.name }}</span>
-            <span style="font-size:10px; color:var(--ni-text-sub); font-family:var(--font-mono);">
+          <div class="ac-perm-row">
+            <span class="ac-perm-name">{{ item.perm.name }}</span>
+            <span style="font-size:10px; color:var(--ac-text-sub); font-family:var(--font-mono);">
               {% if item.status == 'role_on' %}✓ Rol{% elif item.status == 'role_off' %}— Rol{% endif %}
             </span>
             <select name="perm_{{ item.perm.code }}"
@@ -112,7 +92,7 @@
     {% endfor %}
 
     <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
-      <button type="submit" class="ni-btn ni-btn-primary">
+      <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
         <i class="ti ti-check" aria-hidden="true"></i> Guardar permisos
       </button>
     </div>

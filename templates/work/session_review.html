@@ -7,83 +7,71 @@
   /* ── FILTROS ── */
   .review-filters {
     padding: 10px 16px;
-    background: var(--ni-white);
-    border-bottom: 0.5px solid var(--ni-border);
+    background: var(--ac-white);
+    border-bottom: 1px solid var(--ac-border);
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
     position: sticky;
-    top: var(--ni-topbar-h);
+    top: var(--ac-topbar-h);
     z-index: 10;
   }
   .review-filters input[type="date"],
   .review-filters input[type="text"] {
     height: 36px;
-    border: 1.5px solid var(--ni-border);
+    border: 1.5px solid var(--ac-border);
     border-radius: var(--radius);
     padding: 0 10px;
     font-size: 13px;
     font-family: var(--font-main);
-    background: var(--ni-light);
-    color: var(--ni-text);
+    background: var(--ac-surface);
+    color: var(--ac-text);
     outline: none;
     transition: border-color 0.15s;
   }
-  .review-filters input:focus { border-color: var(--ni-blue); background: var(--ni-white); }
+  .review-filters input:focus { border-color: var(--ac-blue); background: var(--ac-white); }
   .review-filters input[type="date"] { width: 140px; flex-shrink: 0; }
   .review-filters input[type="text"] { flex: 1; min-width: 120px; }
   .search-wrap-r { position: relative; flex: 1; min-width: 120px; }
   .search-wrap-r input { width: 100%; padding-left: 32px; }
-  .search-icon-r { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--ni-text-sub); pointer-events: none; }
+  .search-icon-r { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--ac-text-sub); pointer-events: none; }
 
-  /* ── STATS ── */
-  .stats-bar {
-    display: flex; gap: 8px; padding: 8px 16px;
-    background: var(--ni-white);
-    border-bottom: 0.5px solid var(--ni-border);
-    flex-wrap: wrap;
-  }
-  .stat-pill {
-    font-size: 11px; border-radius: 20px; padding: 3px 10px;
-    font-family: var(--font-mono);
-    display: flex; align-items: center; gap: 4px;
-  }
-  .pill-total   { background: #f0f0f0; color: #888; }
-  .pill-session { background: #e8f5ee; color: var(--ni-success); }
-  .pill-warn    { background: #fef3e2; color: var(--ni-warn); }
-  .pill-blue    { background: var(--ni-blue-soft); color: var(--ni-blue); }
+  /* ── STATS locales (variante propia con pill-total/session/warn) ── */
+  .pill-total   { background: var(--ac-surface);     color: var(--ac-text-sub); }
+  .pill-session { background: var(--ac-success-bg);  color: var(--ac-success-text); }
+  .pill-warn    { background: var(--ac-warn-bg);      color: var(--ac-warn-text); }
 
   /* ── WORKER ROWS (accordion) ── */
   .worker-header {
     display: flex; align-items: center; gap: 10px;
     padding: 12px 16px;
-    border-bottom: 0.5px solid var(--ni-border);
+    border-bottom: 1px solid var(--ac-border);
     cursor: pointer;
-    background: var(--ni-white);
+    background: var(--ac-white);
     -webkit-tap-highlight-color: transparent;
     transition: background 0.1s;
     user-select: none;
   }
-  .worker-header:active { background: var(--ni-light); }
-  .worker-header.expanded { background: #f8f9ff; }
+  .worker-header:active { background: var(--ac-surface); }
+  .worker-header.expanded { background: var(--ac-blue-soft); }
 
   .wh-avatar {
     width: 36px; height: 36px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 600; flex-shrink: 0;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
   }
-  .av-open   { background: #e8f5ee; color: var(--ni-success); }
-  .av-closed { background: var(--ni-blue-soft); color: var(--ni-blue); }
-  .av-none   { background: #f0f0f0; color: #aaa; }
-  .av-nos    { background: #fef3e2; color: var(--ni-warn); }
+  .av-open   { background: var(--ac-success-bg); color: var(--ac-success-text); }
+  .av-closed { background: var(--ac-blue-soft);   color: var(--ac-blue); }
+  .av-none   { background: var(--ac-surface);     color: var(--ac-text-hint); }
+  .av-nos    { background: var(--ac-warn-bg);     color: var(--ac-warn-text); }
 
   .wh-info { flex: 1; min-width: 0; }
   .wh-name {
-    font-size: 14px; font-weight: 500; color: var(--ni-text);
+    font-size: 14px; font-weight: 600; color: var(--ac-text);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .wh-meta {
-    font-size: 11px; color: var(--ni-text-sub);
+    font-size: 11px; color: var(--ac-text-sub);
     font-family: var(--font-mono); margin-top: 1px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
@@ -93,27 +81,27 @@
     font-size: 10px; border-radius: 20px; padding: 2px 8px;
     font-family: var(--font-mono); white-space: nowrap;
   }
-  .badge-open   { background: #e8f5ee; color: var(--ni-success); }
-  .badge-closed { background: #f0f0f0; color: #888; }
-  .badge-warn   { background: #fef3e2; color: var(--ni-warn); }
-  .badge-none   { background: #f0f0f0; color: #bbb; }
+  .badge-open   { background: var(--ac-success-bg); color: var(--ac-success-text); }
+  .badge-closed { background: var(--ac-surface);     color: var(--ac-text-sub); }
+  .badge-warn   { background: var(--ac-warn-bg);     color: var(--ac-warn-text); }
+  .badge-none   { background: var(--ac-surface);     color: var(--ac-text-hint); }
 
-  .chevron-icon { font-size: 16px; color: #ccc; transition: transform 0.2s; }
+  .chevron-icon { font-size: 16px; color: var(--ac-text-hint); transition: transform 0.2s; }
   .chevron-icon.open { transform: rotate(90deg); }
 
   /* ── DETALLE SESIONES (acordeón móvil) ── */
   .worker-detail {
     display: none;
-    background: #f8f9ff;
-    border-bottom: 0.5px solid var(--ni-border);
+    background: var(--ac-blue-soft);
+    border-bottom: 1px solid var(--ac-border);
     padding: 0 16px 12px;
   }
   .worker-detail.visible { display: block; }
 
   /* ── SESSION CARD ── */
   .session-card {
-    background: var(--ni-white);
-    border: 0.5px solid var(--ni-border);
+    background: var(--ac-white);
+    border: 1px solid var(--ac-border);
     border-radius: var(--radius);
     margin-top: 8px;
     overflow: hidden;
@@ -121,99 +109,52 @@
   .session-card-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 9px 12px;
-    border-bottom: 0.5px solid #f0f0f0;
+    border-bottom: 1px solid var(--ac-border);
   }
-  .sc-task  { font-size: 13px; font-weight: 500; color: var(--ni-dark); }
-  .sc-stage { font-size: 11px; color: var(--ni-text-sub); margin-top: 1px; }
+  .sc-task  { font-size: 13px; font-weight: 600; color: var(--ac-dark); }
+  .sc-stage { font-size: 11px; color: var(--ac-text-sub); margin-top: 1px; }
   .session-card-body {
     display: flex;
     font-size: 11px;
   }
   .sc-stat {
     flex: 1; padding: 8px 12px;
-    border-right: 0.5px solid #f0f0f0;
+    border-right: 1px solid var(--ac-border);
     display: flex; flex-direction: column; gap: 1px;
   }
   .sc-stat:last-child { border-right: none; }
-  .sc-stat-label { color: var(--ni-text-sub); font-size: 10px; font-family: var(--font-mono); }
-  .sc-stat-value { color: var(--ni-text); font-weight: 500; font-family: var(--font-mono); font-size: 12px; }
+  .sc-stat-label { color: var(--ac-text-sub); font-size: 10px; font-family: var(--font-mono); }
+  .sc-stat-value { color: var(--ac-text); font-weight: 600; font-family: var(--font-mono); font-size: 12px; }
   .session-card-footer {
-    padding: 8px 12px; border-top: 0.5px solid #f0f0f0;
+    padding: 8px 12px; border-top: 1px solid var(--ac-border);
     display: flex; justify-content: flex-end;
   }
 
   .btn-edit-session {
     font-size: 12px;
-    border: 0.5px solid var(--ni-border);
+    border: 1px solid var(--ac-border);
     border-radius: var(--radius);
     padding: 6px 12px;
-    background: var(--ni-white);
-    color: var(--ni-text);
+    background: var(--ac-white);
+    color: var(--ac-text);
     cursor: pointer;
     display: flex; align-items: center; gap: 5px;
     font-family: var(--font-main);
     transition: background 0.12s, border-color 0.12s;
   }
-  .btn-edit-session:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); color: var(--ni-blue); }
+  .btn-edit-session:hover { background: var(--ac-blue-soft); border-color: var(--ac-blue); color: var(--ac-blue); }
 
   /* ── SECCION SIN SESION ── */
   .section-divider {
     padding: 8px 16px;
-    background: #f5f5f5;
-    border-bottom: 0.5px solid var(--ni-border);
-    font-size: 11px; font-weight: 500;
-    color: var(--ni-text-sub);
+    background: var(--ac-surface);
+    border-bottom: 1px solid var(--ac-border);
+    font-size: 11px; font-weight: 600;
+    color: var(--ac-text-sub);
     font-family: var(--font-mono);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     display: flex; align-items: center; justify-content: space-between;
-  }
-
-  /* ── MODAL EDICION ── */
-  .edit-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45);
-    z-index: 1000;
-    align-items: flex-end;
-    justify-content: center;
-  }
-  .edit-overlay.visible { display: flex; }
-  .edit-sheet {
-    background: var(--ni-white);
-    border-radius: 16px 16px 0 0;
-    width: 100%; max-width: 520px;
-    max-height: 90vh; overflow-y: auto;
-    animation: slideUp 0.2s ease;
-  }
-  @media (min-width: 600px) {
-    .edit-overlay { align-items: center; padding: 16px; }
-    .edit-sheet { border-radius: var(--radius-lg); }
-  }
-  @keyframes slideUp {
-    from { transform: translateY(40px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
-  .edit-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--ni-border); margin: 10px auto 0; }
-  @media (min-width: 600px) { .edit-handle { display: none; } }
-  .edit-header { padding: 16px; border-bottom: 0.5px solid var(--ni-border); }
-  .edit-title  { font-size: 15px; font-weight: 600; color: var(--ni-dark); }
-  .edit-sub    { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
-  .edit-body   { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-  .edit-footer { padding: 12px 16px; border-top: 0.5px solid var(--ni-border); display: flex; gap: 8px; }
-  .btn-confirm-edit {
-    flex: 1; height: 44px; border: none; border-radius: var(--radius);
-    background: var(--ni-blue); color: var(--ni-white);
-    font-family: var(--font-brand); font-weight: 700; font-size: 14px;
-    cursor: pointer; transition: opacity 0.15s;
-  }
-  .btn-confirm-edit:hover { opacity: 0.88; }
-  .btn-confirm-edit:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-cancel-edit {
-    height: 44px; border: 1.5px solid var(--ni-border); border-radius: var(--radius);
-    background: var(--ni-white); color: var(--ni-dark);
-    font-family: var(--font-main); font-weight: 500; font-size: 14px;
-    cursor: pointer; padding: 0 16px;
   }
 
   /* ── DESKTOP: dos columnas ── */
@@ -225,16 +166,16 @@
       align-items: start;
     }
     .review-left {
-      border-right: 0.5px solid var(--ni-border);
+      border-right: 1px solid var(--ac-border);
       position: sticky;
-      top: calc(var(--ni-topbar-h) + 100px);
+      top: calc(var(--ac-topbar-h) + 100px);
       max-height: calc(100vh - 180px);
       overflow-y: auto;
     }
     .review-right { display: block !important; padding: 20px; }
     .worker-detail { display: none !important; }
     .chevron-icon  { display: none; }
-    .worker-header.selected { background: var(--ni-blue-soft) !important; }
+    .worker-header.selected { background: var(--ac-blue-soft) !important; }
   }
   @media (max-width: 899px) {
     .review-layout { display: block; }
@@ -245,38 +186,23 @@
   .desktop-worker-header {
     margin-bottom: 16px;
     padding-bottom: 14px;
-    border-bottom: 0.5px solid var(--ni-border);
+    border-bottom: 1px solid var(--ac-border);
     display: flex; align-items: center; gap: 12px;
   }
   .desktop-worker-avatar {
     width: 44px; height: 44px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 600; flex-shrink: 0;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
   }
-
-  /* Toast */
-  #review-toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--ni-dark); color: var(--ni-white);
-    border-radius: var(--radius); padding: 10px 18px;
-    font-size: 13px; z-index: 2000;
-    display: none; align-items: center; gap: 8px;
-    max-width: 90vw; text-align: center;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  }
-  #review-toast.visible { display: flex; }
-
-  .empty-state { padding: 40px; text-align: center; color: var(--ni-text-sub); }
-  .empty-state i { font-size: 36px; color: #ddd; display: block; margin-bottom: 10px; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">Revision de partidas</h1>
-    <p class="ni-page-sub">
+    <h1 class="ac-page-title">Revision de partidas</h1>
+    <p class="ac-page-sub">
       {{ site.name }}
       {% if not is_today %}&nbsp;·&nbsp; {{ selected_date|date:"d/m/Y" }}{% else %}&nbsp;·&nbsp; Hoy{% endif %}
     </p>
@@ -301,33 +227,33 @@
       autocomplete="off"
     >
   </div>
-  <button type="submit" class="ni-btn ni-btn-primary" style="width:auto; padding:0 14px; height:36px; font-size:13px;">
+  <button type="submit" class="ac-btn ac-btn-primary" style="width:auto; padding:0 14px; height:36px;">
     <i class="ti ti-search" aria-hidden="true"></i>
   </button>
   {% if perms_ctx.can_review_sessions %}
   <a href="#" onclick="openExportModal(); return false;"
-    class="ni-btn ni-btn-secondary"
-    style="width:auto; padding:0 14px; height:36px; font-size:13px; display:flex; align-items:center; gap:6px; text-decoration:none;">
+    class="ac-btn ac-btn-secondary"
+    style="width:auto; padding:0 14px; height:36px; text-decoration:none;">
     <i class="ti ti-file-export" aria-hidden="true"></i>
     Exportar
   </a>
   {% endif %}
 </form>
 
-<div class="stats-bar">
-  <span class="stat-pill pill-total">
+<div class="ac-stats-bar">
+  <span class="ac-stat-pill pill-total">
     <i class="ti ti-users" aria-hidden="true"></i>{{ total }} total
   </span>
-  <span class="stat-pill pill-session">
+  <span class="ac-stat-pill pill-session">
     <i class="ti ti-circle-check" aria-hidden="true"></i>{{ con_sesion }} con sesion
   </span>
   {% if sin_sesion > 0 %}
-  <span class="stat-pill pill-warn">
+  <span class="ac-stat-pill pill-warn">
     <i class="ti ti-circle-x" aria-hidden="true"></i>{{ sin_sesion }} sin sesion
   </span>
   {% endif %}
   {% if not is_today %}
-  <span class="stat-pill" style="background:#f0f0f0; color:#888;">
+  <span class="ac-stat-pill ac-stat-pill-gray">
     <i class="ti ti-history" aria-hidden="true"></i>Historico
   </span>
   {% endif %}
@@ -337,7 +263,7 @@
 
   <!-- COLUMNA IZQUIERDA / LISTA -->
   <div class="review-left" id="review-left">
-    <div style="border-radius:0; border-left:none; border-right:none; border-top:none;">
+    <div>
 
       {% if workers_with_sessions %}
         {% for item in workers_with_sessions %}
@@ -417,17 +343,17 @@
         {% endfor %}
 
       {% else %}
-        <div class="empty-state">
+        <div class="ac-empty">
           <i class="ti ti-clipboard-list" aria-hidden="true"></i>
-          <p style="font-size:14px; font-weight:500; margin-bottom:4px;">Sin sesiones</p>
-          <p style="font-size:13px;">No hay sesiones registradas para esta fecha.</p>
+          <div class="ac-empty-title">Sin sesiones</div>
+          <div class="ac-empty-sub">No hay sesiones registradas para esta fecha.</div>
         </div>
       {% endif %}
 
       {% if workers_without_sessions %}
         <div class="section-divider">
           Sin sesion
-          <span class="stat-pill pill-warn" style="font-size:10px; padding:2px 8px;">{{ sin_sesion }}</span>
+          <span class="ac-stat-pill pill-warn" style="font-size:10px; padding:2px 8px;">{{ sin_sesion }}</span>
         </div>
         {% for item in workers_without_sessions %}
           <div class="worker-header" style="cursor:default;">
@@ -455,10 +381,10 @@
   <!-- COLUMNA DERECHA desktop -->
   <div class="review-right" id="review-right" style="display:none;">
     <div id="desktop-detail-content">
-      <div class="empty-state">
+      <div class="ac-empty">
         <i class="ti ti-hand-finger" aria-hidden="true"></i>
-        <p style="font-size:14px; font-weight:500; margin-bottom:4px;">Selecciona un trabajador</p>
-        <p style="font-size:13px;">Elige un nombre de la lista para ver sus sesiones.</p>
+        <div class="ac-empty-title">Selecciona un trabajador</div>
+        <div class="ac-empty-sub">Elige un nombre de la lista para ver sus sesiones.</div>
       </div>
     </div>
   </div>
@@ -466,43 +392,43 @@
 </div>
 
 <!-- MODAL EDICION -->
-<div class="edit-overlay" id="edit-overlay" onclick="handleEditOverlay(event)">
-  <div class="edit-sheet" id="edit-sheet">
-    <div class="edit-handle"></div>
-    <div id="edit-loading" style="padding:32px; text-align:center; color:var(--ni-text-sub);">
+<div class="ac-overlay" id="edit-overlay" onclick="handleEditOverlay(event)">
+  <div class="ac-sheet" id="edit-sheet">
+    <div class="ac-sheet-handle"></div>
+    <div id="edit-loading" style="padding:32px; text-align:center; color:var(--ac-text-sub);">
       <i class="ti ti-loader" style="font-size:28px; display:block; margin-bottom:8px;" aria-hidden="true"></i>
       Cargando...
     </div>
     <div id="edit-content" style="display:none;">
-      <div class="edit-header">
-        <div class="edit-title">Editar etapa / partida</div>
-        <div class="edit-sub" id="edit-worker-info"></div>
+      <div class="ac-sheet-header">
+        <div class="ac-sheet-title">Editar etapa / partida</div>
+        <div class="ac-sheet-sub" id="edit-worker-info"></div>
       </div>
-      <div class="edit-body">
-        <div class="ni-alert ni-alert-info" style="font-size:12px;">
+      <div class="ac-sheet-body">
+        <div class="ac-alert ac-alert-info" style="font-size:12px;">
           <i class="ti ti-info-circle" aria-hidden="true"></i>
           <span>Solo se puede cambiar etapa y partida. No se modifica el horario ni el supervisor.</span>
         </div>
-        <div class="ni-field">
-          <label class="ni-label" for="edit-stage">Etapa</label>
-          <select class="ni-select" id="edit-stage" onchange="filterEditTasks()">
+        <div class="ac-field">
+          <label class="ac-label" for="edit-stage">Etapa</label>
+          <select class="ac-select" id="edit-stage" onchange="filterEditTasks()">
             <option value="">Selecciona una etapa...</option>
           </select>
         </div>
-        <div class="ni-field">
-          <label class="ni-label" for="edit-task">Partida</label>
-          <select class="ni-select" id="edit-task" disabled>
+        <div class="ac-field">
+          <label class="ac-label" for="edit-task">Partida</label>
+          <select class="ac-select" id="edit-task" disabled>
             <option value="">Primero selecciona una etapa...</option>
           </select>
         </div>
-        <div class="ni-field" style="margin-bottom:0;">
-          <label class="ni-label" for="edit-reason">Motivo de la correccion (opcional)</label>
-          <input class="ni-input" type="text" id="edit-reason" placeholder="Ej: etapa incorrecta al inicio" maxlength="200">
+        <div class="ac-field" style="margin-bottom:0;">
+          <label class="ac-label" for="edit-reason">Motivo de la correccion (opcional)</label>
+          <input class="ac-input" type="text" id="edit-reason" placeholder="Ej: etapa incorrecta al inicio" maxlength="200">
         </div>
       </div>
-      <div class="edit-footer">
-        <button class="btn-cancel-edit" onclick="closeEditModal()">Cancelar</button>
-        <button class="btn-confirm-edit" id="btn-confirm-edit" onclick="confirmEdit()">
+      <div class="ac-sheet-footer">
+        <button class="ac-sheet-cancel" onclick="closeEditModal()">Cancelar</button>
+        <button class="ac-sheet-confirm" id="btn-confirm-edit" onclick="confirmEdit()">
           <i class="ti ti-check" aria-hidden="true"></i> Guardar cambio
         </button>
       </div>
@@ -510,41 +436,41 @@
   </div>
 </div>
 
-<div id="review-toast">
+<div class="ac-toast" id="review-toast">
   <i class="ti ti-check" aria-hidden="true"></i>
   <span id="toast-msg"></span>
 </div>
 
 <!-- MODAL EXPORTAR -->
-<div class="edit-overlay" id="export-overlay" onclick="if(event.target===this)closeExportModal()">
-  <div class="edit-sheet" style="max-height:auto;">
-    <div class="edit-handle"></div>
-    <div class="edit-header">
-      <div class="edit-title">Exportar sesiones</div>
-      <div class="edit-sub">Selecciona el rango de fechas</div>
+<div class="ac-overlay" id="export-overlay" onclick="if(event.target===this)closeExportModal()">
+  <div class="ac-sheet">
+    <div class="ac-sheet-handle"></div>
+    <div class="ac-sheet-header">
+      <div class="ac-sheet-title">Exportar sesiones</div>
+      <div class="ac-sheet-sub">Selecciona el rango de fechas</div>
     </div>
-    <div class="edit-body">
-      <div class="ni-field">
-        <label class="ni-label">Desde</label>
-        <input type="date" id="export-desde" class="ni-input"
+    <div class="ac-sheet-body">
+      <div class="ac-field">
+        <label class="ac-label">Desde</label>
+        <input type="date" id="export-desde" class="ac-input"
                value="{{ today|date:'Y-m-d' }}"
                max="{{ today|date:'Y-m-d' }}">
       </div>
-      <div class="ni-field" style="margin-bottom:0;">
-        <label class="ni-label">Hasta</label>
-        <input type="date" id="export-hasta" class="ni-input"
+      <div class="ac-field" style="margin-bottom:0;">
+        <label class="ac-label">Hasta</label>
+        <input type="date" id="export-hasta" class="ac-input"
                value="{{ today|date:'Y-m-d' }}"
                max="{{ today|date:'Y-m-d' }}">
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
-        <button onclick="setRange(7)"  class="ni-btn ni-btn-secondary" style="width:auto; padding:6px 12px; font-size:12px;">Última semana</button>
-        <button onclick="setRange(15)" class="ni-btn ni-btn-secondary" style="width:auto; padding:6px 12px; font-size:12px;">15 días</button>
-        <button onclick="setRange(30)" class="ni-btn ni-btn-secondary" style="width:auto; padding:6px 12px; font-size:12px;">Último mes</button>
+        <button onclick="setRange(7)"  class="ac-btn ac-btn-secondary ac-btn-sm">Última semana</button>
+        <button onclick="setRange(15)" class="ac-btn ac-btn-secondary ac-btn-sm">15 días</button>
+        <button onclick="setRange(30)" class="ac-btn ac-btn-secondary ac-btn-sm">Último mes</button>
       </div>
     </div>
-    <div class="edit-footer">
-      <button class="btn-cancel-edit" onclick="closeExportModal()">Cancelar</button>
-      <button class="btn-confirm-edit" onclick="doExport()">
+    <div class="ac-sheet-footer">
+      <button class="ac-sheet-cancel" onclick="closeExportModal()">Cancelar</button>
+      <button class="ac-sheet-confirm" onclick="doExport()">
         <i class="ti ti-download" aria-hidden="true"></i> Descargar
       </button>
     </div>
@@ -629,7 +555,7 @@
 
     if (!worker) {
       container.innerHTML = `
-        <div class="empty-state">
+        <div class="ac-empty">
           <i class="ti ti-clipboard-list" aria-hidden="true"></i>
           <p style="font-size:14px;">Sin sesiones para este trabajador.</p>
         </div>`;
@@ -642,8 +568,8 @@
       <div class="desktop-worker-header">
         <div class="desktop-worker-avatar ${avatarClass}">${worker.initials}</div>
         <div>
-          <div style="font-size:16px; font-weight:600; color:var(--ni-dark);">${worker.name}</div>
-          <div style="font-size:12px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:2px;">
+          <div style="font-size:16px; font-weight:700; color:var(--ac-dark);">${worker.name}</div>
+          <div style="font-size:12px; color:var(--ac-text-sub); font-family:var(--font-mono); margin-top:2px;">
             ${worker.cargo} · ${worker.sessions.length} sesión${worker.sessions.length !== 1 ? 'es' : ''}
           </div>
         </div>

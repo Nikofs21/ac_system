@@ -6,8 +6,8 @@
   .op-wrap { max-width: 560px; margin: 0 auto; padding: 16px; }
 
   .sub-ficha {
-    background: var(--ni-white);
-    border: 0.5px solid var(--ni-border);
+    background: var(--ac-white);
+    border: 1px solid var(--ac-border);
     border-radius: var(--radius-lg);
     padding: 16px;
     margin-bottom: 20px;
@@ -15,37 +15,37 @@
   }
   .sub-avatar {
     width: 48px; height: 48px; border-radius: 12px;
-    background: var(--ni-blue-soft); color: var(--ni-blue);
+    background: var(--ac-blue-soft); color: var(--ac-blue);
     display: flex; align-items: center; justify-content: center;
     font-size: 13px; font-weight: 700; font-family: var(--font-mono);
     flex-shrink: 0;
   }
-  .sub-ficha-name { font-size: 16px; font-weight: 600; color: var(--ni-dark); }
-  .sub-ficha-meta { font-size: 12px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 2px; }
+  .sub-ficha-name { font-size: 16px; font-weight: 700; color: var(--ac-dark); }
+  .sub-ficha-meta { font-size: 12px; color: var(--ac-text-sub); font-family: var(--font-mono); margin-top: 2px; }
 
   .partida-card {
-    border: 1.5px solid var(--ni-border);
+    border: 1.5px solid var(--ac-border);
     border-radius: var(--radius);
     padding: 14px;
     margin-bottom: 10px;
-    background: var(--ni-white);
+    background: var(--ac-white);
   }
   .partida-card-header {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 12px;
   }
-  .partida-card-title { font-size: 13px; font-weight: 600; color: var(--ni-dark); font-family: var(--font-mono); }
+  .partida-card-title { font-size: 13px; font-weight: 700; color: var(--ac-dark); font-family: var(--font-mono); }
   .btn-remove {
     background: none; border: none; cursor: pointer;
-    color: #c0392b; font-size: 18px; padding: 2px;
+    color: var(--ac-danger); font-size: 18px; padding: 2px;
     display: flex; align-items: center;
   }
   .partida-grid { display: grid; grid-template-columns: 1fr 110px; gap: 10px; align-items: end; }
   @media (max-width: 480px) { .partida-grid { grid-template-columns: 1fr; } }
 
   .totalizador {
-    background: var(--ni-blue-soft);
-    border: 0.5px solid #b0c0ff;
+    background: var(--ac-blue-soft);
+    border: 1px solid var(--ac-blue-mid);
     border-radius: var(--radius);
     padding: 10px 14px;
     display: flex; gap: 20px;
@@ -53,29 +53,29 @@
     margin-bottom: 16px;
   }
   .total-item { display: flex; flex-direction: column; gap: 2px; }
-  .total-label { font-size: 10px; color: var(--ni-blue); opacity: 0.7; }
-  .total-value { font-size: 16px; font-weight: 700; color: var(--ni-blue); }
+  .total-label { font-size: 10px; color: var(--ac-blue); opacity: 0.7; }
+  .total-value { font-size: 16px; font-weight: 700; color: var(--ac-blue); }
 
   .btn-add {
     display: flex; align-items: center; gap: 8px;
-    border: 1.5px dashed var(--ni-border);
+    border: 1.5px dashed var(--ac-border);
     border-radius: var(--radius);
     padding: 12px 16px;
     background: none; cursor: pointer;
-    color: var(--ni-text-sub); font-size: 13px;
+    color: var(--ac-text-sub); font-size: 13px;
     font-family: var(--font-main);
     width: 100%; margin-bottom: 16px;
     transition: border-color 0.15s, color 0.15s;
   }
-  .btn-add:hover { border-color: var(--ni-blue); color: var(--ni-blue); }
+  .btn-add:hover { border-color: var(--ac-blue); color: var(--ac-blue); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">Iniciar sesion</h1>
-    <p class="ni-page-sub">{{ site.name }}</p>
+    <h1 class="ac-page-title">Iniciar sesion</h1>
+    <p class="ac-page-sub">{{ site.name }}</p>
   </div>
 </div>
 
@@ -95,10 +95,10 @@
   </div>
 
   {% if not tasks %}
-    <div style="text-align:center; padding:32px 16px; color:var(--ni-text-sub);">
-      <i class="ti ti-alert-circle" style="font-size:36px; display:block; margin-bottom:8px; color:#ddd;" aria-hidden="true"></i>
-      <p style="font-size:14px; font-weight:500;">Sin partidas disponibles</p>
-      <p style="font-size:12px;">Agrega partidas a la etapa reservada de este subcontrato.</p>
+    <div class="ac-empty">
+      <i class="ti ti-alert-circle" aria-hidden="true"></i>
+      <div class="ac-empty-title">Sin partidas disponibles</div>
+      <div class="ac-empty-sub">Agrega partidas a la etapa reservada de este subcontrato.</div>
     </div>
   {% else %}
     <form method="post" id="form-iniciar">
@@ -106,8 +106,8 @@
       <input type="hidden" name="action" value="iniciar">
 
       <div style="margin-bottom:16px;">
-        <p style="font-size:13px; font-weight:600; color:var(--ni-dark); margin-bottom:4px;">Partidas a ejecutar hoy</p>
-        <p style="font-size:12px; color:var(--ni-text-sub);">Agrega las partidas y la cantidad de personas en cada una.</p>
+        <p style="font-size:13px; font-weight:700; color:var(--ac-dark); margin-bottom:4px;">Partidas a ejecutar hoy</p>
+        <p style="font-size:12px; color:var(--ac-text-sub);">Agrega las partidas y la cantidad de personas en cada una.</p>
       </div>
 
       <div id="partidas-container"></div>
@@ -127,7 +127,7 @@
         <i class="ti ti-plus" aria-hidden="true"></i> Agregar partida
       </button>
 
-      <button type="submit" class="ni-btn ni-btn-primary" id="btn-iniciar" disabled>
+      <button type="submit" class="ac-btn ac-btn-primary ac-btn-full" id="btn-iniciar" disabled>
         <i class="ti ti-player-play" aria-hidden="true"></i> Iniciar sesion
       </button>
     </form>
@@ -163,16 +163,16 @@ function addPartida() {
       </button>
     </div>
     <div class="partida-grid">
-      <div class="ni-field" style="margin-bottom:0;">
-        <label class="ni-label">Partida</label>
-        <select class="ni-select" name="task_id" onchange="updateTotals()" required>
+      <div class="ac-field" style="margin-bottom:0;">
+        <label class="ac-label">Partida</label>
+        <select class="ac-select" name="task_id" onchange="updateTotals()" required>
           <option value="">Selecciona...</option>
           ${opts}
         </select>
       </div>
-      <div class="ni-field" style="margin-bottom:0;">
-        <label class="ni-label">Personas</label>
-        <input type="number" name="quantity" class="ni-input"
+      <div class="ac-field" style="margin-bottom:0;">
+        <label class="ac-label">Personas</label>
+        <input type="number" name="quantity" class="ac-input"
           min="1" value="1" oninput="updateTotals()" required
           style="text-align:center;">
       </div>

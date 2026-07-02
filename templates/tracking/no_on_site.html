@@ -4,206 +4,60 @@
 
 {% block extra_css %}
 <style>
-  /* ── LISTA DE TRABAJADORES ── */
-  .worker-list { display:flex; flex-direction:column; }
+  .av-free    { background: var(--ac-blue-soft);   color: var(--ac-blue); }
+  .av-session { background: var(--ac-success-bg);  color: var(--ac-success); }
+  .av-nos     { background: var(--ac-warn-bg);      color: var(--ac-warn); }
 
-  .worker-row {
-    display:flex;
-    align-items:center;
-    gap:12px;
-    padding:12px 16px;
-    border-bottom:0.5px solid var(--ni-border);
-    cursor:pointer;
-    transition:background 0.12s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .worker-row:last-child { border-bottom:none; }
-  .worker-row:active { background:var(--ni-blue-soft); }
-
-  .worker-avatar {
-    width:38px; height:38px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-size:12px; font-weight:600; flex-shrink:0;
-  }
-  .av-free    { background:var(--ni-blue-soft); color:var(--ni-blue); }
-  .av-session { background:#e8f5ee; color:var(--ni-success); }
-  .av-nos     { background:#fef3e2; color:var(--ni-warn); }
-
-  .worker-info { flex:1; min-width:0; }
-  .worker-name { font-size:14px; font-weight:500; color:var(--ni-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .worker-meta { font-size:11px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-  .worker-badge {
-    font-size:10px; border-radius:20px; padding:3px 9px;
-    font-family:var(--font-mono); white-space:nowrap; flex-shrink:0;
-  }
-  .badge-free    { background:#f0f0f0; color:#888; }
-  .badge-session { background:#e8f5ee; color:var(--ni-success); }
-  .badge-nos     { background:#fef3e2; color:var(--ni-warn); }
-
-  /* ── SEARCH BAR ── */
-  .search-bar {
-    padding:10px 16px;
-    background:var(--ni-white);
-    border-bottom:0.5px solid var(--ni-border);
-    position:sticky; top:var(--ni-topbar-h); z-index:10;
-  }
-  .search-bar input {
-    width:100%;
-    border:1.5px solid var(--ni-border);
-    border-radius:var(--radius);
-    padding:9px 12px 9px 36px;
-    font-size:14px;
-    font-family:var(--font-main);
-    background:var(--ni-light);
-    color:var(--ni-text);
-    outline:none;
-    transition:border-color 0.15s;
-  }
-  .search-bar input:focus { border-color:var(--ni-blue); background:var(--ni-white); }
-  .search-icon {
-    position:absolute; left:28px; top:50%; transform:translateY(-50%);
-    font-size:16px; color:var(--ni-text-sub); pointer-events:none;
-  }
-  .search-wrap { position:relative; }
-
-  /* ── EMPTY STATE ── */
-  .empty-state {
-    padding:48px 24px;
-    text-align:center;
-    color:var(--ni-text-sub);
-  }
-  .empty-state i { font-size:40px; color:#ddd; display:block; margin-bottom:12px; }
-
-  /* ── MODAL OVERLAY ── */
-  .modal-overlay {
-    display:none;
-    position:fixed; inset:0;
-    background:rgba(0,0,0,0.45);
-    z-index:1000;
-    align-items:flex-end;
-    justify-content:center;
-    padding:0;
-  }
-  .modal-overlay.visible { display:flex; }
-
-  /* Bottom sheet en mobile, centrado en desktop */
-  .modal-sheet {
-    background:var(--ni-white);
-    border-radius:16px 16px 0 0;
-    width:100%;
-    max-width:520px;
-    max-height:90vh;
-    overflow-y:auto;
-    animation:slideUp 0.2s ease;
-  }
-  @media (min-width:600px) {
-    .modal-overlay { align-items:center; padding:16px; }
-    .modal-sheet { border-radius:var(--radius-lg); max-height:80vh; }
-  }
-  @keyframes slideUp {
-    from { transform:translateY(40px); opacity:0; }
-    to   { transform:translateY(0);    opacity:1; }
-  }
-
-  .modal-handle {
-    width:36px; height:4px; border-radius:2px;
-    background:var(--ni-border);
-    margin:10px auto 0;
-  }
-  @media (min-width:600px) { .modal-handle { display:none; } }
-
-  .modal-header { padding:16px 16px 12px; border-bottom:0.5px solid var(--ni-border); }
-  .modal-title  { font-size:15px; font-weight:600; color:var(--ni-dark); }
-  .modal-sub    { font-size:12px; color:var(--ni-text-sub); margin-top:2px; }
-
-  .modal-body   { padding:16px; display:flex; flex-direction:column; gap:14px; }
-  .modal-footer { padding:12px 16px; border-top:0.5px solid var(--ni-border); display:flex; gap:8px; }
+  .badge-free    { background: var(--ac-surface);     color: var(--ac-text-sub); }
+  .badge-session { background: var(--ac-success-bg);   color: var(--ac-success-text); }
+  .badge-nos     { background: var(--ac-warn-bg);      color: var(--ac-warn-text); }
 
   /* Alerta sesion abierta */
   .session-alert {
-    background:var(--ni-warn-bg);
-    border:0.5px solid var(--ni-warn-bdr);
-    border-radius:var(--radius);
-    padding:10px 12px;
-    display:flex; gap:10px;
-    font-size:13px; color:var(--ni-warn); line-height:1.5;
+    background: var(--ac-warn-bg);
+    border: 1px solid var(--ac-warn-bdr);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    display: flex; gap: 10px;
+    font-size: 13px; color: var(--ac-warn-text); line-height: 1.5;
   }
-  .session-alert i { font-size:18px; flex-shrink:0; margin-top:1px; }
+  .session-alert i { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
 
   /* Vista de registro existente */
   .nos-detail-row {
-    display:flex; justify-content:space-between; align-items:center;
-    padding:8px 0; border-bottom:0.5px solid #f5f5f5; font-size:13px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--ac-border); font-size: 13px;
   }
-  .nos-detail-row:last-child { border-bottom:none; }
-  .nos-detail-label { color:var(--ni-text-sub); }
-  .nos-detail-value { font-weight:500; }
+  .nos-detail-row:last-child { border-bottom: none; }
+  .nos-detail-label { color: var(--ac-text-sub); }
+  .nos-detail-value { font-weight: 600; }
 
-  /* Botones modal */
-  .btn-confirm-nos {
-    flex:1; height:44px; border:none; border-radius:var(--radius);
-    background:var(--ni-blue); color:var(--ni-white);
-    font-family:var(--font-brand); font-weight:700; font-size:14px;
-    cursor:pointer; transition:opacity 0.15s;
-  }
-  .btn-confirm-nos:hover { opacity:0.88; }
-  .btn-confirm-nos.warn-action { background:var(--ni-warn); }
-  .btn-confirm-nos.danger-action { background:#c0392b; }
+  .warn-action   { background: var(--ac-warn) !important; }
+  .danger-action { background: var(--ac-danger) !important; }
 
-  .btn-cancel-modal {
-    height:44px; border:1.5px solid var(--ni-border); border-radius:var(--radius);
-    background:var(--ni-white); color:var(--ni-dark);
-    font-family:var(--font-main); font-weight:500; font-size:14px;
-    cursor:pointer; padding:0 16px; transition:opacity 0.15s;
-  }
-  .btn-cancel-modal:hover { opacity:0.8; }
-
-  /* Stats bar */
-  .stats-bar {
-    display:flex; gap:8px; padding:10px 16px;
-    background:var(--ni-white); border-bottom:0.5px solid var(--ni-border);
-  }
-  .stat-pill {
-    font-size:11px; border-radius:20px; padding:4px 12px;
-    font-family:var(--font-mono); display:flex; align-items:center; gap:5px;
-  }
-  .stat-total   { background:#f0f0f0; color:#888; }
-  .stat-nos     { background:#fef3e2; color:var(--ni-warn); }
-  .stat-session { background:#e8f5ee; color:var(--ni-success); }
-
-  /* Feedback toast */
-  #nos-toast {
-    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-    background:var(--ni-dark); color:var(--ni-white);
-    border-radius:var(--radius); padding:10px 18px;
-    font-size:13px; z-index:2000;
-    display:none; align-items:center; gap:8px;
-    max-width:90vw; text-align:center;
-    box-shadow:0 4px 16px rgba(0,0,0,0.2);
-  }
-  #nos-toast.visible { display:flex; }
+  .stat-nos     { background: var(--ac-warn-bg);     color: var(--ac-warn-text); }
+  .stat-session { background: var(--ac-success-bg);  color: var(--ac-success-text); }
 </style>
 {% endblock %}
 
 {% block content %}
 
 <!-- PAGE HEADER -->
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">No en obra</h1>
-    <p class="ni-page-sub">{{ site.name }} &middot; {{ today|date:"l d \d\e F" }}</p>
+    <h1 class="ac-page-title">No en obra</h1>
+    <p class="ac-page-sub">{{ site.name }} &middot; {{ today|date:"l d \d\e F" }}</p>
   </div>
 </div>
 
 <!-- STATS BAR -->
-<div class="stats-bar">
-  <span class="stat-pill stat-total">
+<div class="ac-stats-bar">
+  <span class="ac-stat-pill ac-stat-pill-gray">
     <i class="ti ti-users" aria-hidden="true"></i>
     {{ total_count }} total
   </span>
   {% if nos_count > 0 %}
-  <span class="stat-pill stat-nos">
+  <span class="ac-stat-pill stat-nos">
     <i class="ti ti-circle-minus" aria-hidden="true"></i>
     {{ nos_count }} marcado{{ nos_count|pluralize }}
   </span>
@@ -211,9 +65,9 @@
 </div>
 
 <!-- SEARCH -->
-<div class="search-bar">
-  <div class="search-wrap">
-    <i class="ti ti-search search-icon" aria-hidden="true"></i>
+<div class="ac-search-bar">
+  <div class="ac-search-wrap">
+    <i class="ti ti-search ac-search-icon" aria-hidden="true"></i>
     <input
       type="text"
       id="worker-search"
@@ -225,25 +79,26 @@
 </div>
 
 <!-- LISTA -->
-<div class="ni-card" style="margin:12px 16px; margin-bottom:24px;">
+<div class="ac-list" style="margin:12px 16px 24px;">
   {% if workers %}
-    <div class="worker-list" id="worker-list">
+    <div id="worker-list">
       {% for item in workers %}
         <div
-          class="worker-row"
+          class="ac-list-item"
           id="worker-row-{{ item.resource.id }}"
           data-name="{{ item.resource.display_name|lower }}"
           data-cargo="{{ item.resource.job_title.name|lower|default:'' }}"
           onclick="openModal({{ item.resource.id }})"
           role="button"
+          style="cursor:pointer;"
           aria-label="Ver detalle de {{ item.resource.display_name }}"
         >
-          <div class="worker-avatar av-{{ item.estado }}">
+          <div class="ac-item-avatar av-{{ item.estado }}">
             {{ item.resource.display_name|slice:":1" }}{{ item.resource.display_name.split|last|slice:":1" }}
           </div>
-          <div class="worker-info">
-            <div class="worker-name">{{ item.resource.display_name }}</div>
-            <div class="worker-meta">
+          <div class="ac-item-info">
+            <div class="ac-item-name">{{ item.resource.display_name }}</div>
+            <div class="ac-item-meta">
               {{ item.resource.job_title.name|default:"Sin cargo" }}
               {% if item.estado == 'session' %}
                 &nbsp;·&nbsp; sesion: {{ item.open_session.task_name_snapshot }}
@@ -252,53 +107,53 @@
               {% endif %}
             </div>
           </div>
-          <span class="worker-badge badge-{{ item.estado }}">
+          <span class="ac-badge badge-{{ item.estado }}">
             {% if item.estado == 'session' %}Con sesion
             {% elif item.estado == 'nos' %}No en obra
             {% else %}Sin sesion
             {% endif %}
           </span>
-          <i class="ti ti-chevron-right" style="font-size:16px; color:#ccc;" aria-hidden="true"></i>
+          <i class="ti ti-chevron-right" style="font-size:16px; color:var(--ac-text-hint);" aria-hidden="true"></i>
         </div>
       {% endfor %}
     </div>
   {% else %}
-    <div class="empty-state">
+    <div class="ac-empty">
       <i class="ti ti-users" aria-hidden="true"></i>
-      <p style="font-size:15px; font-weight:500; margin-bottom:4px;">Sin trabajadores asignados</p>
-      <p style="font-size:13px;">No hay trabajadores activos en esta obra.</p>
+      <div class="ac-empty-title">Sin trabajadores asignados</div>
+      <div class="ac-empty-sub">No hay trabajadores activos en esta obra.</div>
     </div>
   {% endif %}
 
-  <div id="no-results" style="display:none;" class="empty-state">
+  <div id="no-results" style="display:none;" class="ac-empty">
     <i class="ti ti-search" aria-hidden="true"></i>
-    <p style="font-size:14px;">Sin coincidencias</p>
+    <div class="ac-empty-title">Sin coincidencias</div>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════ -->
 <!-- MODAL -->
 <!-- ═══════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
-  <div class="modal-sheet" id="modal-sheet">
-    <div class="modal-handle"></div>
+<div class="ac-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="ac-sheet" id="modal-sheet">
+    <div class="ac-sheet-handle"></div>
 
     <!-- ESTADO: cargando -->
-    <div id="modal-loading" style="padding:32px; text-align:center; color:var(--ni-text-sub);">
+    <div id="modal-loading" style="padding:32px; text-align:center; color:var(--ac-text-sub);">
       <i class="ti ti-loader" style="font-size:28px; display:block; margin-bottom:8px;" aria-hidden="true"></i>
       Cargando...
     </div>
 
     <!-- ESTADO: marcar (sin sesion abierta) -->
     <div id="modal-mark" style="display:none;">
-      <div class="modal-header">
-        <div class="modal-title">Marcar como No en obra</div>
-        <div class="modal-sub" id="mark-worker-name"></div>
+      <div class="ac-sheet-header">
+        <div class="ac-sheet-title">Marcar como No en obra</div>
+        <div class="ac-sheet-sub" id="mark-worker-name"></div>
       </div>
-      <div class="modal-body">
-        <div class="ni-field">
-          <label class="ni-label" for="mark-reason">Motivo</label>
-          <select class="ni-select" id="mark-reason">
+      <div class="ac-sheet-body">
+        <div class="ac-field">
+          <label class="ac-label" for="mark-reason">Motivo</label>
+          <select class="ac-select" id="mark-reason">
             <option value="">Seleccionar...</option>
             <option value="PERMISO">Permiso</option>
             <option value="LICENCIA">Licencia medica</option>
@@ -307,14 +162,14 @@
             <option value="OTRO">Otro</option>
           </select>
         </div>
-        <div class="ni-field" style="margin-bottom:0;">
-          <label class="ni-label" for="mark-detail">Detalle (opcional)</label>
-          <input class="ni-input" type="text" id="mark-detail" placeholder="Ej: permiso medico, se fue a las 15:00..." maxlength="200">
+        <div class="ac-field" style="margin-bottom:0;">
+          <label class="ac-label" for="mark-detail">Detalle (opcional)</label>
+          <input class="ac-input" type="text" id="mark-detail" placeholder="Ej: permiso medico, se fue a las 15:00..." maxlength="200">
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn-cancel-modal" onclick="closeModal()">Cancelar</button>
-        <button class="btn-confirm-nos" id="btn-confirm-mark" onclick="confirmMark()">
+      <div class="ac-sheet-footer">
+        <button class="ac-sheet-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="ac-sheet-confirm" id="btn-confirm-mark" onclick="confirmMark()">
           <i class="ti ti-circle-minus" aria-hidden="true"></i> Confirmar
         </button>
       </div>
@@ -322,11 +177,11 @@
 
     <!-- ESTADO: marcar con sesion abierta -->
     <div id="modal-mark-session" style="display:none;">
-      <div class="modal-header">
-        <div class="modal-title">Marcar como No en obra</div>
-        <div class="modal-sub" id="mark-session-worker-name"></div>
+      <div class="ac-sheet-header">
+        <div class="ac-sheet-title">Marcar como No en obra</div>
+        <div class="ac-sheet-sub" id="mark-session-worker-name"></div>
       </div>
-      <div class="modal-body">
+      <div class="ac-sheet-body">
         <div class="session-alert">
           <i class="ti ti-alert-triangle" aria-hidden="true"></i>
           <div>
@@ -334,9 +189,9 @@
             Al confirmar, esa sesion se cerrara automaticamente.
           </div>
         </div>
-        <div class="ni-field">
-          <label class="ni-label" for="mark-session-reason">Motivo</label>
-          <select class="ni-select" id="mark-session-reason">
+        <div class="ac-field">
+          <label class="ac-label" for="mark-session-reason">Motivo</label>
+          <select class="ac-select" id="mark-session-reason">
             <option value="">Seleccionar...</option>
             <option value="PERMISO">Permiso</option>
             <option value="LICENCIA">Licencia medica</option>
@@ -345,14 +200,14 @@
             <option value="OTRO">Otro</option>
           </select>
         </div>
-        <div class="ni-field" style="margin-bottom:0;">
-          <label class="ni-label" for="mark-session-detail">Detalle (opcional)</label>
-          <input class="ni-input" type="text" id="mark-session-detail" placeholder="Ej: se fue a las 15:00..." maxlength="200">
+        <div class="ac-field" style="margin-bottom:0;">
+          <label class="ac-label" for="mark-session-detail">Detalle (opcional)</label>
+          <input class="ac-input" type="text" id="mark-session-detail" placeholder="Ej: se fue a las 15:00..." maxlength="200">
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn-cancel-modal" onclick="closeModal()">Cancelar</button>
-        <button class="btn-confirm-nos warn-action" id="btn-confirm-mark-session" onclick="confirmMark()">
+      <div class="ac-sheet-footer">
+        <button class="ac-sheet-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="ac-sheet-confirm warn-action" id="btn-confirm-mark-session" onclick="confirmMark()">
           <i class="ti ti-alert-triangle" aria-hidden="true"></i> Confirmar y cerrar sesion
         </button>
       </div>
@@ -360,11 +215,11 @@
 
     <!-- ESTADO: ya marcado (ver / anular) -->
     <div id="modal-nos-detail" style="display:none;">
-      <div class="modal-header">
-        <div class="modal-title">No en obra registrado</div>
-        <div class="modal-sub" id="detail-worker-name"></div>
+      <div class="ac-sheet-header">
+        <div class="ac-sheet-title">No en obra registrado</div>
+        <div class="ac-sheet-sub" id="detail-worker-name"></div>
       </div>
-      <div class="modal-body">
+      <div class="ac-sheet-body">
         <div>
           <div class="nos-detail-row">
             <span class="nos-detail-label">Motivo</span>
@@ -384,9 +239,9 @@
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn-cancel-modal" onclick="closeModal()">Cerrar</button>
-        <button class="btn-confirm-nos danger-action" onclick="confirmVoid()">
+      <div class="ac-sheet-footer">
+        <button class="ac-sheet-cancel" onclick="closeModal()">Cerrar</button>
+        <button class="ac-sheet-confirm danger-action" onclick="confirmVoid()">
           <i class="ti ti-trash" aria-hidden="true"></i> Anular registro
         </button>
       </div>
@@ -396,7 +251,7 @@
 </div>
 
 <!-- TOAST -->
-<div id="nos-toast">
+<div class="ac-toast" id="nos-toast">
   <i class="ti ti-check" aria-hidden="true"></i>
   <span id="toast-msg"></span>
 </div>
@@ -418,7 +273,7 @@
 
   function filterWorkers(query) {
     const q = query.toLowerCase().trim();
-    const rows = document.querySelectorAll('.worker-row');
+    const rows = document.querySelectorAll('.ac-list-item');
     let visible = 0;
 
     rows.forEach(row => {
@@ -598,16 +453,16 @@
     if (!row) return;
 
     // Avatar
-    const avatar = row.querySelector('.worker-avatar');
-    avatar.className = 'worker-avatar av-' + newState;
+    const avatar = row.querySelector('.ac-item-avatar');
+    avatar.className = 'ac-item-avatar av-' + newState;
 
     // Badge
-    const badge = row.querySelector('.worker-badge');
-    badge.className = 'worker-badge badge-' + newState;
+    const badge = row.querySelector('.ac-badge');
+    badge.className = 'ac-badge badge-' + newState;
     badge.textContent = newState === 'nos' ? 'No en obra' : newState === 'session' ? 'Con sesion' : 'Sin sesion';
 
     // Meta
-    const meta = row.querySelector('.worker-meta');
+    const meta = row.querySelector('.ac-item-meta');
     const cargo = meta.textContent.split('\u00b7')[0].trim();
     if (newState === 'nos' && reasonDisplay) {
       meta.textContent = cargo + ' \u00b7 ' + reasonDisplay;

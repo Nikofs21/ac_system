@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 {% block title %}No disponible{% endblock %}
 {% block content %}
-<div style="min-height:calc(100vh - var(--ni-topbar-h)); display:flex; align-items:center; justify-content:center; padding:24px;">
+<div style="min-height:calc(100vh - var(--ac-topbar-h)); display:flex; align-items:center; justify-content:center; padding:24px;">
   <div style="max-width:400px; text-align:center;">
-    <div style="width:64px; height:64px; border-radius:50%; background:var(--ni-blue-soft); display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
-      <i class="ti ti-plug-off" style="font-size:28px; color:var(--ni-blue);" aria-hidden="true"></i>
+    <div style="width:64px; height:64px; border-radius:50%; background:var(--ac-blue-soft); display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+      <i class="ti ti-plug-off" style="font-size:28px; color:var(--ac-blue);" aria-hidden="true"></i>
     </div>
-    <h1 style="font-size:20px; font-weight:600; color:var(--ni-dark); margin-bottom:8px;">Funcionalidad no disponible</h1>
-    <p style="font-size:14px; color:var(--ni-text-sub); margin-bottom:24px; line-height:1.6;">
+    <h1 style="font-size:20px; font-weight:700; color:var(--ac-dark); margin-bottom:8px;">Funcionalidad no disponible</h1>
+    <p style="font-size:14px; color:var(--ac-text-sub); margin-bottom:24px; line-height:1.6;">
       Esta funcion no esta habilitada para esta obra.<br>
       Contacta al administrador del sistema si necesitas activarla.
     </p>
-    <a href="{% url 'dashboard' %}" class="ni-btn ni-btn-primary" style="width:auto; display:inline-flex; padding:10px 24px;">
+    <a href="{% url 'dashboard' %}" class="ac-btn ac-btn-primary">
       <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver al inicio
     </a>
   </div>

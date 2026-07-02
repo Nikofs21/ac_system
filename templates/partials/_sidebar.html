@@ -1,0 +1,114 @@
+<nav class="ac-sidebar" aria-label="Navegacion principal">
+
+  {% if active_site %}
+    <div class="ac-sidebar-top">
+      <div class="ac-obra-ctx">
+        <div class="ac-obra-ctx-label">Obra activa</div>
+        <div class="ac-obra-ctx-name">{{ active_site.name }}</div>
+        <div class="ac-obra-ctx-code">{{ active_site.code }}</div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="ac-nav">
+
+    {% if perms_ctx.can_start_people or perms_ctx.can_start_machines %}
+      <div class="ac-nav-section">Operacion</div>
+
+      <a href="{% url 'work:assignment_new' %}" class="ac-nav-item {% block nav_assign %}{% endblock %}">
+        <i class="ti ti-plus" aria-hidden="true"></i>
+        <span>Nueva asignacion</span>
+      </a>
+
+      <a href="{% url 'work:active_workers' %}" class="ac-nav-item {% block nav_active %}{% endblock %}">
+        <i class="ti ti-users" aria-hidden="true"></i>
+        <span>Trabajadores activos</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_view_resources %}
+      {% if not perms_ctx.can_start_people and not perms_ctx.can_start_machines %}
+        <div class="ac-nav-section">Recursos</div>
+      {% endif %}
+
+      <a href="{% url 'resources:worker_list' %}" class="ac-nav-item {% block nav_list %}{% endblock %}">
+        <i class="ti ti-list-search" aria-hidden="true"></i>
+        <span>Listado trabajadores</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_manage_nos and features.no_on_site %}
+      <a href="{% url 'tracking:no_on_site' %}" class="ac-nav-item {% block nav_noonsite %}{% endblock %}">
+        <i class="ti ti-circle-minus" aria-hidden="true"></i>
+        <span>No en obra</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_review_sessions %}
+      <div class="ac-nav-section">Control</div>
+      <a href="{% url 'work:session_review' %}" class="ac-nav-item {% block nav_review %}{% endblock %}">
+        <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+        <span>Revision de partidas</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_view_progress and features.planning %}
+      <div class="ac-nav-section">Planificacion</div>
+      <a href="#" class="ac-nav-item {% block nav_progress %}{% endblock %}">
+        <i class="ti ti-chart-bar" aria-hidden="true"></i>
+        <span>Avance semanal</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_view_orgchart and features.orgchart %}
+      <a href="#" class="ac-nav-item {% block nav_orgchart %}{% endblock %}">
+        <i class="ti ti-sitemap" aria-hidden="true"></i>
+        <span>Organigrama</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_view_moi %}
+      <div class="ac-nav-section">Administracion</div>
+      <a href="{% url 'access:moi_list' %}" class="ac-nav-item {% block nav_moi %}{% endblock %}">
+        <i class="ti ti-id-badge" aria-hidden="true"></i>
+        <span>Mano de obra indirecta</span>
+      </a>
+    {% endif %}
+
+    {% if perms_ctx.can_manage_companies %}
+      <a href="/prestador/" class="ac-nav-item {% block nav_companies %}{% endblock %}">
+        <i class="ti ti-building-factory" aria-hidden="true"></i>
+        <span>Empresas y obras</span>
+      </a>
+
+      <a href="{% url 'work:partidas_panel' %}" class="ac-nav-item {% block nav_partidas %}{% endblock %}">
+        <i class="ti ti-clipboard-text" aria-hidden="true"></i>
+        <span>Partidas y etapas</span>
+      </a>
+
+      <a href="{% url 'resources:workers_bulk_select' %}" class="ac-nav-item">
+        <i class="ti ti-users-plus" aria-hidden="true"></i>
+        <span>Carga masiva trabajadores</span>
+      </a>
+    {% endif %}
+
+    {% if features.subcontracts and perms_ctx.can_view_subcontracts %}
+      <a href="{% url 'subcontracts:subcontract_list' %}" class="ac-nav-item {% block nav_subcontracts %}{% endblock %}">
+        <i class="ti ti-file-invoice" aria-hidden="true"></i>
+        <span>Subcontratos</span>
+      </a>
+    {% endif %}
+
+  </div>{# /ac-nav #}
+
+  <div class="ac-sidebar-bottom">
+    <form method="post" action="{% url 'logout' %}" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="ac-nav-item">
+        <i class="ti ti-logout" aria-hidden="true"></i>
+        <span>Cerrar sesion</span>
+      </button>
+    </form>
+  </div>
+
+</nav>

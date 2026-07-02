@@ -2,24 +2,38 @@
 """
 CRUD de Mano de Obra Indirecta (MOI).
 Usuarios del sistema (supervisores, administrativos, jefes, etc.)
-en una obra específica.
+en una obra especifica.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 from django.db import transaction
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.utils.crypto import get_random_string
-from core.utils import get_active_site
 
 from companies.models import SiteMembership, CompanyMembership
 from access.models import Role
-from core.permissions import user_has_permission, get_user_context_permissions
+from core.permissions import (
+    user_has_permission,
+    get_user_context_permissions,
+    get_assignable_roles_queryset,
+    can_user_edit_membership,
+    ROLES_GRANTABLE_ONLY_BY_NOVUS,
+    PROVIDER_ONLY_ROLE_CODES,
+)
 
 User = get_user_model()
+
+
+def get_active_site(request):
+    try:
+        return request.user.preference.last_site
+    except Exception:
+        return None
+
 
 def require_active_site(view_func):
     from functools import wraps
@@ -49,7 +63,14 @@ def _normalize_rut(rut_str):
 
 @require_active_site
 def moi_list(request):
-    """Listado de usuarios MOI de la obra activa."""
+    """
+    Listado de usuarios MOI de la obra activa.
+
+    Excluye membresias con rol de prestador puro (novus_super, novus_consultor):
+    esos usuarios tienen acceso tecnico a la obra (otorgado automaticamente
+    via señal), pero no son personal de la obra ni de la empresa cliente —
+    no deben aparecer en la gestion de Mano de Obra Indirecta.
+    """
     site = get_active_site(request)
 
     if not user_has_permission(request.user, 'moi.view', site):
@@ -57,6 +78,8 @@ def moi_list(request):
 
     memberships = SiteMembership.objects.filter(
         site=site,
+    ).exclude(
+        role__code__in=PROVIDER_ONLY_ROLE_CODES,
     ).select_related(
         'user', 'role',
     ).order_by('user__first_name', 'user__last_name')
@@ -70,6 +93,11 @@ def moi_list(request):
         'perms_ctx':   perms_ctx,
         'total':       memberships.count(),
         'active_count': memberships.filter(is_active=True).count(),
+        # Usado en el template para decidir si mostrar editar/baja en filas
+        # con cargos protegidos (admin_obra, gerencia, aac). Estos cargos
+        # siempre son VISIBLES en el listado para cualquiera con moi.view,
+        # pero solo editables/dados de baja por novus_super.
+        'protected_role_codes': ROLES_GRANTABLE_ONLY_BY_NOVUS,
     })
 
 
@@ -85,13 +113,11 @@ def moi_create(request):
     if not user_has_permission(request.user, 'moi.edit', site):
         return redirect('access_denied')
 
-    # Roles disponibles para asignar (excluir roles de prestador)
-    roles = Role.objects.filter(
-        is_active=True,
-        scope_type='GLOBAL_BASE',
-    ).exclude(
-        code__in=['novus_super', 'novus_consultor']
-    ).order_by('name')
+    # Roles disponibles para asignar — depende de la jerarquia del usuario
+    # actual (ver core.permissions.get_assignable_roles_queryset). Roles de
+    # prestador nunca se incluyen; roles "altos" (admin_obra, gerencia, aac)
+    # solo se incluyen si quien opera es novus_super.
+    roles = get_assignable_roles_queryset(request.user)
 
     if request.method == 'POST':
         return _handle_moi_create(request, site, roles)
@@ -140,6 +166,16 @@ def _handle_moi_create(request, site, roles):
             if already and already.is_active:
                 errors['email'] = f'{email} ya tiene acceso activo a esta obra.'
 
+    # Validacion de seguridad en servidor: el role_id enviado DEBE estar
+    # dentro del queryset de roles asignables por este usuario. Esto cubre
+    # el caso de que alguien mande un role_id de admin_obra/gerencia/aac
+    # directamente por POST sin pasar por el <select> renderizado.
+    role = None
+    if role_id and not errors.get('role_id'):
+        role = roles.filter(id=role_id, is_active=True).first()
+        if not role:
+            errors['role_id'] = 'Ese rol no esta disponible para asignar.'
+
     if errors:
         return render(request, 'access/moi_form.html', {
             'mode':      'create',
@@ -150,8 +186,6 @@ def _handle_moi_create(request, site, roles):
             'page_title': 'Agregar usuario',
             'perms_ctx': get_user_context_permissions(request.user, site),
         })
-
-    role = get_object_or_404(Role, id=role_id, is_active=True)
 
     with transaction.atomic():
         if existing_user:
@@ -168,16 +202,15 @@ def _handle_moi_create(request, site, roles):
                 user.save()
         else:
             # Crear usuario nuevo con contraseña temporal
-            user = User(
+            user = User.objects.create_user(
                 email=email,
+                password=get_random_string(32),
                 first_name=first_name,
                 last_name=last_name,
                 rut=rut or None,
                 actor_type='CLIENT',
                 is_active=True,
             )
-            user.set_unusable_password()
-            user.save()
 
         # Asegurar membresía de empresa
         CompanyMembership.objects.get_or_create(
@@ -228,7 +261,14 @@ def _handle_moi_create(request, site, roles):
 
 @require_active_site
 def moi_edit(request, membership_id):
-    """Editar datos y rol de un usuario MOI."""
+    """
+    Editar datos y rol de un usuario MOI.
+
+    Si la membresia tiene un cargo protegido (admin_obra, gerencia, aac) y
+    quien edita NO es novus_super, se bloquea el acceso por completo —
+    no se muestra el formulario ni se permite ningun cambio. Esa membresia
+    sigue siendo visible en moi_list, solo no es editable desde aqui.
+    """
     site = get_active_site(request)
 
     if not user_has_permission(request.user, 'moi.edit', site):
@@ -237,12 +277,15 @@ def moi_edit(request, membership_id):
     membership = get_object_or_404(SiteMembership, id=membership_id, site=site)
     user       = membership.user
 
-    roles = Role.objects.filter(
-        is_active=True,
-        scope_type='GLOBAL_BASE',
-    ).exclude(
-        code__in=['novus_super', 'novus_consultor']
-    ).order_by('name')
+    if not can_user_edit_membership(request.user, membership):
+        messages.error(
+            request,
+            f'"{membership.role.name}" es un cargo reservado a usuarios de Novus. '
+            f'No tienes permiso para editar a {user.get_full_name()}.'
+        )
+        return redirect('access:moi_list')
+
+    roles = get_assignable_roles_queryset(request.user)
 
     if request.method == 'POST':
         first_name = request.POST.get('first_name', '').strip()
@@ -259,9 +302,13 @@ def moi_edit(request, membership_id):
         if rut:
             rut = _normalize_rut(rut)
 
-        if not errors:
-            role = get_object_or_404(Role, id=role_id, is_active=True)
+        role = None
+        if role_id and not errors.get('role_id'):
+            role = roles.filter(id=role_id, is_active=True).first()
+            if not role:
+                errors['role_id'] = 'Ese rol no esta disponible para asignar.'
 
+        if not errors:
             user.first_name = first_name
             user.last_name  = last_name
             user.rut        = rut or None
@@ -310,6 +357,11 @@ def moi_deactivate(request, membership_id):
 
     membership = get_object_or_404(SiteMembership, id=membership_id, site=site)
 
+    if not can_user_edit_membership(request.user, membership):
+        return JsonResponse({
+            'error': f'"{membership.role.name}" es un cargo reservado a usuarios de Novus.'
+        }, status=403)
+
     # No permitir darse de baja a uno mismo
     if membership.user == request.user:
         return JsonResponse({'error': 'No puedes darte de baja a ti mismo.'}, status=400)
@@ -321,6 +373,36 @@ def moi_deactivate(request, membership_id):
     return JsonResponse({
         'status':  'ok',
         'message': f'{membership.user.get_full_name()} dado de baja de {site.name}.',
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REACTIVAR
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_active_site
+@require_POST
+def moi_reactivate(request, membership_id):
+    """Reactiva la membresía de un usuario MOI previamente dado de baja."""
+    site = get_active_site(request)
+
+    if not user_has_permission(request.user, 'moi.edit', site):
+        return JsonResponse({'error': 'Sin permiso.'}, status=403)
+
+    membership = get_object_or_404(SiteMembership, id=membership_id, site=site)
+
+    if not can_user_edit_membership(request.user, membership):
+        return JsonResponse({
+            'error': f'"{membership.role.name}" es un cargo reservado a usuarios de Novus.'
+        }, status=403)
+
+    membership.is_active = True
+    membership.ended_at   = None
+    membership.save()
+
+    return JsonResponse({
+        'status':  'ok',
+        'message': f'{membership.user.get_full_name()} reactivado en {site.name}.',
     })
 
 
@@ -347,24 +429,4 @@ def moi_qr(request, membership_id):
         'email': user.email,
         'role':  membership.role.name,
         'qr_url': qr_url,
-    })
-
-@require_active_site
-@require_POST
-def moi_reactivate(request, membership_id):
-    """Reactiva un usuario MOI — reactiva su membresía en esta obra."""
-    site = get_active_site(request)
-
-    if not user_has_permission(request.user, 'moi.edit', site):
-        return JsonResponse({'error': 'Sin permiso.'}, status=403)
-
-    membership = get_object_or_404(SiteMembership, id=membership_id, site=site)
-
-    membership.is_active = True
-    membership.ended_at  = None
-    membership.save()
-
-    return JsonResponse({
-        'status':  'ok',
-        'message': f'{membership.user.get_full_name()} reactivado en {site.name}.',
     })

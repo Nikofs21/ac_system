@@ -799,6 +799,7 @@ body {
 .ac-list-item:last-child { border-bottom: none; }
 .ac-list-item:hover { background: var(--ac-surface); }
 .ac-list-item-inactive { opacity: 0.5; }
+.ac-list-item-selected { background: var(--ac-blue-soft); }
 
 /* Avatar de ítem */
 .ac-item-avatar {

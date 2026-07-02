@@ -1,49 +1,18 @@
 {% extends 'base.html' %}
 {% block title %}Gestión de roles{% endblock %}
 
-{% block extra_css %}
-<style>
-  .role-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 16px;
-    border-bottom: 0.5px solid var(--ni-border);
-    text-decoration: none;
-    transition: background 0.1s;
-  }
-  .role-row:last-child { border-bottom: none; }
-  .role-row:hover { background: var(--ni-light); }
-
-  .role-avatar {
-    width: 38px; height: 38px; border-radius: 10px;
-    background: var(--ni-blue-soft); color: var(--ni-blue);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; font-family: var(--font-mono);
-    flex-shrink: 0;
-  }
-  .role-name { font-size: 14px; font-weight: 500; color: var(--ni-text); }
-  .role-code { font-size: 11px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 1px; }
-  .role-perm-count {
-    margin-left: auto; font-size: 11px;
-    background: var(--ni-blue-soft); color: var(--ni-blue);
-    border-radius: 20px; padding: 3px 10px;
-    font-family: var(--font-mono); white-space: nowrap;
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">Roles base del sistema</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">Roles base del sistema</p>
   </div>
-  <a href="{% url 'provider:panel' %}" class="ni-btn ni-btn-secondary"
-     style="width:auto; padding:9px 16px; font-size:13px;">
+  <a href="{% url 'provider:panel' %}" class="ac-btn ac-btn-secondary ac-btn-sm">
     <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver al panel
   </a>
 </div>
 
-<div class="ni-alert ni-alert-info" style="margin: 16px 24px;">
+<div class="ac-alert ac-alert-info" style="margin: 16px 24px;">
   <i class="ti ti-info-circle" aria-hidden="true"></i>
   <span style="font-size:12px;">
     Los cambios aquí afectan a <strong>todos los usuarios</strong> con ese rol en todas las obras.
@@ -51,21 +20,30 @@
   </span>
 </div>
 
-<div class="ni-card" style="margin: 0 24px 24px;">
+<div class="ac-list" style="margin: 0 24px 24px;">
   {% for item in roles_data %}
-    <a href="{% url 'provider:role_permissions' item.role.id %}" class="role-row">
-      <div class="role-avatar">{{ item.role.code|slice:":3"|upper }}</div>
-      <div>
-        <div class="role-name">{{ item.role.name }}</div>
-        <div class="role-code">{{ item.role.code }}</div>
+    <a href="{% url 'provider:role_permissions' item.role.id %}" class="ac-list-item">
+      <div class="ac-item-avatar ac-item-avatar-sq">{{ item.role.code|slice:":3"|upper }}</div>
+      <div class="ac-item-info">
+        <div class="ac-item-name">
+          {{ item.role.name }}
+          {% if item.role.is_protected %}
+            <i class="ti ti-shield-lock" style="font-size:12px; color:var(--ac-purple); margin-left:4px;" title="Rol protegido" aria-hidden="true"></i>
+          {% endif %}
+        </div>
+        <div class="ac-item-meta">{{ item.role.code }}</div>
       </div>
-      <span class="role-perm-count">{{ item.perm_count }} permisos activos</span>
-      <i class="ti ti-chevron-right" style="font-size:16px; color:#ccc;" aria-hidden="true"></i>
+      {% if item.role.is_protected %}
+        <span class="ac-badge ac-badge-purple">Protegido</span>
+      {% endif %}
+      <span class="ac-badge ac-badge-blue">{{ item.perm_count }} permisos activos</span>
+      <i class="ti ti-chevron-right" style="font-size:16px; color:var(--ac-text-hint);" aria-hidden="true"></i>
     </a>
   {% empty %}
-    <div style="padding:40px; text-align:center; color:var(--ni-text-sub);">
-      <i class="ti ti-shield-off" style="font-size:36px; display:block; margin-bottom:8px; color:#ddd;" aria-hidden="true"></i>
-      <p>Sin roles registrados. Corre <code>seed_roles</code> primero.</p>
+    <div class="ac-empty">
+      <i class="ti ti-shield-off" aria-hidden="true"></i>
+      <div class="ac-empty-title">Sin roles registrados</div>
+      <div class="ac-empty-sub">Corre <code>seed_roles</code> primero.</div>
     </div>
   {% endfor %}
 </div>

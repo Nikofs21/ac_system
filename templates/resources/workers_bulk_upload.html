@@ -2,13 +2,12 @@
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">{{ site.company.name }}</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">{{ site.company.name }}</p>
   </div>
-  <a href="/resources/listado/?site={{ site.id }}"
-     class="ni-btn ni-btn-secondary" style="width:auto; padding:9px 16px; font-size:13px;">
+  <a href="/resources/listado/?site={{ site.id }}" class="ac-btn ac-btn-secondary ac-btn-sm">
     <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver
   </a>
 </div>
@@ -17,7 +16,7 @@
 
   {% if messages %}
     {% for msg in messages %}
-      <div class="ni-alert ni-alert-{% if msg.tags == 'error' %}warn{% else %}success{% endif %}"
+      <div class="ac-alert ac-alert-{% if msg.tags == 'error' %}warn{% else %}success{% endif %}"
            style="margin-bottom:12px;">
         <i class="ti ti-{% if msg.tags == 'error' %}alert-triangle{% else %}check{% endif %}"
            aria-hidden="true"></i>
@@ -26,52 +25,52 @@
     {% endfor %}
   {% endif %}
 
-  <div class="ni-card" style="margin-bottom:16px;">
-    <div class="ni-card-header"><span class="ni-card-title">Cargar trabajadores desde Excel</span></div>
-    <div class="ni-card-body">
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header"><span class="ac-card-title">Cargar trabajadores desde Excel</span></div>
+    <div class="ac-card-body">
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <div class="ni-field">
-          <label class="ni-label">Archivo Excel (.xlsx)</label>
+        <div class="ac-field">
+          <label class="ac-label">Archivo Excel (.xlsx)</label>
           <input type="file" name="archivo" accept=".xlsx,.xls"
-                 class="ni-input" style="padding:8px;" required>
+                 class="ac-input" style="padding:8px;" required>
         </div>
-        <button type="submit" class="ni-btn ni-btn-primary">
+        <button type="submit" class="ac-btn ac-btn-primary">
           <i class="ti ti-upload" aria-hidden="true"></i> Procesar archivo
         </button>
       </form>
     </div>
   </div>
 
-  <div class="ni-card">
-    <div class="ni-card-header"><span class="ni-card-title">Formato esperado</span></div>
-    <div class="ni-card-body">
-      <p style="font-size:12px; color:var(--ni-text-sub); margin-bottom:12px;">
+  <div class="ac-card">
+    <div class="ac-card-header"><span class="ac-card-title">Formato esperado</span></div>
+    <div class="ac-card-body">
+      <p style="font-size:12px; color:var(--ac-text-sub); margin-bottom:12px;">
         El archivo debe tener una hoja llamada <strong>Trabajadores</strong> con estas columnas:
       </p>
       <table style="width:100%; font-size:12px; border-collapse:collapse;">
         <thead>
-          <tr style="background:var(--ni-light);">
-            <th style="padding:6px 10px; text-align:left; border-bottom:0.5px solid var(--ni-border); font-family:var(--font-mono); font-size:10px; color:var(--ni-text-sub);">Columna</th>
-            <th style="padding:6px 10px; text-align:left; border-bottom:0.5px solid var(--ni-border); font-family:var(--font-mono); font-size:10px; color:var(--ni-text-sub);">Descripción</th>
-            <th style="padding:6px 10px; text-align:left; border-bottom:0.5px solid var(--ni-border); font-family:var(--font-mono); font-size:10px; color:var(--ni-text-sub);">Obligatorio</th>
+          <tr style="background:var(--ac-surface);">
+            <th style="padding:6px 10px; text-align:left; border-bottom:1px solid var(--ac-border); font-family:var(--font-mono); font-size:10px; color:var(--ac-text-sub);">Columna</th>
+            <th style="padding:6px 10px; text-align:left; border-bottom:1px solid var(--ac-border); font-family:var(--font-mono); font-size:10px; color:var(--ac-text-sub);">Descripción</th>
+            <th style="padding:6px 10px; text-align:left; border-bottom:1px solid var(--ac-border); font-family:var(--font-mono); font-size:10px; color:var(--ac-text-sub);">Obligatorio</th>
           </tr>
         </thead>
         <tbody>
           {% for col, desc, req in formato_cols %}
           <tr>
-            <td style="padding:6px 10px; border-bottom:0.5px solid var(--ni-border); font-family:var(--font-mono); color:var(--ni-blue);">{{ col }}</td>
-            <td style="padding:6px 10px; border-bottom:0.5px solid var(--ni-border);">{{ desc }}</td>
-            <td style="padding:6px 10px; border-bottom:0.5px solid var(--ni-border);">
-              {% if req %}<span style="color:#2e7d32; font-size:11px;">✓ Sí</span>
-              {% else %}<span style="color:#888; font-size:11px;">No</span>{% endif %}
+            <td style="padding:6px 10px; border-bottom:1px solid var(--ac-border); font-family:var(--font-mono); color:var(--ac-blue);">{{ col }}</td>
+            <td style="padding:6px 10px; border-bottom:1px solid var(--ac-border);">{{ desc }}</td>
+            <td style="padding:6px 10px; border-bottom:1px solid var(--ac-border);">
+              {% if req %}<span style="color:var(--ac-success-text); font-size:11px;">✓ Sí</span>
+              {% else %}<span style="color:var(--ac-text-sub); font-size:11px;">No</span>{% endif %}
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
 
-      <div style="margin-top:14px; padding:10px 12px; background:var(--ni-blue-soft); border-radius:var(--radius); font-size:12px; color:var(--ni-blue);">
+      <div style="margin-top:14px; padding:10px 12px; background:var(--ac-blue-soft); border-radius:var(--radius); font-size:12px; color:var(--ac-blue);">
         <i class="ti ti-info-circle" aria-hidden="true"></i>
         Si el RUT ya existe en la empresa, se actualiza el registro sin duplicar.
         El UID y QR se generan automáticamente.

@@ -4,167 +4,77 @@
 
 {% block extra_css %}
 <style>
-  .filter-bar {
-    display: flex; gap: 6px; padding: 10px 16px;
-    background: var(--ni-white); border-bottom: 0.5px solid var(--ni-border);
-    overflow-x: auto; align-items: center;
-  }
-  .filter-btn {
-    border: 0.5px solid var(--ni-border); border-radius: 20px;
-    padding: 5px 14px; font-size: 12px; background: var(--ni-white);
-    color: var(--ni-text-sub); cursor: pointer; white-space: nowrap;
-    font-family: var(--font-main);
-    transition: background 0.12s, border-color 0.12s, color 0.12s;
-  }
-  .filter-btn.active { background: var(--ni-blue); border-color: var(--ni-blue); color: #fff; }
-
   .select-all-bar {
     padding: 8px 16px;
-    background: #fafafa; border-bottom: 0.5px solid var(--ni-border);
-    font-size: 12px; color: var(--ni-text-sub);
+    background: var(--ac-surface); border-bottom: 1px solid var(--ac-border);
+    font-size: 12px; color: var(--ac-text-sub);
     display: flex; align-items: center; gap: 8px;
   }
-  .select-all-check { accent-color: var(--ni-blue); width: 16px; height: 16px; cursor: pointer; }
+  .select-all-check { accent-color: var(--ac-blue); width: 16px; height: 16px; cursor: pointer; }
 
   .bulk-bar {
     display: none; align-items: center; gap: 10px;
     padding: 8px 16px;
-    background: var(--ni-blue-soft); border-bottom: 0.5px solid #b0c0ff;
-    font-size: 13px; color: var(--ni-blue);
+    background: var(--ac-blue-soft); border-bottom: 1px solid var(--ac-blue-mid);
+    font-size: 13px; color: var(--ac-blue);
   }
   .bulk-bar.visible { display: flex; }
-  .bulk-count { font-weight: 600; font-family: var(--font-mono); }
+  .bulk-count { font-weight: 700; font-family: var(--font-mono); }
   .bulk-actions { margin-left: auto; display: flex; gap: 8px; }
   .btn-bulk {
     height: 32px; border-radius: var(--radius);
-    border: 1px solid var(--ni-blue); background: var(--ni-white); color: var(--ni-blue);
+    border: 1px solid var(--ac-blue); background: var(--ac-white); color: var(--ac-blue);
     font-size: 12px; cursor: pointer; padding: 0 12px;
     display: flex; align-items: center; gap: 5px;
     font-family: var(--font-main); white-space: nowrap;
   }
-  .btn-bulk:hover { background: var(--ni-blue); color: #fff; }
+  .btn-bulk:hover { background: var(--ac-blue); color: #fff; }
   .btn-bulk-cancel {
     height: 32px; border-radius: var(--radius);
-    border: none; background: none; color: var(--ni-blue);
+    border: none; background: none; color: var(--ac-blue);
     font-size: 12px; cursor: pointer; padding: 0 8px;
     font-family: var(--font-main);
   }
 
-  .worker-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; border-bottom: 0.5px solid var(--ni-border);
-    transition: background 0.1s;
-  }
-  .worker-row:last-child { border-bottom: none; }
-  .worker-row.selected { background: #f0f4ff; }
-
   .row-check {
     width: 18px; height: 18px; flex-shrink: 0;
-    accent-color: var(--ni-blue); cursor: pointer;
+    accent-color: var(--ac-blue); cursor: pointer;
   }
 
-  .worker-avatar {
-    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; color: var(--ni-blue);
-    background: var(--ni-blue-soft); font-family: var(--font-mono);
-  }
-  .worker-avatar.inactive { background: #f0f0f0; color: #aaa; }
-  .worker-avatar.session  { background: #e8f5ee; color: #2e7d32; }
-
-  .worker-info { flex: 1; min-width: 0; }
-  .worker-name { font-size: 14px; font-weight: 500; color: var(--ni-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .worker-meta { font-size: 11px; color: var(--ni-text-sub); font-family: var(--font-mono); margin-top: 2px; }
-
-  .row-actions { flex-shrink: 0; display: flex; gap: 6px; }
-  .btn-row {
-    height: 30px; border-radius: var(--radius);
-    border: 0.5px solid var(--ni-border); background: var(--ni-white);
-    font-size: 11px; color: var(--ni-text-sub); cursor: pointer;
-    padding: 0 10px; display: flex; align-items: center; gap: 4px;
-    text-decoration: none; white-space: nowrap; font-family: var(--font-main);
-  }
-  .btn-row:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); color: var(--ni-blue); }
-
-  .empty-state { padding: 40px 24px; text-align: center; color: var(--ni-text-sub); }
-  .empty-state i { font-size: 36px; color: #ddd; display: block; margin-bottom: 8px; }
-
-  /* QR Modal */
-  .qr-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5); z-index: 1000;
-    align-items: flex-end; justify-content: center;
-  }
-  .qr-overlay.visible { display: flex; }
-  .qr-sheet {
-    background: var(--ni-white); border-radius: 16px 16px 0 0;
-    width: 100%; max-width: 420px; padding: 0 0 32px;
-    animation: slideUp 0.2s ease;
-  }
-  @media (min-width: 600px) {
-    .qr-overlay { align-items: center; padding: 16px; }
-    .qr-sheet { border-radius: var(--radius-lg); }
-  }
-  @keyframes slideUp {
-    from { transform: translateY(40px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
-  .qr-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--ni-border); margin: 10px auto 16px; }
-  @media (min-width: 600px) { .qr-handle { display: none; } }
-  .qr-header { padding: 0 20px 16px; border-bottom: 0.5px solid var(--ni-border); text-align: center; }
-  .qr-body   { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-  .qr-container {
-    background: var(--ni-white); border: 1.5px solid var(--ni-border);
-    border-radius: var(--radius-lg); padding: 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;
-  }
-  .qr-brand { display: flex; align-items: center; gap: 6px; font-family: var(--font-brand); font-weight: 800; font-size: 11px; color: var(--ni-dark); }
-  .qr-footer { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
-  .qr-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--ni-text-sub); font-size: 13px; gap: 8px; }
-
-  #dl-toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--ni-dark); color: var(--ni-white);
-    border-radius: var(--radius); padding: 10px 18px;
-    font-size: 13px; z-index: 2000; display: none;
-    align-items: center; gap: 8px; max-width: 90vw;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  }
-  #dl-toast.visible { display: flex; }
+  .ac-item-avatar-session { background: var(--ac-success-bg); color: var(--ac-success-text); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">Trabajadores</h1>
-    <p class="ni-page-sub">{{ site.name }}</p>
+    <h1 class="ac-page-title">Trabajadores</h1>
+    <p class="ac-page-sub">{{ site.name }}</p>
   </div>
   {% if perms_ctx.can_crud_people %}
-    <a href="{% url 'resources:resource_create' %}" class="ni-btn ni-btn-primary"
-       style="width:auto; padding:9px 16px; font-size:13px;">
+    <a href="{% url 'resources:resource_create' %}" class="ac-btn ac-btn-primary ac-btn-sm">
       <i class="ti ti-plus" aria-hidden="true"></i> Nuevo
     </a>
   {% endif %}
 </div>
 
 <!-- Filtros -->
-<div class="filter-bar">
-  <button class="filter-btn {% if active_filter == 'active' %}active{% endif %}" onclick="setFilter('active')">
+<div class="ac-filter-bar">
+  <button class="ac-filter-btn {% if active_filter == 'active' %}active{% endif %}" onclick="setFilter('active')">
     Activos <span style="opacity:.6;">({{ counts.active }})</span>
   </button>
-  <button class="filter-btn {% if active_filter == 'with_session' %}active{% endif %}" onclick="setFilter('with_session')">
+  <button class="ac-filter-btn {% if active_filter == 'with_session' %}active{% endif %}" onclick="setFilter('with_session')">
     Con sesión <span style="opacity:.6;">({{ counts.with_session }})</span>
   </button>
-  <button class="filter-btn {% if active_filter == 'without_session' %}active{% endif %}" onclick="setFilter('without_session')">
+  <button class="ac-filter-btn {% if active_filter == 'without_session' %}active{% endif %}" onclick="setFilter('without_session')">
     Sin sesión <span style="opacity:.6;">({{ counts.without_session }})</span>
   </button>
-  <button class="filter-btn {% if active_filter == 'inactive' %}active{% endif %}" onclick="setFilter('inactive')">
+  <button class="ac-filter-btn {% if active_filter == 'inactive' %}active{% endif %}" onclick="setFilter('inactive')">
     Inactivos <span style="opacity:.6;">({{ counts.inactive }})</span>
   </button>
   <div style="position:relative; margin-left:auto; flex-shrink:0;">
-    <i class="ti ti-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--ni-text-sub); pointer-events:none;" aria-hidden="true"></i>
-    <input type="text" id="worker-search" class="filter-btn"
+    <i class="ti ti-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--ac-text-sub); pointer-events:none;" aria-hidden="true"></i>
+    <input type="text" id="worker-search" class="ac-filter-btn"
            placeholder="Buscar..."
            style="padding-left:30px; border-radius:20px; width:160px; cursor:text;"
            oninput="filterWorkers(this.value)">
@@ -194,41 +104,41 @@
 {% endif %}
 
 <!-- Lista -->
-<div class="ni-card" style="margin: 12px 16px 24px;">
+<div class="ac-list" style="margin: 12px 16px 24px;">
   {% if workers %}
     {% for worker in workers %}
-      <div class="worker-row" id="wrow-{{ worker.id }}">
+      <div class="ac-list-item" id="wrow-{{ worker.id }}">
 
         {% if active_filter == 'active' %}
           <input type="checkbox" class="row-check" value="{{ worker.id }}"
                  onchange="onCheckChange(this)" aria-label="Seleccionar {{ worker.display_name }}">
         {% endif %}
 
-        <div class="worker-avatar {% if not worker.is_active_assignment %}inactive{% elif worker.has_open_session %}session{% endif %}">
+        <div class="ac-item-avatar {% if not worker.is_active_assignment %}ac-item-avatar-inactive{% elif worker.has_open_session %}ac-item-avatar-session{% endif %}">
           {{ worker.display_name|slice:":2"|upper }}
         </div>
 
-        <div class="worker-info">
-          <div class="worker-name">{{ worker.display_name }}</div>
-          <div class="worker-meta">
+        <div class="ac-item-info">
+          <div class="ac-item-name">{{ worker.display_name }}</div>
+          <div class="ac-item-meta">
             {% if worker.job_title %}{{ worker.job_title.name }}{% endif %}
             {% if worker.person_rut %}&nbsp;·&nbsp;{{ worker.person_rut }}{% endif %}
           </div>
         </div>
 
-        <div class="row-actions">
+        <div style="flex-shrink:0; display:flex; gap:6px;">
           {% if perms_ctx.can_view_qr %}
-            <button class="btn-row" onclick="openQRModal({{ worker.id }})" title="Ver QR">
+            <button class="ac-row-btn" onclick="openQRModal({{ worker.id }})" title="Ver QR">
               <i class="ti ti-qrcode" aria-hidden="true"></i>
             </button>
           {% endif %}
           {% if perms_ctx.can_start_people and worker.is_active_assignment and not worker.has_open_session %}
-            <a href="{% url 'work:assignment_preload' worker.id %}" class="btn-row" title="Asignar partida">
+            <a href="{% url 'work:assignment_preload' worker.id %}" class="ac-row-btn" title="Asignar partida">
               <i class="ti ti-plus" aria-hidden="true"></i> Asignar
             </a>
           {% endif %}
           {% if perms_ctx.can_crud_people %}
-            <a href="{% url 'resources:resource_edit' worker.id %}" class="btn-row">
+            <a href="{% url 'resources:resource_edit' worker.id %}" class="ac-row-btn">
               <i class="ti ti-pencil" aria-hidden="true"></i>
             </a>
           {% endif %}
@@ -236,36 +146,38 @@
       </div>
     {% endfor %}
   {% else %}
-    <div class="empty-state">
+    <div class="ac-empty">
       <i class="ti ti-users-minus" aria-hidden="true"></i>
-      <p style="font-size:14px; font-weight:500; margin-bottom:4px;">Sin trabajadores</p>
-      <p style="font-size:12px;">No hay trabajadores en esta categoría.</p>
+      <div class="ac-empty-title">Sin trabajadores</div>
+      <div class="ac-empty-sub">No hay trabajadores en esta categoría.</div>
     </div>
   {% endif %}
 </div>
 
 <!-- Modal QR -->
-<div class="qr-overlay" id="qr-overlay" onclick="if(event.target===this)closeQRModal()">
-  <div class="qr-sheet" id="qr-sheet">
-    <div class="qr-handle"></div>
-    <div id="qr-loading" class="qr-loading"><i class="ti ti-loader" aria-hidden="true"></i> Cargando...</div>
+<div class="ac-overlay" id="qr-overlay" onclick="if(event.target===this)closeQRModal()">
+  <div class="ac-sheet" id="qr-sheet" style="max-width:420px;">
+    <div class="ac-sheet-handle"></div>
+    <div id="qr-loading" style="display:flex; align-items:center; justify-content:center; padding:40px; color:var(--ac-text-sub); font-size:13px; gap:8px;">
+      <i class="ti ti-loader" aria-hidden="true"></i> Cargando...
+    </div>
     <div id="qr-content" style="display:none;">
-      <div class="qr-header">
-        <div style="font-size:16px; font-weight:600; color:var(--ni-dark);" id="qr-worker-name"></div>
-        <div style="font-size:12px; color:var(--ni-text-sub); margin-top:2px;" id="qr-worker-cargo"></div>
-        <div style="font-size:11px; color:var(--ni-text-sub); font-family:var(--font-mono); margin-top:2px;" id="qr-worker-rut"></div>
+      <div class="ac-sheet-header" style="text-align:center;">
+        <div class="ac-sheet-title" id="qr-worker-name"></div>
+        <div class="ac-sheet-sub" id="qr-worker-cargo"></div>
+        <div class="ac-sheet-sub" style="font-family:var(--font-mono);" id="qr-worker-rut"></div>
       </div>
-      <div class="qr-body">
-        <div class="qr-container">
+      <div class="ac-sheet-body" style="align-items:center;">
+        <div style="background:var(--ac-white); border:1.5px solid var(--ac-border); border-radius:var(--radius-lg); padding:20px; display:flex; flex-direction:column; align-items:center; gap:12px; width:100%;">
           <div id="qr-code-display"></div>
-          <div style="font-family:var(--font-mono); font-size:10px; color:#bbb;" id="qr-worker-uid"></div>
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--ac-text-hint);" id="qr-worker-uid"></div>
         </div>
       </div>
-      <div class="qr-footer">
-        <button onclick="printWorkerQR()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px;">
+      <div class="ac-sheet-footer" style="flex-direction:column;">
+        <button onclick="printWorkerQR()" class="ac-btn ac-btn-secondary ac-btn-full">
           <i class="ti ti-printer" aria-hidden="true"></i> Imprimir / Guardar
         </button>
-        <button onclick="closeQRModal()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px; color:var(--ni-text-sub);">
+        <button onclick="closeQRModal()" class="ac-btn ac-btn-secondary ac-btn-full" style="color:var(--ac-text-sub);">
           Cerrar
         </button>
       </div>
@@ -274,7 +186,7 @@
 </div>
 
 <!-- Toast descarga -->
-<div id="dl-toast">
+<div class="ac-toast" id="dl-toast">
   <i class="ti ti-loader" aria-hidden="true"></i>
   <span id="dl-toast-msg">Generando PDF...</span>
 </div>
@@ -296,7 +208,7 @@ function setFilter(filter) {
 
 // ── Checkboxes ────────────────────────────────────────────────────────────
 function onCheckChange(cb) {
-  cb.closest('.worker-row').classList.toggle('selected', cb.checked);
+  cb.closest('.ac-list-item').classList.toggle('ac-list-item-selected', cb.checked);
   syncMasterCheck();
   updateBulkBar();
 }
@@ -304,7 +216,7 @@ function onCheckChange(cb) {
 function toggleAll(masterCb) {
   document.querySelectorAll('.row-check').forEach(cb => {
     cb.checked = masterCb.checked;
-    cb.closest('.worker-row').classList.toggle('selected', masterCb.checked);
+    cb.closest('.ac-list-item').classList.toggle('ac-list-item-selected', masterCb.checked);
   });
   updateBulkBar();
 }
@@ -312,7 +224,7 @@ function toggleAll(masterCb) {
 function clearSelection() {
   document.querySelectorAll('.row-check').forEach(cb => {
     cb.checked = false;
-    cb.closest('.worker-row').classList.remove('selected');
+    cb.closest('.ac-list-item').classList.remove('ac-list-item-selected');
   });
   const master = document.getElementById('check-all');
   if (master) master.checked = false;
@@ -432,9 +344,9 @@ document.getElementById('qr-sheet').addEventListener('touchstart', e => { touchS
 document.getElementById('qr-sheet').addEventListener('touchend', e => { if (e.changedTouches[0].clientY - touchStartY > 80) closeQRModal(); }, { passive: true });
 function filterWorkers(query) {
   const q = query.toLowerCase().trim();
-  document.querySelectorAll('.worker-row').forEach(row => {
-    const name = row.querySelector('.worker-name')?.textContent.toLowerCase() || '';
-    const meta = row.querySelector('.worker-meta')?.textContent.toLowerCase() || '';
+  document.querySelectorAll('.ac-list-item').forEach(row => {
+    const name = row.querySelector('.ac-item-name')?.textContent.toLowerCase() || '';
+    const meta = row.querySelector('.ac-item-meta')?.textContent.toLowerCase() || '';
     row.style.display = (!q || name.includes(q) || meta.includes(q)) ? '' : 'none';
   });
 }

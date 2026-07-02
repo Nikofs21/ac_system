@@ -24,6 +24,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('actor_type', ActorType.PROVIDER)
+        extra_fields.setdefault('is_novus_super', True)
         return self.create_user(email, password, **extra_fields)
 
 
@@ -41,6 +42,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(max_length=30, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    is_novus_super = models.BooleanField(
+        default=False,
+        help_text=(
+            'Acceso total al sistema: todas las empresas y obras, sin excepcion. '
+            'Es independiente de membresias (CompanyMembership/SiteMembership) y se '
+            'otorga automaticamente en cada empresa/obra nueva via signals. '
+            'Otorgar solo a personal interno de Novus de maxima confianza.'
+        )
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -113,6 +123,13 @@ class Role(models.Model):
         related_name='custom_roles'
     )
     is_active = models.BooleanField(default=True)
+    is_protected = models.BooleanField(
+        default=False,
+        help_text=(
+            'Rol protegido del sistema (ej: novus_super, novus_consultor). '
+            'Sus permisos no pueden modificarse desde la UI de gestion de roles.'
+        )
+    )
     description = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -199,19 +216,14 @@ class RolePermission(models.Model):
 
     def __str__(self):
         return f'{self.role.name} - {self.permission.name}'
-    
+
+
 class SiteMembershipPermissionOverride(models.Model):
     """
     Sobrescribe permisos del rol estandar para un usuario especifico en una obra.
 
     granted=True  → agrega el permiso aunque el rol no lo tenga
     granted=False → quita el permiso aunque el rol lo tenga
-
-    Ejemplos de uso:
-    - Supervisor que necesita ver subcontratos en una obra especifica:
-        site_membership=supervisor_membership, permission=subcontracts.view_list, granted=True
-    - Jefe de terreno al que se le quita edicion de sesiones en una obra:
-        site_membership=jefe_membership, permission=sessions_review.edit_today, granted=False
 
     Solo el prestador puede crear/editar estos overrides.
     """
@@ -225,7 +237,7 @@ class SiteMembershipPermissionOverride(models.Model):
         on_delete=models.CASCADE,
         related_name='membership_overrides',
     )
-    granted    = models.BooleanField(
+    granted = models.BooleanField(
         help_text='True = agregar permiso, False = quitar permiso'
     )
     created_by = models.ForeignKey(

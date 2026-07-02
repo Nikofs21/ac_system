@@ -4,10 +4,10 @@
 
 {% block content %}
 
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">{{ site.name }}</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">{{ site.name }}</p>
   </div>
 </div>
 
@@ -15,10 +15,10 @@
   <form method="post" id="moi-form">
     {% csrf_token %}
 
-    <div class="ni-field">
-      <label class="ni-label" for="first_name">Nombre</label>
+    <div class="ac-field">
+      <label class="ac-label" for="first_name">Nombre</label>
       <input
-        class="ni-input {% if errors.first_name %}error{% endif %}"
+        class="ac-input {% if errors.first_name %}error{% endif %}"
         type="text"
         name="first_name"
         id="first_name"
@@ -28,14 +28,14 @@
         required
       >
       {% if errors.first_name %}
-        <div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.first_name }}</div>
+        <div class="ac-field-error">{{ errors.first_name }}</div>
       {% endif %}
     </div>
 
-    <div class="ni-field">
-      <label class="ni-label" for="last_name">Apellido</label>
+    <div class="ac-field">
+      <label class="ac-label" for="last_name">Apellido</label>
       <input
-        class="ni-input {% if errors.last_name %}error{% endif %}"
+        class="ac-input {% if errors.last_name %}error{% endif %}"
         type="text"
         name="last_name"
         id="last_name"
@@ -45,20 +45,20 @@
         required
       >
       {% if errors.last_name %}
-        <div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.last_name }}</div>
+        <div class="ac-field-error">{{ errors.last_name }}</div>
       {% endif %}
     </div>
 
-    <div class="ni-field">
-      <label class="ni-label" for="email">
+    <div class="ac-field">
+      <label class="ac-label" for="email">
         Correo electrónico
         {% if mode == 'edit' %}
-          <span style="font-size:10px; color:#aaa; font-weight:400;">(no editable)</span>
+          <span style="font-size:10px; color:var(--ac-text-hint); font-weight:400;">(no editable)</span>
         {% endif %}
       </label>
       {% if mode == 'create' %}
         <input
-          class="ni-input {% if errors.email %}error{% endif %}"
+          class="ac-input {% if errors.email %}error{% endif %}"
           type="email"
           name="email"
           id="email"
@@ -68,14 +68,14 @@
           required
         >
         {% if errors.email %}
-          <div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.email }}</div>
+          <div class="ac-field-error">{{ errors.email }}</div>
         {% endif %}
-        <div style="font-size:11px; color:var(--ni-text-sub); margin-top:4px;">
+        <div class="ac-field-hint">
           Si el correo ya existe en el sistema, se vinculará el usuario existente.
         </div>
       {% else %}
         <input
-          class="ni-input"
+          class="ac-input"
           type="email"
           value="{{ membership.user.email }}"
           disabled
@@ -84,10 +84,10 @@
       {% endif %}
     </div>
 
-    <div class="ni-field">
-      <label class="ni-label" for="rut">RUT</label>
+    <div class="ac-field">
+      <label class="ac-label" for="rut">RUT</label>
       <input
-        class="ni-input"
+        class="ac-input"
         type="text"
         name="rut"
         id="rut"
@@ -95,13 +95,13 @@
         placeholder="12345678-9"
         autocomplete="off"
       >
-      <div style="font-size:11px; color:var(--ni-text-sub); margin-top:4px;">Sin puntos, con guión. Opcional.</div>
+      <div class="ac-field-hint">Sin puntos, con guión. Opcional.</div>
     </div>
 
-    <div class="ni-field">
-      <label class="ni-label" for="role_id">Rol</label>
+    <div class="ac-field">
+      <label class="ac-label" for="role_id">Rol</label>
       <select
-        class="ni-select {% if errors.role_id %}error{% endif %}"
+        class="ac-select {% if errors.role_id %}error{% endif %}"
         name="role_id"
         id="role_id"
         required
@@ -117,14 +117,14 @@
         {% endfor %}
       </select>
       {% if errors.role_id %}
-        <div style="font-size:11px; color:#c0392b; margin-top:4px;">{{ errors.role_id }}</div>
+        <div class="ac-field-error">{{ errors.role_id }}</div>
       {% endif %}
     </div>
 
-    <div class="ni-field">
-      <label class="ni-label" for="notes">Notas (opcional)</label>
+    <div class="ac-field">
+      <label class="ac-label" for="notes">Notas (opcional)</label>
       <input
-        class="ni-input"
+        class="ac-input"
         type="text"
         name="notes"
         id="notes"
@@ -136,11 +136,11 @@
     </div>
 
     <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px;">
-      <button type="submit" class="ni-btn ni-btn-primary">
+      <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
         <i class="ti ti-{% if mode == 'create' %}user-plus{% else %}check{% endif %}" aria-hidden="true"></i>
         {% if mode == 'create' %}Agregar usuario{% else %}Guardar cambios{% endif %}
       </button>
-      <a href="{% url 'access:moi_list' %}" class="ni-btn ni-btn-secondary" style="text-align:center;">
+      <a href="{% url 'access:moi_list' %}" class="ac-btn ac-btn-secondary ac-btn-full" style="text-align:center;">
         Cancelar
       </a>
     </div>

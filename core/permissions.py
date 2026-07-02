@@ -143,6 +143,12 @@ PERMISSION_CODES = {
 # MATRIX DE PERMISOS POR ROL
 # Define los permisos estandar de cada rol.
 # Puede sobrescribirse por obra via SiteMembershipPermissionOverride.
+#
+# NOTA: novus_super ya NO se resuelve via esta matriz — es un flag de User
+# (user.is_novus_super) evaluado directamente en is_novus_super(). Se deja
+# 'novus_super' en el dict de roles porque SiteMembership.role todavia
+# referencia este codigo para las membresias operativas existentes, pero
+# is_novus_super() nunca consulta ROLE_PERMISSIONS para resolver el acceso.
 # ─────────────────────────────────────────────────────────────────────────────
 
 ROLE_PERMISSIONS = {
@@ -241,6 +247,83 @@ ROLE_PERMISSIONS = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# JERARQUIA DE OTORGAMIENTO DE ROLES
+#
+# Roles que SOLO pueden ser otorgados/asignados por usuarios novus_super
+# (ver is_novus_super()). Ningun otro rol -- ni siquiera admin_obra a otro
+# admin_obra -- puede crear o editar una membresia hacia estos roles.
+#
+# Esto es independiente de los permisos operativos del rol (ROLE_PERMISSIONS);
+# un admin_obra puede tener moi.edit y administrar MOI normalmente, pero el
+# <select> de roles disponibles para asignar excluye estos codigos salvo que
+# quien esta operando la pantalla sea novus_super.
+#
+# Usar get_assignable_roles_queryset() en vistas que muestren un selector de
+# roles, en vez de filtrar manualmente — asi la regla queda en un solo lugar.
+# ─────────────────────────────────────────────────────────────────────────────
+
+ROLES_GRANTABLE_ONLY_BY_NOVUS = [
+    'admin_obra',
+    'gerencia',
+    'aac',
+]
+
+# Roles de prestador — nunca asignables desde pantallas de MOI/usuarios cliente,
+# independiente de quien este operando (ni siquiera novus_super los asigna ahi;
+# esos se gestionan por fuera, a nivel de User.is_novus_super / Role directo).
+PROVIDER_ONLY_ROLE_CODES = [
+    'novus_super',
+    'novus_consultor',
+]
+
+
+def get_assignable_roles_queryset(user):
+    """
+    Retorna el queryset de Roles que `user` puede asignar a otra persona
+    desde pantallas de gestion de usuarios (ej: MOI).
+
+    Reglas:
+    - Los roles de prestador (PROVIDER_ONLY_ROLE_CODES) nunca se incluyen aqui.
+    - Los roles en ROLES_GRANTABLE_ONLY_BY_NOVUS solo se incluyen si
+      is_novus_super(user) es True.
+    - El resto de roles activos GLOBAL_BASE se incluyen siempre.
+    """
+    from access.models import Role
+
+    excluded_codes = list(PROVIDER_ONLY_ROLE_CODES)
+    if not is_novus_super(user):
+        excluded_codes += ROLES_GRANTABLE_ONLY_BY_NOVUS
+
+    return Role.objects.filter(
+        is_active=True,
+        scope_type='GLOBAL_BASE',
+    ).exclude(
+        code__in=excluded_codes
+    ).order_by('name')
+
+
+def can_user_edit_membership(user, membership):
+    """
+    Determina si `user` puede editar/dar de baja una SiteMembership especifica
+    (pantallas de MOI). Esto es distinto de "puede asignar este rol" — aqui se
+    evalua sobre una membresia que YA existe.
+
+    Regla: si el rol actual de la membresia esta en ROLES_GRANTABLE_ONLY_BY_NOVUS,
+    solo un novus_super puede editarla o darla de baja. Cualquier otro usuario
+    con moi.edit puede VER esa fila en el listado, pero no tocarla.
+
+    Los roles de prestador (PROVIDER_ONLY_ROLE_CODES) nunca deberian aparecer
+    en SiteMembership de MOI en la practica, pero por defensiva se tratan
+    igual de protegidos si llegaran a existir.
+    """
+    if is_novus_super(user):
+        return True
+
+    protected_codes = set(ROLES_GRANTABLE_ONLY_BY_NOVUS) | set(PROVIDER_ONLY_ROLE_CODES)
+    return membership.role.code not in protected_codes
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # FEATURE FLAGS
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -273,13 +356,21 @@ COMPANY_FEATURE_FLAGS = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 def is_novus_super(user):
+    """
+    Acceso total al sistema: todas las empresas y obras, sin excepcion.
+
+    Se resuelve con dos flags a nivel de User, NUNCA por membresia:
+    - user.is_superuser    (flag nativo de Django)
+    - user.is_novus_super  (flag propio del sistema, ver access.models.User)
+
+    Esto es deliberado: novus_super no es un rol que pueda variar por obra.
+    Si necesitas otorgarlo/quitarlo, hazlo sobre el User directamente
+    (admin de Django o pantalla de gestion de usuarios), no sobre una
+    membresia especifica.
+    """
     if not user or not user.is_authenticated:
         return False
-    if user.actor_type != 'PROVIDER':
-        return False
-    return user.site_memberships.filter(
-        role__code='novus_super', is_active=True,
-    ).exists() or user.is_superuser
+    return bool(user.is_superuser or user.is_novus_super)
 
 
 def get_user_role_for_site(user, site):
@@ -299,7 +390,7 @@ def get_user_permissions_for_site(user, site):
     Retorna el set de codigos de permisos del usuario en una obra.
 
     Orden de resolucion:
-    1. novus_super → todos los permisos
+    1. novus_super → todos los permisos (no requiere membresia)
     2. Permisos del rol base (via RolePermission)
     3. Overrides de la membresia (SiteMembershipPermissionOverride)
        - granted=True  → agrega aunque el rol no lo tenga

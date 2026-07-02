@@ -2,194 +2,32 @@
 {% block title %}Mano de obra indirecta{% endblock %}
 {% block nav_moi %}active{% endblock %}
 
-{% block extra_css %}
-<style>
-  .moi-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 16px;
-    border-bottom: 0.5px solid var(--ni-border);
-    transition: background 0.1s;
-  }
-  .moi-row:last-child { border-bottom: none; }
-  .moi-row.inactive-row { opacity: 0.5; }
-
-  .moi-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 600; flex-shrink: 0;
-    background: var(--ni-blue-soft); color: var(--ni-blue);
-  }
-  .moi-avatar.inactive { background: #f0f0f0; color: #aaa; }
-
-  .moi-info { flex: 1; min-width: 0; }
-  .moi-name {
-    font-size: 14px; font-weight: 500; color: var(--ni-text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .moi-meta {
-    font-size: 11px; color: var(--ni-text-sub);
-    font-family: var(--font-mono); margin-top: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-
-  .moi-badge {
-    font-size: 10px; border-radius: 20px; padding: 3px 9px;
-    font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;
-  }
-  .badge-active   { background: var(--ni-blue-soft); color: var(--ni-blue); }
-  .badge-inactive { background: #f0f0f0; color: #bbb; }
-
-  .row-action { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
-  .btn-row {
-    height: 32px; border-radius: var(--radius);
-    border: 0.5px solid var(--ni-border);
-    background: var(--ni-white);
-    font-size: 12px; color: var(--ni-text-sub);
-    cursor: pointer; padding: 0 10px;
-    display: flex; align-items: center; gap: 5px;
-    text-decoration: none; white-space: nowrap;
-    font-family: var(--font-main);
-    transition: background 0.12s, border-color 0.12s;
-  }
-  .btn-row:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); color: var(--ni-blue); }
-
-  .empty-state { padding: 48px 24px; text-align: center; color: var(--ni-text-sub); }
-  .empty-state i { font-size: 40px; color: #ddd; display: block; margin-bottom: 12px; }
-
-  .stats-bar {
-    display: flex; gap: 8px; padding: 10px 16px;
-    background: var(--ni-white);
-    border-bottom: 0.5px solid var(--ni-border);
-    flex-wrap: wrap;
-  }
-  .stat-pill {
-    font-size: 11px; border-radius: 20px; padding: 4px 12px;
-    font-family: var(--font-mono);
-    display: flex; align-items: center; gap: 5px;
-  }
-  .stat-total  { background: #f0f0f0; color: #888; }
-  .stat-active { background: var(--ni-blue-soft); color: var(--ni-blue); }
-
-  .search-bar {
-    padding: 10px 16px;
-    background: var(--ni-white);
-    border-bottom: 0.5px solid var(--ni-border);
-    position: sticky; top: var(--ni-topbar-h); z-index: 10;
-  }
-  .search-wrap { position: relative; }
-  .search-wrap input {
-    width: 100%;
-    border: 1.5px solid var(--ni-border);
-    border-radius: var(--radius);
-    padding: 9px 12px 9px 36px;
-    font-size: 14px; font-family: var(--font-main);
-    background: var(--ni-light); color: var(--ni-text);
-    outline: none; transition: border-color 0.15s;
-  }
-  .search-wrap input:focus { border-color: var(--ni-blue); background: var(--ni-white); }
-  .search-icon {
-    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-    font-size: 16px; color: var(--ni-text-sub); pointer-events: none;
-  }
-
-  /* Modal QR */
-  .qr-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5); z-index: 1000;
-    align-items: flex-end; justify-content: center;
-  }
-  .qr-overlay.visible { display: flex; }
-  .qr-sheet {
-    background: var(--ni-white); border-radius: 16px 16px 0 0;
-    width: 100%; max-width: 420px; padding: 0 0 32px;
-    animation: slideUp 0.2s ease;
-  }
-  @media (min-width: 600px) {
-    .qr-overlay { align-items: center; padding: 16px; }
-    .qr-sheet { border-radius: var(--radius-lg); }
-  }
-  @keyframes slideUp {
-    from { transform: translateY(40px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
-  .qr-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--ni-border); margin: 10px auto 16px; }
-  @media (min-width: 600px) { .qr-handle { display: none; } }
-  .qr-header { padding: 0 20px 16px; border-bottom: 0.5px solid var(--ni-border); text-align: center; }
-  .qr-name  { font-size: 16px; font-weight: 600; color: var(--ni-dark); }
-  .qr-meta  { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
-  .qr-body  { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-  .qr-container {
-    background: var(--ni-white); border: 1.5px solid var(--ni-border);
-    border-radius: var(--radius-lg); padding: 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;
-  }
-  .qr-brand {
-    display: flex; align-items: center; gap: 6px;
-    font-family: var(--font-brand); font-weight: 800;
-    font-size: 11px; color: var(--ni-dark);
-  }
-  .qr-footer { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
-  .qr-loading {
-    display: flex; align-items: center; justify-content: center;
-    padding: 40px; color: var(--ni-text-sub); font-size: 13px; gap: 8px;
-  }
-
-  /* Modal baja */
-  .baja-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45); z-index: 1000;
-    align-items: flex-end; justify-content: center;
-  }
-  .baja-overlay.visible { display: flex; }
-  .baja-sheet {
-    background: var(--ni-white); border-radius: 16px 16px 0 0;
-    width: 100%; max-width: 480px; animation: slideUp 0.2s ease; overflow: hidden;
-  }
-  @media (min-width: 600px) {
-    .baja-overlay { align-items: center; padding: 16px; }
-    .baja-sheet { border-radius: var(--radius-lg); }
-  }
-
-  /* Toast */
-  #moi-toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--ni-dark); color: var(--ni-white);
-    border-radius: var(--radius); padding: 10px 18px;
-    font-size: 13px; z-index: 2000;
-    display: none; align-items: center; gap: 8px;
-    max-width: 90vw; text-align: center;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  }
-  #moi-toast.visible { display: flex; }
-</style>
-{% endblock %}
-
 {% block content %}
 
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">Mano de obra indirecta</h1>
-    <p class="ni-page-sub">{{ site.name }}</p>
+    <h1 class="ac-page-title">Mano de obra indirecta</h1>
+    <p class="ac-page-sub">{{ site.name }}</p>
   </div>
   {% if perms_ctx.can_edit_moi %}
-    <a href="{% url 'access:moi_create' %}" class="ni-btn ni-btn-primary" style="width:auto; padding:9px 16px; font-size:13px;">
+    <a href="{% url 'access:moi_create' %}" class="ac-btn ac-btn-primary ac-btn-sm">
       <i class="ti ti-plus" aria-hidden="true"></i> Agregar
     </a>
   {% endif %}
 </div>
 
-<div class="stats-bar">
-  <span class="stat-pill stat-total">
+<div class="ac-stats-bar">
+  <span class="ac-stat-pill ac-stat-pill-gray">
     <i class="ti ti-id-badge" aria-hidden="true"></i>{{ total }} total
   </span>
-  <span class="stat-pill stat-active">
+  <span class="ac-stat-pill ac-stat-pill-blue">
     <i class="ti ti-circle-check" aria-hidden="true"></i>{{ active_count }} activos
   </span>
 </div>
 
-<div class="search-bar">
-  <div class="search-wrap">
-    <i class="ti ti-search search-icon" aria-hidden="true"></i>
+<div class="ac-search-bar">
+  <div class="ac-search-wrap">
+    <i class="ti ti-search ac-search-icon" aria-hidden="true"></i>
     <input
       type="text"
       id="moi-search"
@@ -200,24 +38,24 @@
   </div>
 </div>
 
-<div class="ni-card" style="margin: 12px 16px 24px;">
+<div class="ac-list" style="margin: 12px 16px 24px;">
   {% if memberships %}
     <div id="moi-list">
       {% for m in memberships %}
         <div
-          class="moi-row {% if not m.is_active %}inactive-row{% endif %}"
+          class="ac-list-item {% if not m.is_active %}ac-list-item-inactive{% endif %}"
           id="mrow-{{ m.id }}"
           data-name="{{ m.user.get_full_name|lower }}"
           data-email="{{ m.user.email|lower }}"
           data-role="{{ m.role.name|lower }}"
         >
-          <div class="moi-avatar {% if not m.is_active %}inactive{% endif %}">
+          <div class="ac-item-avatar {% if not m.is_active %}ac-item-avatar-inactive{% endif %}">
             {{ m.user.first_name|slice:":1" }}{{ m.user.last_name|slice:":1" }}
           </div>
 
-          <div class="moi-info">
-            <div class="moi-name">{{ m.user.get_full_name }}</div>
-            <div class="moi-meta">
+          <div class="ac-item-info">
+            <div class="ac-item-name">{{ m.user.get_full_name }}</div>
+            <div class="ac-item-meta">
               {{ m.role.name }}
               {% if m.user.email %}&nbsp;·&nbsp; {{ m.user.email }}{% endif %}
               {% if m.user.rut %}&nbsp;·&nbsp; {{ m.user.rut }}{% endif %}
@@ -225,28 +63,36 @@
             </div>
           </div>
 
-          <span class="moi-badge {% if m.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+          <span class="ac-badge {% if m.is_active %}ac-badge-blue{% else %}ac-badge-gray{% endif %}">
             {% if m.is_active %}Activo{% else %}Inactivo{% endif %}
           </span>
+          {% if m.role.code in protected_role_codes and not perms_ctx.is_novus_super %}
+            <span class="ac-badge ac-badge-purple" title="Solo usuarios de Novus pueden editar este cargo">
+              <i class="ti ti-shield-lock" style="font-size:10px; margin-right:3px;" aria-hidden="true"></i>
+              Reservado
+            </span>
+          {% endif %}
 
-          <div class="row-action">
+          <div style="flex-shrink:0; display:flex; align-items:center; gap:6px;">
             {% if perms_ctx.can_view_moi %}
-              <button class="btn-row" onclick="openQRModal({{ m.id }})" title="Ver QR de acceso">
+              <button class="ac-row-btn" onclick="openQRModal({{ m.id }})" title="Ver QR de acceso">
                 <i class="ti ti-qrcode" aria-hidden="true"></i>
               </button>
             {% endif %}
             {% if perms_ctx.can_edit_moi %}
-              <a href="{% url 'access:moi_edit' m.id %}" class="btn-row">
-                <i class="ti ti-pencil" aria-hidden="true"></i>
-              </a>
-              {% if m.is_active and m.user != request.user %}
-                <button class="btn-row" onclick="openBajaModal({{ m.id }}, '{{ m.user.get_full_name|escapejs }}')" title="Dar de baja">
-                  <i class="ti ti-user-minus" aria-hidden="true"></i>
-                </button>
-              {% elif not m.is_active %}
-                <button class="btn-row" onclick="reactivateMoi({{ m.id }}, '{{ m.user.get_full_name|escapejs }}')" title="Reactivar">
-                  <i class="ti ti-refresh" aria-hidden="true"></i> Reactivar
-                </button>
+              {% if m.role.code not in protected_role_codes or perms_ctx.is_novus_super %}
+                <a href="{% url 'access:moi_edit' m.id %}" class="ac-row-btn">
+                  <i class="ti ti-pencil" aria-hidden="true"></i>
+                </a>
+                {% if m.is_active and m.user != request.user %}
+                  <button class="ac-row-btn" onclick="openBajaModal({{ m.id }}, '{{ m.user.get_full_name|escapejs }}')" title="Dar de baja">
+                    <i class="ti ti-user-minus" aria-hidden="true"></i>
+                  </button>
+                {% elif not m.is_active %}
+                  <button class="ac-row-btn" onclick="reactivateMoi({{ m.id }}, '{{ m.user.get_full_name|escapejs }}')" title="Reactivar">
+                    <i class="ti ti-refresh" aria-hidden="true"></i> Reactivar
+                  </button>
+                {% endif %}
               {% endif %}
             {% endif %}
           </div>
@@ -254,37 +100,37 @@
       {% endfor %}
     </div>
 
-    <div id="no-results" class="empty-state" style="display:none;">
+    <div id="no-results" class="ac-empty" style="display:none;">
       <i class="ti ti-search" aria-hidden="true"></i>
-      <p style="font-size:14px; font-weight:500;">Sin coincidencias</p>
+      <div class="ac-empty-title">Sin coincidencias</div>
     </div>
 
   {% else %}
-    <div class="empty-state">
+    <div class="ac-empty">
       <i class="ti ti-id-badge" aria-hidden="true"></i>
-      <p style="font-size:15px; font-weight:500; margin-bottom:4px;">Sin usuarios registrados</p>
-      <p style="font-size:13px;">No hay usuarios MOI en esta obra.</p>
+      <div class="ac-empty-title">Sin usuarios registrados</div>
+      <div class="ac-empty-sub">No hay usuarios MOI en esta obra.</div>
     </div>
   {% endif %}
 </div>
 
 <!-- MODAL QR -->
-<div class="qr-overlay" id="qr-overlay" onclick="handleQROverlay(event)">
-  <div class="qr-sheet" id="qr-sheet">
-    <div class="qr-handle"></div>
-    <div id="qr-loading" class="qr-loading">
+<div class="ac-overlay" id="qr-overlay" onclick="handleQROverlay(event)">
+  <div class="ac-sheet" id="qr-sheet" style="max-width:420px;">
+    <div class="ac-sheet-handle"></div>
+    <div id="qr-loading" style="display:flex; align-items:center; justify-content:center; padding:40px; color:var(--ac-text-sub); font-size:13px; gap:8px;">
       <i class="ti ti-loader" aria-hidden="true"></i> Cargando...
     </div>
     <div id="qr-content" style="display:none;">
-      <div class="qr-header">
-        <div class="qr-name"  id="qr-user-name"></div>
-        <div class="qr-meta" id="qr-user-role"></div>
-        <div class="qr-meta" id="qr-user-email" style="font-family:var(--font-mono); font-size:11px;"></div>
+      <div class="ac-sheet-header" style="text-align:center;">
+        <div class="ac-sheet-title" id="qr-user-name"></div>
+        <div class="ac-sheet-sub" id="qr-user-role"></div>
+        <div class="ac-sheet-sub" id="qr-user-email" style="font-family:var(--font-mono); font-size:11px;"></div>
       </div>
-      <div class="qr-body">
-        <div class="qr-container">
+      <div class="ac-sheet-body" style="align-items:center;">
+        <div style="background:var(--ac-white); border:1.5px solid var(--ac-border); border-radius:var(--radius-lg); padding:20px; display:flex; flex-direction:column; align-items:center; gap:12px; width:100%;">
           <div id="qr-code-display"></div>
-          <div class="qr-brand">
+          <div style="display:flex; align-items:center; gap:6px; font-family:var(--font-brand); font-weight:800; font-size:11px; color:var(--ac-dark);">
             <svg width="14" height="14" viewBox="0 0 36 36" fill="none" aria-hidden="true">
               <rect x="4" y="4" width="28" height="4" rx="2" fill="#0025ec"/>
               <rect x="6" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
@@ -296,16 +142,16 @@
             </svg>
             NOVUS IMPERIUM
           </div>
-          <div style="font-family:var(--font-mono); font-size:10px; color:#bbb; text-align:center;">
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--ac-text-hint); text-align:center;">
             Acceso al sistema
           </div>
         </div>
       </div>
-      <div class="qr-footer">
-        <button onclick="printMoiQR()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px;">
+      <div class="ac-sheet-footer" style="flex-direction:column;">
+        <button onclick="printMoiQR()" class="ac-btn ac-btn-secondary ac-btn-full">
           <i class="ti ti-printer" aria-hidden="true"></i> Imprimir / Guardar
         </button>
-        <button onclick="closeQRModal()" class="ni-btn ni-btn-secondary" style="padding:10px; font-size:13px; color:var(--ni-text-sub);">
+        <button onclick="closeQRModal()" class="ac-btn ac-btn-secondary ac-btn-full" style="color:var(--ac-text-sub);">
           Cerrar
         </button>
       </div>
@@ -314,32 +160,26 @@
 </div>
 
 <!-- MODAL BAJA -->
-<div class="baja-overlay" id="baja-overlay" onclick="handleBajaOverlay(event)">
-  <div class="baja-sheet">
-    <div style="padding:16px; border-bottom:0.5px solid var(--ni-border);">
-      <div style="font-size:15px; font-weight:600; color:#c0392b;">Dar de baja</div>
-      <div style="font-size:12px; color:var(--ni-text-sub); margin-top:2px;" id="baja-user-name"></div>
+<div class="ac-overlay" id="baja-overlay" onclick="handleBajaOverlay(event)">
+  <div class="ac-sheet" style="max-width:480px;">
+    <div class="ac-sheet-header">
+      <div class="ac-sheet-title" style="color:var(--ac-danger);">Dar de baja</div>
+      <div class="ac-sheet-sub" id="baja-user-name"></div>
     </div>
-    <div style="padding:16px;">
-      <div class="ni-alert ni-alert-warn" style="font-size:12px;">
+    <div class="ac-sheet-body">
+      <div class="ac-alert ac-alert-warn" style="font-size:12px;">
         <i class="ti ti-alert-triangle" aria-hidden="true"></i>
         <span>El usuario perderá acceso a esta obra. Sus datos y sesiones históricas se conservan.</span>
       </div>
     </div>
-    <div style="padding:12px 16px; border-top:0.5px solid var(--ni-border); display:flex; gap:8px;">
-      <button
-        style="height:42px; border:1.5px solid var(--ni-border); border-radius:var(--radius); background:var(--ni-white); color:var(--ni-dark); font-family:var(--font-main); font-weight:500; font-size:14px; cursor:pointer; padding:0 14px;"
-        onclick="closeBajaModal()"
-      >Cancelar</button>
-      <button
-        style="flex:1; height:42px; border:none; border-radius:var(--radius); background:#c0392b; color:#fff; font-family:var(--font-brand); font-weight:700; font-size:14px; cursor:pointer;"
-        onclick="confirmBaja()"
-      >Confirmar baja</button>
+    <div class="ac-sheet-footer">
+      <button class="ac-sheet-cancel" onclick="closeBajaModal()">Cancelar</button>
+      <button class="ac-sheet-confirm ac-sheet-confirm-danger" onclick="confirmBaja()">Confirmar baja</button>
     </div>
   </div>
 </div>
 
-<div id="moi-toast">
+<div class="ac-toast" id="moi-toast">
   <i class="ti ti-check" id="moi-toast-icon" aria-hidden="true"></i>
   <span id="moi-toast-msg"></span>
 </div>
@@ -359,7 +199,7 @@
   // ── FILTRO ────────────────────────────────────────────────────
   function filterMoi() {
     const q    = document.getElementById('moi-search').value.toLowerCase().trim();
-    const rows = document.querySelectorAll('.moi-row');
+    const rows = document.querySelectorAll('.ac-list-item');
     let visible = 0;
 
     rows.forEach(row => {
@@ -491,11 +331,11 @@
         closeBajaModal();
         const row = document.getElementById('mrow-' + currentMembershipId);
         if (row) {
-          row.classList.add('inactive-row');
-          const badge = row.querySelector('.moi-badge');
-          const avatar = row.querySelector('.moi-avatar');
-          if (badge)  { badge.className = 'moi-badge badge-inactive'; badge.textContent = 'Inactivo'; }
-          if (avatar) avatar.classList.add('inactive');
+          row.classList.add('ac-list-item-inactive');
+          const badge = row.querySelector('.ac-badge');
+          const avatar = row.querySelector('.ac-item-avatar');
+          if (badge)  { badge.className = 'ac-badge ac-badge-gray'; badge.textContent = 'Inactivo'; }
+          if (avatar) avatar.classList.add('ac-item-avatar-inactive');
         }
         showToast(data.message, 'ok');
       } else {

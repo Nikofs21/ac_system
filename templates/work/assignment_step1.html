@@ -3,32 +3,32 @@
 {% block nav_assign %}active{% endblock %}
 
 {% block content %}
-<div class="ni-timeline">
-  <div class="ni-t-step active">
-    <div class="ni-t-num active">1</div>
-    <span class="ni-t-label active">Seleccionar partida</span>
+<div class="ac-timeline">
+  <div class="ac-t-step ac-t-step-active">
+    <div class="ac-t-num ac-t-num-active">1</div>
+    <span class="ac-t-label ac-t-label-active">Seleccionar partida</span>
   </div>
-  <div class="ni-t-step">
-    <div class="ni-t-num pending">2</div>
-    <span class="ni-t-label pending">Escanear trabajadores</span>
+  <div class="ac-t-step">
+    <div class="ac-t-num ac-t-num-pending">2</div>
+    <span class="ac-t-label ac-t-label-pending">Escanear trabajadores</span>
   </div>
-  <div class="ni-t-step">
-    <div class="ni-t-num pending">3</div>
-    <span class="ni-t-label pending">Confirmar e iniciar</span>
+  <div class="ac-t-step">
+    <div class="ac-t-num ac-t-num-pending">3</div>
+    <span class="ac-t-label ac-t-label-pending">Confirmar e iniciar</span>
   </div>
 </div>
 
 <div style="padding:24px; max-width:600px;">
   <div style="margin-bottom:20px;">
-    <h1 class="ni-page-title">Nueva asignacion</h1>
-    <p style="font-size:13px; color:var(--ni-text-sub); margin-top:4px;">{{ site.name }}</p>
+    <h1 class="ac-page-title">Nueva asignacion</h1>
+    <p style="font-size:13px; color:var(--ac-text-sub); margin-top:4px;">{{ site.name }}</p>
   </div>
 
   {% if preloaded_name %}
-    <div class="ni-alert ni-alert-info" style="margin-bottom:20px;">
+    <div class="ac-alert ac-alert-info" style="margin-bottom:20px;">
       <i class="ti ti-user-check" aria-hidden="true"></i>
       <div>
-        <div style="font-weight:500; margin-bottom:2px;">Trabajador pre-cargado</div>
+        <div style="font-weight:600; margin-bottom:2px;">Trabajador pre-cargado</div>
         <div style="font-size:12px;">
           <strong>{{ preloaded_name }}</strong> se agregara automaticamente al grupo en el paso 2.
           Selecciona la etapa y partida para continuar.
@@ -40,9 +40,9 @@
   <form method="post">
     {% csrf_token %}
 
-    <div class="ni-field">
-      <label class="ni-label" for="stage_id">Etapa</label>
-      <select class="ni-select" name="stage_id" id="stage_id" required onchange="filterTasks()">
+    <div class="ac-field">
+      <label class="ac-label" for="stage_id">Etapa</label>
+      <select class="ac-select" name="stage_id" id="stage_id" required onchange="filterTasks()">
         <option value="">Selecciona una etapa...</option>
         {% for grupo in etapas %}
           <option value="{{ grupo.stage.id }}">{{ grupo.stage.name }}</option>
@@ -50,14 +50,14 @@
       </select>
     </div>
 
-    <div class="ni-field" id="task-search-container" style="display:none;">
-      <label class="ni-label" for="task-search">Buscar partida</label>
-      <input type="text" id="task-search" class="ni-input" placeholder="Escribe para filtrar... ej: yeso, tabique, hormigon">
+    <div class="ac-field" id="task-search-container" style="display:none;">
+      <label class="ac-label" for="task-search">Buscar partida</label>
+      <input type="text" id="task-search" class="ac-input" placeholder="Escribe para filtrar... ej: yeso, tabique, hormigon">
     </div>
 
-    <div class="ni-field">
-      <label class="ni-label" for="task_id">Partida</label>
-      <select class="ni-select" name="task_id" id="task_id" required disabled>
+    <div class="ac-field">
+      <label class="ac-label" for="task_id">Partida</label>
+      <select class="ac-select" name="task_id" id="task_id" required disabled>
         <option value="">Primero selecciona una etapa...</option>
         {% for grupo in etapas %}
           {% for task in grupo.tasks %}
@@ -70,17 +70,17 @@
     </div>
 
     <div id="risk-info" style="display:none; margin-bottom:20px;">
-      <div class="ni-alert ni-alert-warn" id="risk-high" style="display:none;">
+      <div class="ac-alert ac-alert-warn" id="risk-high" style="display:none;">
         <i class="ti ti-alert-triangle" aria-hidden="true"></i>
         <span>Esta partida es de <strong>alto riesgo</strong>. Se enviara una alerta al iniciar.</span>
       </div>
-      <div class="ni-alert ni-alert-info" id="risk-normal" style="display:none;">
+      <div class="ac-alert ac-alert-info" id="risk-normal" style="display:none;">
         <i class="ti ti-info-circle" aria-hidden="true"></i>
         <span>Riesgo <strong>normal</strong>.</span>
       </div>
     </div>
 
-    <button type="submit" class="ni-btn ni-btn-primary">
+    <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
       <i class="ti ti-arrow-right" aria-hidden="true"></i>
       {% if preloaded_name %}
         Continuar con {{ preloaded_name }}

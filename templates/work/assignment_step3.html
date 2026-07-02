@@ -4,83 +4,53 @@
 
 {% block extra_css %}
 <style>
-  /* Modal alto riesgo */
-  .risk-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 1000;
-    align-items: flex-end;
-    justify-content: center;
-  }
-  .risk-overlay.visible { display: flex; }
-
-  .risk-sheet {
-    background: var(--ni-white);
-    border-radius: 16px 16px 0 0;
-    width: 100%; max-width: 520px;
-    animation: slideUp 0.2s ease;
-    overflow: hidden;
-  }
-  @media (min-width: 600px) {
-    .risk-overlay { align-items: center; padding: 16px; }
-    .risk-sheet   { border-radius: var(--radius-lg); }
-  }
-  @keyframes slideUp {
-    from { transform: translateY(40px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
-
   .risk-header {
-    background: #c0392b;
+    background: var(--ac-danger);
     padding: 16px 20px;
     display: flex; align-items: center; gap: 12px;
   }
   .risk-header i   { font-size: 24px; color: #fff; flex-shrink: 0; }
-  .risk-header-title { font-size: 16px; font-weight: 600; color: #fff; }
+  .risk-header-title { font-size: 16px; font-weight: 700; color: #fff; }
   .risk-header-sub   { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px; }
 
-  .risk-body { padding: 16px 20px; }
   .risk-body-msg {
-    font-size: 13px; color: var(--ni-text); line-height: 1.6;
+    font-size: 13px; color: var(--ac-text); line-height: 1.6;
     margin-bottom: 14px;
   }
 
   .risk-worker-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
   .risk-worker-item {
     display: flex; align-items: center; gap: 10px;
-    background: #fce8e8; border: 0.5px solid #f0b0b0;
+    background: var(--ac-danger-bg); border: 1px solid var(--ac-danger-bdr);
     border-radius: var(--radius); padding: 9px 12px;
   }
   .risk-worker-avatar {
     width: 30px; height: 30px; border-radius: 50%;
-    background: #c0392b; color: #fff;
+    background: var(--ac-danger); color: #fff;
     display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 600; flex-shrink: 0;
+    font-size: 10px; font-weight: 700; flex-shrink: 0;
   }
-  .risk-worker-name  { font-size: 13px; font-weight: 500; }
-  .risk-worker-task  { font-size: 11px; color: #c0392b; font-family: var(--font-mono); }
+  .risk-worker-name  { font-size: 13px; font-weight: 600; }
+  .risk-worker-task  { font-size: 11px; color: var(--ac-danger); font-family: var(--font-mono); }
 
   .risk-checkbox-row {
     display: flex; align-items: flex-start; gap: 10px;
-    background: #fff8f8; border: 0.5px solid #f0b0b0;
+    background: var(--ac-danger-bg); border: 1px solid var(--ac-danger-bdr);
     border-radius: var(--radius); padding: 12px;
     cursor: pointer;
   }
   .risk-checkbox-row input[type="checkbox"] {
     width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px;
-    accent-color: #c0392b; cursor: pointer;
+    accent-color: var(--ac-danger); cursor: pointer;
   }
   .risk-checkbox-label {
-    font-size: 13px; color: var(--ni-text); line-height: 1.5;
+    font-size: 13px; color: var(--ac-text); line-height: 1.5;
     cursor: pointer;
   }
 
-  .risk-footer { padding: 12px 20px; border-top: 0.5px solid var(--ni-border); display: flex; gap: 8px; }
-
   .btn-risk-confirm {
     flex: 1; height: 44px; border: none; border-radius: var(--radius);
-    background: #c0392b; color: #fff;
+    background: var(--ac-danger); color: #fff;
     font-family: var(--font-brand); font-weight: 700; font-size: 14px;
     cursor: pointer; opacity: 0.4; pointer-events: none;
     transition: opacity 0.15s;
@@ -88,39 +58,32 @@
   }
   .btn-risk-confirm.enabled { opacity: 1; pointer-events: auto; }
   .btn-risk-confirm.enabled:hover { opacity: 0.88; }
-
-  .btn-risk-cancel {
-    height: 44px; border: 1.5px solid var(--ni-border); border-radius: var(--radius);
-    background: var(--ni-white); color: var(--ni-dark);
-    font-family: var(--font-main); font-weight: 500; font-size: 14px;
-    cursor: pointer; padding: 0 16px;
-  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ni-timeline">
-  <div class="ni-t-step done">
-    <div class="ni-t-num done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
-    <span class="ni-t-label done">Partida seleccionada</span>
+<div class="ac-timeline">
+  <div class="ac-t-step ac-t-step-done">
+    <div class="ac-t-num ac-t-num-done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
+    <span class="ac-t-label ac-t-label-done">Partida seleccionada</span>
   </div>
-  <div class="ni-t-step done">
-    <div class="ni-t-num done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
-    <span class="ni-t-label done">Trabajadores escaneados</span>
+  <div class="ac-t-step ac-t-step-done">
+    <div class="ac-t-num ac-t-num-done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
+    <span class="ac-t-label ac-t-label-done">Trabajadores escaneados</span>
   </div>
-  <div class="ni-t-step active">
-    <div class="ni-t-num active">3</div>
-    <span class="ni-t-label active">Confirmar e iniciar</span>
+  <div class="ac-t-step ac-t-step-active">
+    <div class="ac-t-num ac-t-num-active">3</div>
+    <span class="ac-t-label ac-t-label-active">Confirmar e iniciar</span>
   </div>
 </div>
 
 <div style="padding:24px; max-width:520px;">
 
   {% if workers_with_session %}
-    <div class="ni-alert ni-alert-warn" style="margin-bottom:16px;">
+    <div class="ac-alert ac-alert-warn" style="margin-bottom:16px;">
       <i class="ti ti-alert-triangle" style="flex-shrink:0;" aria-hidden="true"></i>
       <div>
-        <div style="font-weight:500; margin-bottom:6px;">
+        <div style="font-weight:600; margin-bottom:6px;">
           {{ workers_with_session|length }} trabajador{% if workers_with_session|length != 1 %}es{% endif %} con sesion abierta
         </div>
         {% for item in workers_with_session %}
@@ -139,10 +102,10 @@
   {% endif %}
 
   {% if no_on_site_workers %}
-    <div class="ni-alert ni-alert-warn" style="margin-bottom:16px;">
+    <div class="ac-alert ac-alert-warn" style="margin-bottom:16px;">
       <i class="ti ti-circle-minus" style="flex-shrink:0;" aria-hidden="true"></i>
       <div>
-        <div style="font-weight:500; margin-bottom:4px;">Trabajadores con marca No en obra</div>
+        <div style="font-weight:600; margin-bottom:4px;">Trabajadores con marca No en obra</div>
         {% for item in no_on_site_workers %}
           <div style="font-size:12px;">{{ item.worker.display_name }} — {{ item.reason }}</div>
         {% endfor %}
@@ -152,76 +115,76 @@
   {% endif %}
 
   <!-- RESUMEN -->
-  <div class="ni-card" style="margin-bottom:16px;">
-    <div class="ni-card-header">
-      <span class="ni-card-title">Resumen</span>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Resumen</span>
       {% if has_high_risk %}
-        <span class="ni-badge" style="background:#fce8e8; color:#c0392b;">
+        <span class="ac-badge ac-badge-red">
           <i class="ti ti-alert-triangle" style="font-size:10px; margin-right:3px;" aria-hidden="true"></i>
           Alto riesgo
         </span>
       {% endif %}
     </div>
     <div style="padding:0;">
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
-        <span style="font-size:13px; color:var(--ni-text-sub);">Etapa</span>
-        <span style="font-size:13px; font-weight:500;">{{ stage.name }}</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:1px solid var(--ac-border);">
+        <span style="font-size:13px; color:var(--ac-text-sub);">Etapa</span>
+        <span style="font-size:13px; font-weight:600;">{{ stage.name }}</span>
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
-        <span style="font-size:13px; color:var(--ni-text-sub);">Partida</span>
-        <span style="font-size:13px; font-weight:500;">{{ task.task.name }}</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:1px solid var(--ac-border);">
+        <span style="font-size:13px; color:var(--ac-text-sub);">Partida</span>
+        <span style="font-size:13px; font-weight:600;">{{ task.task.name }}</span>
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
-        <span style="font-size:13px; color:var(--ni-text-sub);">Riesgo</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:1px solid var(--ac-border);">
+        <span style="font-size:13px; color:var(--ac-text-sub);">Riesgo</span>
         {% if task.task.risk_level == 'HIGH_RISK' %}
-          <span class="ni-badge" style="background:#fce8e8; color:#c0392b;">Alto riesgo</span>
+          <span class="ac-badge ac-badge-red">Alto riesgo</span>
         {% else %}
-          <span class="ni-badge ni-badge-green">Normal</span>
+          <span class="ac-badge ac-badge-green">Normal</span>
         {% endif %}
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:0.5px solid #f5f5f5;">
-        <span style="font-size:13px; color:var(--ni-text-sub);">Trabajadores</span>
-        <span style="font-size:13px; font-weight:500;">{{ workers|length }} persona{% if workers|length != 1 %}s{% endif %}</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:1px solid var(--ac-border);">
+        <span style="font-size:13px; color:var(--ac-text-sub);">Trabajadores</span>
+        <span style="font-size:13px; font-weight:600;">{{ workers|length }} persona{% if workers|length != 1 %}s{% endif %}</span>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px;">
-        <span style="font-size:13px; color:var(--ni-text-sub);">Hora de inicio</span>
-        <span style="font-size:13px; font-weight:500; font-family:var(--font-mono);">{{ now|time:"H:i" }}</span>
+        <span style="font-size:13px; color:var(--ac-text-sub);">Hora de inicio</span>
+        <span style="font-size:13px; font-weight:600; font-family:var(--font-mono);">{{ now|time:"H:i" }}</span>
       </div>
     </div>
   </div>
 
   <!-- LISTA TRABAJADORES -->
-  <div class="ni-card" style="margin-bottom:20px;">
-    <div class="ni-card-header">
-      <span class="ni-card-title">Trabajadores</span>
+  <div class="ac-card" style="margin-bottom:20px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Trabajadores</span>
     </div>
     <div style="padding:12px; display:flex; flex-direction:column; gap:6px;">
       {% for worker in workers %}
         {% comment %}Chip advertencia si tiene sesion abierta{% endcomment %}
         {% for item in workers_with_session %}
           {% if item.worker.id == worker.id %}
-            <div style="display:flex; align-items:center; gap:9px; border:0.5px solid var(--ni-warn-bdr); border-radius:var(--radius); padding:8px 10px; background:var(--ni-warn-bg);">
-              <div style="width:30px; height:30px; border-radius:50%; background:#fef3e2; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:var(--ni-warn); flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:9px; border:1px solid var(--ac-warn-bdr); border-radius:var(--radius); padding:8px 10px; background:var(--ac-warn-bg);">
+              <div style="width:30px; height:30px; border-radius:50%; background:var(--ac-warn-bg); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--ac-warn-text); flex-shrink:0;">
                 {{ worker.display_name|slice:":1" }}
               </div>
               <div style="flex:1; min-width:0;">
-                <p style="font-size:12px; font-weight:500;">{{ worker.display_name }}</p>
-                <p style="font-family:var(--font-mono); font-size:10px; color:var(--ni-warn);">
+                <p style="font-size:12px; font-weight:600;">{{ worker.display_name }}</p>
+                <p style="font-family:var(--font-mono); font-size:10px; color:var(--ac-warn-text);">
                   {{ worker.job_title.name|default:"Sin cargo" }} · Sesion activa se cerrara
                 </p>
               </div>
-              <i class="ti ti-arrow-right" style="font-size:12px; color:var(--ni-warn);" aria-hidden="true"></i>
+              <i class="ti ti-arrow-right" style="font-size:12px; color:var(--ac-warn-text);" aria-hidden="true"></i>
             </div>
           {% endif %}
         {% endfor %}
 
-        <div style="display:flex; align-items:center; gap:9px; border:0.5px solid var(--ni-border); border-radius:var(--radius); padding:8px 10px; background:#fafafa;">
-          <div style="width:30px; height:30px; border-radius:50%; background:var(--ni-blue-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:var(--ni-blue); flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:9px; border:1px solid var(--ac-border); border-radius:var(--radius); padding:8px 10px; background:var(--ac-surface);">
+          <div style="width:30px; height:30px; border-radius:50%; background:var(--ac-blue-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--ac-blue); flex-shrink:0;">
             {{ worker.display_name|slice:":1" }}
           </div>
           <div>
-            <p style="font-size:12px; font-weight:500;">{{ worker.display_name }}</p>
-            <p style="font-family:var(--font-mono); font-size:10px; color:var(--ni-text-sub);">{{ worker.job_title.name|default:"Sin cargo" }}</p>
+            <p style="font-size:12px; font-weight:600;">{{ worker.display_name }}</p>
+            <p style="font-family:var(--font-mono); font-size:10px; color:var(--ac-text-sub);">{{ worker.job_title.name|default:"Sin cargo" }}</p>
           </div>
         </div>
       {% endfor %}
@@ -234,9 +197,9 @@
       type="{% if has_high_risk %}button{% else %}submit{% endif %}"
       name="start"
       id="btn-start"
-      class="ni-btn ni-btn-primary"
+      class="ac-btn ac-btn-primary ac-btn-full"
       {% if has_high_risk %}onclick="openRiskModal()"{% endif %}
-      style="{% if has_high_risk %}background:#c0392b;{% endif %}"
+      style="{% if has_high_risk %}background:var(--ac-danger);{% endif %}"
     >
       <i class="ti ti-player-play" aria-hidden="true"></i>
       {% if workers_with_session %}
@@ -245,7 +208,7 @@
         Confirmar e iniciar {{ workers|length }} sesion{% if workers|length != 1 %}es{% endif %}
       {% endif %}
     </button>
-    <a href="{% url 'work:assignment_scan' %}" class="ni-btn ni-btn-secondary" style="margin-top:10px; text-align:center; display:block;">
+    <a href="{% url 'work:assignment_scan' %}" class="ac-btn ac-btn-secondary ac-btn-full" style="margin-top:10px; text-align:center; display:block;">
       <i class="ti ti-arrow-left" aria-hidden="true"></i>
       Volver a editar grupo
     </a>
@@ -257,8 +220,8 @@
 <!-- MODAL ALTO RIESGO -->
 <!-- ═══════════════════════════════════════ -->
 {% if has_high_risk %}
-<div class="risk-overlay" id="risk-overlay">
-  <div class="risk-sheet">
+<div class="ac-overlay" id="risk-overlay">
+  <div class="ac-sheet" style="max-width:520px;">
 
     <div class="risk-header">
       <i class="ti ti-alert-triangle" aria-hidden="true"></i>
@@ -268,7 +231,7 @@
       </div>
     </div>
 
-    <div class="risk-body">
+    <div class="ac-sheet-body">
       <p class="risk-body-msg">
         La partida <strong>{{ task.task.name }}</strong> esta clasificada como
         <strong>alto riesgo</strong>. Los siguientes trabajadores quedarán
@@ -303,8 +266,8 @@
       </label>
     </div>
 
-    <div class="risk-footer">
-      <button class="btn-risk-cancel" onclick="closeRiskModal()">Cancelar</button>
+    <div class="ac-sheet-footer">
+      <button class="ac-sheet-cancel" onclick="closeRiskModal()">Cancelar</button>
       <button
         class="btn-risk-confirm"
         id="btn-risk-confirm"

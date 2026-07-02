@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.db import transaction
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.utils.crypto import get_random_string
 
 from .models import (
     Company, CompanyConfig, CompanyMembership,
@@ -46,6 +47,8 @@ def require_novus_super(view_func):
 
 def _check_company_access(request, company):
     """Verifica que el prestador tenga membresía en esta empresa."""
+    if is_novus_super(request.user):
+        return True
     return CompanyMembership.objects.filter(
         user=request.user,
         company=company,
@@ -79,10 +82,14 @@ def _site_module_flags(config=None):
 
 @require_provider
 def provider_panel(request):
-    companies = Company.objects.filter(
-        memberships__user=request.user,
-        memberships__is_active=True,
-    ).exclude(status='ARCHIVED').order_by('name')
+    # novus_super ve todas las empresas; el resto solo las suyas via membresia.
+    if is_novus_super(request.user):
+        companies = Company.objects.exclude(status='ARCHIVED').order_by('name')
+    else:
+        companies = Company.objects.filter(
+            memberships__user=request.user,
+            memberships__is_active=True,
+        ).exclude(status='ARCHIVED').order_by('name')
 
     company_id = request.GET.get('company')
     selected_company = None
@@ -196,6 +203,9 @@ def _handle_company_save(request, company):
 
     with transaction.atomic():
         if company is None:
+            # NOTA: al crear, companies.signals.grant_novus_super_access_on_company_create
+            # otorga CompanyMembership automaticamente a todos los User.is_novus_super=True
+            # (incluyendo a request.user si corresponde). No es necesario hacerlo aqui.
             company = Company.objects.create(
                 name=name, code=code, status=status,
                 tax_id=tax_id or None,
@@ -220,11 +230,14 @@ def _handle_company_save(request, company):
         config.allow_assistance   = allow_assistance
         config.save()
 
-        CompanyMembership.objects.get_or_create(
-            user=request.user,
-            company=company,
-            defaults={'membership_type': 'PROVIDER', 'is_active': True}
-        )
+        # Si quien crea la empresa NO es novus_super, igual necesita su propio
+        # acceso (la señal solo cubre a los novus_super existentes).
+        if not is_novus_super(request.user):
+            CompanyMembership.objects.get_or_create(
+                user=request.user,
+                company=company,
+                defaults={'membership_type': 'PROVIDER', 'is_active': True}
+            )
 
     messages.success(request, f'Empresa "{company.name}" guardada.')
     return redirect(f'/prestador/?company={company.id}')
@@ -338,6 +351,9 @@ def _handle_site_save(request, company, site):
 
     with transaction.atomic():
         if site is None:
+            # NOTA: al crear, companies.signals.grant_novus_super_access_on_site_create
+            # otorga SiteMembership (rol novus_super) automaticamente a todos los
+            # User.is_novus_super=True. Ya no se otorga manualmente aqui.
             site = Site.objects.create(
                 company=company,
                 name=name, code=code, status=status,
@@ -362,17 +378,20 @@ def _handle_site_save(request, company, site):
         config.enable_no_on_site_tracking = enable_no_on_site
         config.save()
 
-        novus_role = Role.objects.filter(code='novus_super').first()
-        if novus_role:
-            SiteMembership.objects.get_or_create(
-                user=request.user,
-                site=site,
-                defaults={
-                    'role':        novus_role,
-                    'is_active':   True,
-                    'can_operate': True,
-                }
-            )
+        # Si quien crea la obra NO es novus_super, igual necesita su propio
+        # acceso operativo (la señal solo cubre a los novus_super existentes).
+        if site.pk and not is_novus_super(request.user):
+            novus_role = Role.objects.filter(code='novus_super').first()
+            if novus_role:
+                SiteMembership.objects.get_or_create(
+                    user=request.user,
+                    site=site,
+                    defaults={
+                        'role':        novus_role,
+                        'is_active':   True,
+                        'can_operate': True,
+                    }
+                )
 
     messages.success(request, f'Obra "{site.name}" guardada.')
     return redirect(f'/prestador/?company={company.id}')
@@ -519,7 +538,7 @@ def role_list(request):
 
 @require_novus_super
 def role_permissions(request, role_id):
-    """Editar permisos de un rol base."""
+    """Editar permisos de un rol base. Roles protegidos (is_protected=True) son de solo lectura."""
     role = get_object_or_404(Role, id=role_id, scope_type='GLOBAL_BASE')
 
     all_permissions = Permission.objects.filter(is_active=True).order_by('module', 'name')
@@ -531,6 +550,9 @@ def role_permissions(request, role_id):
     )
 
     if request.method == 'POST':
+        if role.is_protected:
+            messages.error(request, f'"{role.name}" es un rol protegido del sistema y no puede modificarse.')
+            return redirect('provider:role_permissions', role_id=role.id)
         return _handle_role_permissions_save(request, role, all_permissions)
 
     perms_data = []
@@ -548,6 +570,11 @@ def role_permissions(request, role_id):
 
 
 def _handle_role_permissions_save(request, role, all_permissions):
+    # Defensa adicional por si se llega aqui sin pasar por la verificacion de la vista.
+    if role.is_protected:
+        messages.error(request, f'"{role.name}" es un rol protegido del sistema y no puede modificarse.')
+        return redirect('provider:role_permissions', role_id=role.id)
+
     with transaction.atomic():
         for perm in all_permissions:
             checked = request.POST.get(f'perm_{perm.code}') == 'on'
@@ -559,3 +586,173 @@ def _handle_role_permissions_save(request, role, all_permissions):
 
     messages.success(request, f'Permisos de "{role.name}" actualizados.')
     return redirect('provider:role_permissions', role_id=role.id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GERENCIA — alta de usuario con acceso a multiples obras de una empresa
+# Solo Novus puede otorgar el rol gerencia (ver core.permissions.
+# ROLES_GRANTABLE_ONLY_BY_NOVUS). Pantalla separada del flujo de MOI porque
+# Gerencia no vive "dentro" de una obra activa — puede abarcar varias obras
+# de una misma empresa de una sola vez.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_provider
+def gerencia_create(request):
+    """
+    Crea un usuario nuevo con rol Gerencia y le otorga SiteMembership en
+    una o mas obras seleccionadas de una empresa.
+
+    Accesible para cualquier usuario PROVIDER (no solo novus_super) — los
+    prestadores normales son quienes habitualmente crean las empresas/obras
+    que asesoran, y deben poder dar de alta a Gerencia sin depender de un
+    novus_super. El alcance de empresas se limita a las que el usuario
+    actual ya administra (mismo criterio que provider_panel), salvo que sea
+    novus_super, que ve todas.
+
+    Si el usuario (por email) ya tiene membresia activa en alguna de las
+    obras seleccionadas, esa obra especifica se omite y se informa al
+    final — no bloquea la creacion para el resto de las obras.
+    """
+    if is_novus_super(request.user):
+        companies = Company.objects.exclude(status='ARCHIVED').order_by('name')
+    else:
+        companies = Company.objects.filter(
+            memberships__user=request.user,
+            memberships__is_active=True,
+        ).exclude(status='ARCHIVED').order_by('name')
+
+    if request.method == 'POST':
+        return _handle_gerencia_create(request, companies)
+
+    return render(request, 'companies/gerencia_create.html', {
+        'companies':  companies,
+        'page_title': 'Nuevo usuario de Gerencia',
+    })
+
+
+def _handle_gerencia_create(request, companies):
+    from access.models import UserPreference
+
+    company_id = request.POST.get('company_id', '')
+    site_ids    = request.POST.getlist('site_ids')
+    first_name  = request.POST.get('first_name', '').strip()
+    last_name   = request.POST.get('last_name', '').strip()
+    email       = request.POST.get('email', '').strip().lower()
+    rut         = request.POST.get('rut', '').strip()
+    notes       = request.POST.get('notes', '').strip()
+
+    errors = {}
+    if not company_id:
+        errors['company_id'] = 'Selecciona una empresa.'
+    if not site_ids:
+        errors['site_ids'] = 'Selecciona al menos una obra.'
+    if not first_name:
+        errors['first_name'] = 'El nombre es obligatorio.'
+    if not last_name:
+        errors['last_name'] = 'El apellido es obligatorio.'
+    if not email:
+        errors['email'] = 'El correo es obligatorio.'
+
+    company = companies.filter(id=company_id).first() if company_id else None
+    if company_id and not company:
+        errors['company_id'] = 'Empresa invalida o sin acceso.'
+
+    sites = Site.objects.filter(id__in=site_ids, company=company) if company else Site.objects.none()
+    if site_ids and company and sites.count() != len(set(site_ids)):
+        errors['site_ids'] = 'Una o mas obras seleccionadas no pertenecen a esta empresa.'
+
+    if rut:
+        from access.views_moi import _normalize_rut  # reutiliza el normalizador existente
+        rut = _normalize_rut(rut)
+
+    if errors:
+        return render(request, 'companies/gerencia_create.html', {
+            'companies':          companies,
+            'errors':             errors,
+            'post_data':          request.POST,
+            'selected_site_ids':  site_ids,
+            'page_title':         'Nuevo usuario de Gerencia',
+        })
+
+    gerencia_role = Role.objects.filter(code='gerencia', is_active=True).first()
+    if not gerencia_role:
+        messages.error(request, 'El rol "gerencia" no esta configurado en el sistema. Corre seed_roles primero.')
+        return redirect('provider:gerencia_create')
+
+    omitted_sites = []
+
+    with transaction.atomic():
+        existing_user = User.objects.filter(email=email).first()
+
+        if existing_user:
+            user = existing_user
+            updated = False
+            if not user.first_name and first_name:
+                user.first_name = first_name; updated = True
+            if not user.last_name and last_name:
+                user.last_name = last_name; updated = True
+            if not user.rut and rut:
+                user.rut = rut; updated = True
+            if updated:
+                user.save()
+        else:
+            user = User.objects.create_user(
+                email=email,
+                password=get_random_string(32),
+                first_name=first_name,
+                last_name=last_name,
+                rut=rut or None,
+                actor_type='CLIENT',
+                is_active=True,
+            )
+
+        CompanyMembership.objects.get_or_create(
+            user=user,
+            company=company,
+            defaults={'membership_type': 'CLIENT_COMPANY', 'is_active': True}
+        )
+
+        for site in sites:
+            already = SiteMembership.objects.filter(user=user, site=site).first()
+            if already and already.is_active:
+                omitted_sites.append(site.name)
+                continue
+
+            if already:
+                # Existe pero inactiva -> reactivar con rol gerencia
+                already.role        = gerencia_role
+                already.is_active   = True
+                already.ended_at    = None
+                already.notes       = notes or None
+                already.granted_by  = request.user
+                already.save()
+            else:
+                SiteMembership.objects.create(
+                    user=user,
+                    site=site,
+                    role=gerencia_role,
+                    is_active=True,
+                    can_operate=True,
+                    notes=notes or None,
+                    granted_by=request.user,
+                )
+
+        UserPreference.objects.get_or_create(
+            user=user,
+            defaults={'last_site': sites.first(), 'last_company': company}
+        )
+
+    granted_count = sites.count() - len(omitted_sites)
+    if granted_count > 0:
+        messages.success(
+            request,
+            f'{user.get_full_name()} agregado como Gerencia en {granted_count} obra(s) de {company.name}.'
+        )
+    if omitted_sites:
+        messages.warning(
+            request,
+            f'Se omitieron estas obras porque el usuario ya tenia acceso activo: {", ".join(omitted_sites)}.'
+        )
+
+    return redirect(f'/prestador/?company={company.id}&tab=usuarios')
+

@@ -2,10 +2,10 @@
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">{{ company.name }}</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">{{ company.name }}</p>
   </div>
 </div>
 
@@ -13,31 +13,31 @@
   <form method="post">
     {% csrf_token %}
 
-    <div class="ni-card" style="margin-bottom:16px;">
-      <div class="ni-card-header"><span class="ni-card-title">Datos de la obra</span></div>
-      <div class="ni-card-body">
+    <div class="ac-card" style="margin-bottom:16px;">
+      <div class="ac-card-header"><span class="ac-card-title">Datos de la obra</span></div>
+      <div class="ac-card-body">
 
-        <div class="ni-field">
-          <label class="ni-label">Nombre</label>
-          <input class="ni-input {% if errors.name %}error{% endif %}"
+        <div class="ac-field">
+          <label class="ac-label">Nombre</label>
+          <input class="ac-input {% if errors.name %}error{% endif %}"
                  type="text" name="name"
                  value="{% if post_data %}{{ post_data.name }}{% elif site %}{{ site.name }}{% endif %}"
                  placeholder="Ej: Edificio Las Condes" required>
-          {% if errors.name %}<div style="font-size:11px;color:#c0392b;margin-top:4px;">{{ errors.name }}</div>{% endif %}
+          {% if errors.name %}<div class="ac-field-error">{{ errors.name }}</div>{% endif %}
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-          <div class="ni-field" style="margin-bottom:0;">
-            <label class="ni-label">Código</label>
-            <input class="ni-input {% if errors.code %}error{% endif %}"
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Código</label>
+            <input class="ac-input {% if errors.code %}error{% endif %}"
                    type="text" name="code"
                    value="{% if post_data %}{{ post_data.code }}{% elif site %}{{ site.code }}{% endif %}"
                    placeholder="Ej: P001" style="text-transform:uppercase;" required>
-            {% if errors.code %}<div style="font-size:11px;color:#c0392b;margin-top:4px;">{{ errors.code }}</div>{% endif %}
+            {% if errors.code %}<div class="ac-field-error">{{ errors.code }}</div>{% endif %}
           </div>
-          <div class="ni-field" style="margin-bottom:0;">
-            <label class="ni-label">Estado</label>
-            <select class="ni-select" name="status">
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Estado</label>
+            <select class="ac-select" name="status">
               <option value="PLANNED" {% if site and site.status == 'PLANNED' %}selected{% elif not site %}selected{% endif %}>Planificada</option>
               <option value="ACTIVE"  {% if site and site.status == 'ACTIVE' %}selected{% endif %}>Activa</option>
               <option value="PAUSED"  {% if site and site.status == 'PAUSED' %}selected{% endif %}>Pausada</option>
@@ -46,22 +46,22 @@
           </div>
         </div>
 
-        <div class="ni-field" style="margin-top:14px;">
-          <label class="ni-label">Dirección</label>
-          <input class="ni-input" type="text" name="address"
+        <div class="ac-field" style="margin-top:14px;">
+          <label class="ac-label">Dirección</label>
+          <input class="ac-input" type="text" name="address"
                  value="{% if post_data %}{{ post_data.address }}{% elif site %}{{ site.address|default:'' }}{% endif %}"
                  placeholder="Av. Apoquindo 1234, Las Condes">
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-          <div class="ni-field" style="margin-bottom:0;">
-            <label class="ni-label">Fecha inicio</label>
-            <input class="ni-input" type="date" name="start_date"
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Fecha inicio</label>
+            <input class="ac-input" type="date" name="start_date"
                    value="{% if post_data %}{{ post_data.start_date }}{% elif site %}{{ site.start_date|default:'' }}{% endif %}">
           </div>
-          <div class="ni-field" style="margin-bottom:0;">
-            <label class="ni-label">Fecha término estimada</label>
-            <input class="ni-input" type="date" name="end_date"
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Fecha término estimada</label>
+            <input class="ac-input" type="date" name="end_date"
                    value="{% if post_data %}{{ post_data.end_date }}{% elif site %}{{ site.end_date|default:'' }}{% endif %}">
           </div>
         </div>
@@ -69,16 +69,16 @@
       </div>
     </div>
 
-    <div class="ni-card" style="margin-bottom:20px;">
-      <div class="ni-card-header"><span class="ni-card-title">Módulos habilitados en esta obra</span></div>
-      <div class="ni-card-body">
+    <div class="ac-card" style="margin-bottom:20px;">
+      <div class="ac-card-header"><span class="ac-card-title">Módulos habilitados en esta obra</span></div>
+      <div class="ac-card-body">
 
         {% for field_name, label, is_checked in site_flags %}
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:0.5px solid var(--ni-border);">
-          <span style="font-size:13px; color:var(--ni-text);">{{ label }}</span>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ac-border);">
+          <span style="font-size:13px; color:var(--ac-text);">{{ label }}</span>
           <input type="checkbox" name="{{ field_name }}"
                  {% if is_checked %}checked{% endif %}
-                 style="accent-color:var(--ni-blue); width:16px; height:16px; cursor:pointer;">
+                 style="accent-color:var(--ac-blue); width:16px; height:16px; cursor:pointer;">
         </div>
         {% endfor %}
 
@@ -86,12 +86,12 @@
     </div>
 
     <div style="display:flex; flex-direction:column; gap:10px;">
-      <button type="submit" class="ni-btn ni-btn-primary">
+      <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
         <i class="ti ti-{% if mode == 'create' %}plus{% else %}check{% endif %}" aria-hidden="true"></i>
         {% if mode == 'create' %}Crear obra{% else %}Guardar cambios{% endif %}
       </button>
       <a href="{% url 'provider:panel' %}?company={{ company.id }}"
-         class="ni-btn ni-btn-secondary" style="text-align:center;">Cancelar</a>
+         class="ac-btn ac-btn-secondary ac-btn-full" style="text-align:center;">Cancelar</a>
     </div>
   </form>
 </div>

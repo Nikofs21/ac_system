@@ -3,133 +3,31 @@
 
 {% block extra_css %}
 <style>
-  .dash-wrap { padding: 20px 24px; max-width: 900px; }
+  .ac-dash-wrap { padding: 20px 24px; max-width: 900px; }
 
-  .dash-header {
-    margin-bottom: 20px;
-  }
-  .dash-greeting {
-    font-size: 18px; font-weight: 600; color: var(--ni-dark);
-  }
-  .dash-sub {
-    font-size: 13px; color: var(--ni-text-sub); margin-top: 2px;
-  }
+  .ac-dash-greeting { font-size: 18px; font-weight: 700; color: var(--ac-dark); }
+  .ac-dash-sub { font-size: 13px; color: var(--ac-text-sub); margin-top: 2px; }
+  .ac-dash-header { margin-bottom: 20px; }
 
-  /* ── Stats row ── */
-  .stats-row {
-    display: grid; gap: 12px; margin-bottom: 20px;
-  }
-  .stats-row-3 { grid-template-columns: repeat(3, 1fr); }
-  .stats-row-4 { grid-template-columns: repeat(4, 1fr); }
-  .stats-row-2 { grid-template-columns: repeat(2, 1fr); }
-
-  @media (max-width: 600px) {
-    .stats-row-3, .stats-row-4 { grid-template-columns: 1fr 1fr; }
-    .stats-row-2 { grid-template-columns: 1fr; }
-  }
-
-  .stat-card {
-    background: var(--ni-white); border: 0.5px solid var(--ni-border);
-    border-radius: var(--radius-lg); padding: 16px;
-  }
-  .stat-label {
-    font-size: 11px; color: var(--ni-text-sub);
-    font-family: var(--font-mono); text-transform: uppercase;
-    letter-spacing: 0.05em; margin-bottom: 6px;
-  }
-  .stat-value {
-    font-size: 28px; font-weight: 700; color: var(--ni-dark);
-    font-family: var(--font-mono); line-height: 1;
-  }
-  .stat-value.blue   { color: var(--ni-blue); }
-  .stat-value.green  { color: #2e7d32; }
-  .stat-value.orange { color: #e65100; }
-  .stat-value.red    { color: #c0392b; }
-  .stat-sub {
-    font-size: 12px; color: var(--ni-text-sub); margin-top: 4px;
-  }
-
-  /* ── Sección ── */
-  .dash-section {
-    background: var(--ni-white); border: 0.5px solid var(--ni-border);
-    border-radius: var(--radius-lg); margin-bottom: 16px;
-    overflow: hidden;
-  }
-  .dash-section-hd {
-    padding: 12px 16px; border-bottom: 0.5px solid var(--ni-border);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .dash-section-title {
-    font-size: 12px; font-weight: 500; color: var(--ni-text-sub);
-    font-family: var(--font-mono); text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  /* ── Partida row ── */
-  .partida-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 16px; border-bottom: 0.5px solid var(--ni-border);
-  }
-  .partida-row:last-child { border-bottom: none; }
-  .partida-num {
-    width: 24px; height: 24px; border-radius: 50%;
-    background: var(--ni-blue-soft); color: var(--ni-blue);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; font-family: var(--font-mono);
-    flex-shrink: 0;
-  }
-  .partida-info { flex: 1; min-width: 0; }
-  .partida-name {
-    font-size: 13px; font-weight: 500; color: var(--ni-text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .partida-stage { font-size: 11px; color: var(--ni-text-sub); }
-  .partida-count {
-    font-size: 13px; font-weight: 600; color: var(--ni-blue);
-    font-family: var(--font-mono); flex-shrink: 0;
-  }
-
-  /* ── Worker list ── */
-  .worker-pill {
+  .ac-worker-pill {
     display: inline-flex; align-items: center;
-    background: var(--ni-blue-soft); color: var(--ni-blue);
+    background: var(--ac-blue-soft); color: var(--ac-blue);
     border-radius: 20px; padding: 2px 10px;
     font-size: 11px; margin: 2px;
   }
 
-  /* ── Alerta row ── */
-  .alert-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 16px; border-bottom: 0.5px solid var(--ni-border);
-    font-size: 13px;
-  }
-  .alert-row:last-child { border-bottom: none; }
-  .alert-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .dot-warn   { background: #ff9800; }
-  .dot-danger { background: #c0392b; }
-  .dot-ok     { background: #4caf50; }
-
-  /* ── Delta badge ── */
-  .delta-up   { color: #c0392b; font-size: 11px; }
-  .delta-down { color: #2e7d32; font-size: 11px; }
-  .delta-flat { color: #888;    font-size: 11px; }
-
-  .empty-msg {
-    padding: 20px 16px; font-size: 13px;
-    color: var(--ni-text-sub); text-align: center;
-  }
+  .ac-delta-up   { color: var(--ac-danger);  font-size: 11px; }
+  .ac-delta-down { color: var(--ac-success); font-size: 11px; }
+  .ac-delta-flat { color: var(--ac-text-sub); font-size: 11px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dash-wrap">
+<div class="ac-dash-wrap">
 
-  <div class="dash-header">
-    <div class="dash-greeting">Bienvenido, {{ request.user.first_name }} 👋</div>
-    <div class="dash-sub">{{ site.name }} &nbsp;·&nbsp; {{ today|date:"l j \d\e F" }}</div>
+  <div class="ac-dash-header">
+    <div class="ac-dash-greeting">Bienvenido, {{ request.user.first_name }} 👋</div>
+    <div class="ac-dash-sub">{{ site.name }} &nbsp;·&nbsp; {{ today|date:"l j \d\e F" }}</div>
   </div>
 
   {% if dashboard_type == 'supervisor' %}
@@ -137,66 +35,70 @@
        SUPERVISOR
   ══════════════════════════════════════════════════════════ -->
 
-  <div class="stats-row stats-row-3">
-    <div class="stat-card">
-      <div class="stat-label">Mis activos ahora</div>
-      <div class="stat-value blue">{{ my_open_count }}</div>
-      <div class="stat-sub">sesiones abiertas</div>
+  <div class="ac-stats-grid-3">
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Mis activos ahora</div>
+      <div class="ac-stat-value ac-stat-value-blue">{{ my_open_count }}</div>
+      <div class="ac-stat-sub">sesiones abiertas</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Cerrados hoy</div>
-      <div class="stat-value green">{{ my_closed_today }}</div>
-      <div class="stat-sub">por mí</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Cerrados hoy</div>
+      <div class="ac-stat-value ac-stat-value-green">{{ my_closed_today }}</div>
+      <div class="ac-stat-sub">por mí</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">No en obra hoy</div>
-      <div class="stat-value orange">{{ no_on_site_today }}</div>
-      <div class="stat-sub">en la obra</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">No en obra hoy</div>
+      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
+      <div class="ac-stat-sub">en la obra</div>
     </div>
   </div>
 
   {% if partidas_activas %}
-  <div class="dash-section">
-    <div class="dash-section-hd">
-      <span class="dash-section-title">Mis partidas en curso</span>
-      <span style="font-size:11px; color:var(--ni-text-sub);">{{ my_open_count }} trabajadores</span>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Mis partidas en curso</span>
+      <span style="font-size:11px; color:var(--ac-text-sub);">{{ my_open_count }} trabajadores</span>
     </div>
     {% for p in partidas_activas %}
-    <div style="padding:12px 16px; border-bottom:0.5px solid var(--ni-border);">
+    <div style="padding:12px 16px; border-bottom:1px solid var(--ac-border);">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
         <div>
-          <div style="font-size:13px; font-weight:600; color:var(--ni-dark);">{{ p.task_name }}</div>
-          <div style="font-size:11px; color:var(--ni-text-sub);">{{ p.stage_name }}</div>
+          <div style="font-size:13px; font-weight:600; color:var(--ac-dark);">{{ p.task_name }}</div>
+          <div style="font-size:11px; color:var(--ac-text-sub);">{{ p.stage_name }}</div>
         </div>
-        <span style="font-size:13px; font-weight:600; color:var(--ni-blue); font-family:var(--font-mono);">{{ p.count }} pers.</span>
+        <span style="font-size:13px; font-weight:700; color:var(--ac-blue); font-family:var(--font-mono);">{{ p.count }} pers.</span>
       </div>
       <div>
         {% for w in p.workers %}
-          <span class="worker-pill">{{ w }}</span>
+          <span class="ac-worker-pill">{{ w }}</span>
         {% endfor %}
       </div>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <div class="dash-section">
-    <div class="empty-msg">Sin sesiones activas en este momento.</div>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-empty">
+      <i class="ti ti-clipboard-off" aria-hidden="true"></i>
+      <div class="ac-empty-title">Sin sesiones activas</div>
+      <div class="ac-empty-sub">No tienes trabajadores asignados en este momento.</div>
+    </div>
   </div>
   {% endif %}
 
   {% if sesiones_largas %}
-  <div class="dash-section">
-    <div class="dash-section-hd">
-      <span class="dash-section-title" style="color:#c0392b;">⚠ Sesiones largas (+10 hrs)</span>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title" style="color:var(--ac-danger-text);">⚠ Sesiones largas (+10 hrs)</span>
     </div>
     {% for s in sesiones_largas %}
-    <div class="alert-row">
-      <div class="alert-dot dot-danger"></div>
+    <div class="ac-list-item">
+      <span class="ac-dot ac-dot-red"></span>
       <div style="flex:1;">
-        <span style="font-weight:500;">{{ s.worker }}</span>
-        <span style="color:var(--ni-text-sub);"> · {{ s.task }}</span>
+        <span style="font-weight:600;">{{ s.worker }}</span>
+        <span style="color:var(--ac-text-sub);"> · {{ s.task }}</span>
       </div>
-      <span style="font-family:var(--font-mono); font-size:12px; color:#c0392b;">{{ s.horas }} hrs</span>
+      <span style="font-family:var(--font-mono); font-size:12px; color:var(--ac-danger);">{{ s.horas }} hrs</span>
     </div>
     {% endfor %}
   </div>
@@ -208,68 +110,69 @@
        JEFE DE TERRENO / AAC
   ══════════════════════════════════════════════════════════ -->
 
-  <div class="stats-row stats-row-4">
-    <div class="stat-card">
-      <div class="stat-label">Activos ahora</div>
-      <div class="stat-value blue">{{ open_count }}</div>
-      <div class="stat-sub">sesiones abiertas</div>
+  <div class="ac-stats-grid-4">
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Activos ahora</div>
+      <div class="ac-stat-value ac-stat-value-blue">{{ open_count }}</div>
+      <div class="ac-stat-sub">sesiones abiertas</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Sin asignar</div>
-      <div class="stat-value {% if unassigned_count > 0 %}orange{% else %}green{% endif %}">{{ unassigned_count }}</div>
-      <div class="stat-sub">trabajadores</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Sin asignar</div>
+      <div class="ac-stat-value {% if unassigned_count > 0 %}ac-stat-value-amber{% else %}ac-stat-value-green{% endif %}">{{ unassigned_count }}</div>
+      <div class="ac-stat-sub">trabajadores</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Cerrados hoy</div>
-      <div class="stat-value green">{{ closed_today }}</div>
-      <div class="stat-sub">sesiones</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Cerrados hoy</div>
+      <div class="ac-stat-value ac-stat-value-green">{{ closed_today }}</div>
+      <div class="ac-stat-sub">sesiones</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">No en obra</div>
-      <div class="stat-value orange">{{ no_on_site_today }}</div>
-      <div class="stat-sub">hoy</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">No en obra</div>
+      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
+      <div class="ac-stat-sub">hoy</div>
     </div>
   </div>
 
   {% if top_partidas %}
-  <div class="dash-section">
-    <div class="dash-section-hd">
-      <span class="dash-section-title">Top partidas activas ahora</span>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Top partidas activas ahora</span>
     </div>
     {% for p in top_partidas %}
-    <div class="partida-row">
-      <div class="partida-num">{{ forloop.counter }}</div>
-      <div class="partida-info">
-        <div class="partida-name">{{ p.task_name }}</div>
-        <div class="partida-stage">{{ p.stage_name }}</div>
+    <div class="ac-partida-item">
+      <span class="ac-status-bar ac-status-bar-blue"></span>
+      <div style="flex:1; min-width:0;">
+        <div class="ac-partida-name">{{ forloop.counter }}. {{ p.task_name }}</div>
+        <div class="ac-partida-etapa">{{ p.stage_name }}</div>
       </div>
-      <div class="partida-count">{{ p.count }} pers.</div>
+      <div class="ac-partida-right">
+        <div class="ac-partida-pers">{{ p.count }} pers.</div>
+      </div>
     </div>
     {% endfor %}
   </div>
   {% endif %}
 
   {% if sesiones_largas %}
-  <div class="dash-section">
-    <div class="dash-section-hd">
-      <span class="dash-section-title" style="color:#c0392b;">⚠ Sesiones largas (+10 hrs)</span>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title" style="color:var(--ac-danger-text);">⚠ Sesiones largas (+10 hrs)</span>
     </div>
     {% for s in sesiones_largas %}
-    <div class="alert-row">
-      <div class="alert-dot dot-danger"></div>
+    <div class="ac-list-item">
+      <span class="ac-dot ac-dot-red"></span>
       <div style="flex:1;">
-        <span style="font-weight:500;">{{ s.worker }}</span>
-        <span style="color:var(--ni-text-sub);"> · {{ s.task }}</span>
+        <span style="font-weight:600;">{{ s.worker }}</span>
+        <span style="color:var(--ac-text-sub);"> · {{ s.task }}</span>
       </div>
-      <span style="font-family:var(--font-mono); font-size:12px; color:#c0392b;">{{ s.horas }} hrs</span>
+      <span style="font-family:var(--font-mono); font-size:12px; color:var(--ac-danger);">{{ s.horas }} hrs</span>
     </div>
     {% endfor %}
   </div>
   {% endif %}
 
   <div style="margin-top:8px;">
-    <a href="{% url 'work:session_review' %}" class="ni-btn ni-btn-secondary"
-       style="width:auto; padding:10px 20px; font-size:13px; display:inline-flex;">
+    <a href="{% url 'work:session_review' %}" class="ac-btn ac-btn-secondary">
       <i class="ti ti-clipboard-list" aria-hidden="true"></i>
       Ir a revisión de partidas
     </a>
@@ -281,77 +184,79 @@
        ADMINISTRADOR DE OBRA / PRESTADOR
   ══════════════════════════════════════════════════════════ -->
 
-  <div class="stats-row stats-row-4">
-    <div class="stat-card">
-      <div class="stat-label">Activos ahora</div>
-      <div class="stat-value blue">{{ open_count }}</div>
-      <div class="stat-sub">de {{ assigned_count }} asignados</div>
+  <div class="ac-stats-grid-4">
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Activos ahora</div>
+      <div class="ac-stat-value ac-stat-value-blue">{{ open_count }}</div>
+      <div class="ac-stat-sub">de {{ assigned_count }} asignados</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Sin asignar hoy</div>
-      <div class="stat-value {% if unassigned_count > 0 %}orange{% else %}green{% endif %}">{{ unassigned_count }}</div>
-      <div class="stat-sub">trabajadores</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Sin asignar hoy</div>
+      <div class="ac-stat-value {% if unassigned_count > 0 %}ac-stat-value-amber{% else %}ac-stat-value-green{% endif %}">{{ unassigned_count }}</div>
+      <div class="ac-stat-sub">trabajadores</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">HH esta semana</div>
-      <div class="stat-value blue">{{ hh_this_week }}</div>
-      <div class="stat-sub">
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">HH esta semana</div>
+      <div class="ac-stat-value ac-stat-value-blue">{{ hh_this_week }}</div>
+      <div class="ac-stat-sub">
         {% if hh_delta_pct is not None %}
           {% if hh_delta_pct > 0 %}
-            <span class="delta-up">▲ {{ hh_delta_pct }}% vs sem. ant.</span>
+            <span class="ac-delta-up">▲ {{ hh_delta_pct }}% vs sem. ant.</span>
           {% elif hh_delta_pct < 0 %}
-            <span class="delta-down">▼ {{ hh_delta_pct|slice:"1:" }}% vs sem. ant.</span>
+            <span class="ac-delta-down">▼ {{ hh_delta_pct|slice:"1:" }}% vs sem. ant.</span>
           {% else %}
-            <span class="delta-flat">= igual sem. ant.</span>
+            <span class="ac-delta-flat">= igual sem. ant.</span>
           {% endif %}
         {% else %}
           vs {{ hh_last_week }} sem. ant.
         {% endif %}
       </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">No en obra hoy</div>
-      <div class="stat-value orange">{{ no_on_site_today }}</div>
-      <div class="stat-sub">trabajadores</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">No en obra hoy</div>
+      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
+      <div class="ac-stat-sub">trabajadores</div>
     </div>
   </div>
 
   {% if top_partidas %}
-  <div class="dash-section">
-    <div class="dash-section-hd">
-      <span class="dash-section-title">Top partidas activas ahora</span>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Top partidas activas ahora</span>
     </div>
     {% for p in top_partidas %}
-    <div class="partida-row">
-      <div class="partida-num">{{ forloop.counter }}</div>
-      <div class="partida-info">
-        <div class="partida-name">{{ p.task_name }}</div>
-        <div class="partida-stage">{{ p.stage_name }}</div>
+    <div class="ac-partida-item">
+      <span class="ac-status-bar ac-status-bar-blue"></span>
+      <div style="flex:1; min-width:0;">
+        <div class="ac-partida-name">{{ forloop.counter }}. {{ p.task_name }}</div>
+        <div class="ac-partida-etapa">{{ p.stage_name }}</div>
       </div>
-      <div class="partida-count">{{ p.count }} pers.</div>
+      <div class="ac-partida-right">
+        <div class="ac-partida-pers">{{ p.count }} pers.</div>
+      </div>
     </div>
     {% endfor %}
   </div>
   {% endif %}
 
   {% if partidas_dormidas %}
-  <div class="dash-section">
-    <div class="dash-section-hd">
-      <span class="dash-section-title" style="color:#e65100;">⚠ Partidas sin actividad (+14 días)</span>
-      <span style="font-size:11px; color:var(--ni-text-sub);">con registro histórico</span>
+  <div class="ac-card" style="margin-bottom:16px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title" style="color:var(--ac-warn-text);">⚠ Partidas sin actividad (+14 días)</span>
+      <span style="font-size:11px; color:var(--ac-text-sub);">con registro histórico</span>
     </div>
     {% for p in partidas_dormidas %}
-    <div class="alert-row">
-      <div class="alert-dot dot-warn"></div>
+    <div class="ac-list-item">
+      <span class="ac-dot ac-dot-amber"></span>
       <div style="flex:1; min-width:0;">
-        <div style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+        <div style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
           {{ p.task_name }}
         </div>
-        <div style="font-size:11px; color:var(--ni-text-sub);">
+        <div style="font-size:11px; color:var(--ac-text-sub);">
           Última sesión: {{ p.last_seen|date:"d/m/Y" }}
         </div>
       </div>
-      <span style="font-family:var(--font-mono); font-size:12px; color:#e65100; flex-shrink:0; margin-left:8px;">
+      <span style="font-family:var(--font-mono); font-size:12px; color:var(--ac-warn); flex-shrink:0; margin-left:8px;">
         {{ p.days_ago }} días
       </span>
     </div>
@@ -365,36 +270,36 @@
        GERENCIA
   ══════════════════════════════════════════════════════════ -->
 
-  <div class="stats-row stats-row-2">
-    <div class="stat-card">
-      <div class="stat-label">Asistencia hoy</div>
-      <div class="stat-value blue">{{ pct_asistencia }}%</div>
-      <div class="stat-sub">{{ open_count }} activos de {{ assigned_count }} asignados</div>
+  <div class="ac-stats-grid-2">
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Asistencia hoy</div>
+      <div class="ac-stat-value ac-stat-value-blue">{{ pct_asistencia }}%</div>
+      <div class="ac-stat-sub">{{ open_count }} activos de {{ assigned_count }} asignados</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">No en obra hoy</div>
-      <div class="stat-value orange">{{ no_on_site_today }}</div>
-      <div class="stat-sub">trabajadores</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">No en obra hoy</div>
+      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
+      <div class="ac-stat-sub">trabajadores</div>
     </div>
   </div>
 
-  <div class="stats-row stats-row-2">
-    <div class="stat-card">
-      <div class="stat-label">HH esta semana</div>
-      <div class="stat-value blue">{{ hh_this_week }}</div>
-      <div class="stat-sub">horas registradas</div>
+  <div class="ac-stats-grid-2">
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">HH esta semana</div>
+      <div class="ac-stat-value ac-stat-value-blue">{{ hh_this_week }}</div>
+      <div class="ac-stat-sub">horas registradas</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">HH semana anterior</div>
-      <div class="stat-value" style="color:var(--ni-text-sub);">{{ hh_last_week }}</div>
-      <div class="stat-sub">
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">HH semana anterior</div>
+      <div class="ac-stat-value" style="color:var(--ac-text-sub);">{{ hh_last_week }}</div>
+      <div class="ac-stat-sub">
         {% if hh_delta_pct is not None %}
           {% if hh_delta_pct > 0 %}
-            <span class="delta-up">▲ {{ hh_delta_pct }}% más que sem. ant.</span>
+            <span class="ac-delta-up">▲ {{ hh_delta_pct }}% más que sem. ant.</span>
           {% elif hh_delta_pct < 0 %}
-            <span class="delta-down">▼ {{ hh_delta_pct|slice:"1:" }}% menos que sem. ant.</span>
+            <span class="ac-delta-down">▼ {{ hh_delta_pct|slice:"1:" }}% menos que sem. ant.</span>
           {% else %}
-            <span class="delta-flat">Sin variación</span>
+            <span class="ac-delta-flat">Sin variación</span>
           {% endif %}
         {% endif %}
       </div>
@@ -406,18 +311,18 @@
   <!-- ══════════════════════════════════════════════════════════
        DEFAULT
   ══════════════════════════════════════════════════════════ -->
-  <div class="stats-row stats-row-3">
-    <div class="stat-card">
-      <div class="stat-label">Activos ahora</div>
-      <div class="stat-value blue">{{ open_count }}</div>
+  <div class="ac-stats-grid-3">
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Activos ahora</div>
+      <div class="ac-stat-value ac-stat-value-blue">{{ open_count }}</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Cerrados hoy</div>
-      <div class="stat-value green">{{ closed_today }}</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">Cerrados hoy</div>
+      <div class="ac-stat-value ac-stat-value-green">{{ closed_today }}</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">No en obra</div>
-      <div class="stat-value orange">{{ no_on_site_today }}</div>
+    <div class="ac-stat-card">
+      <div class="ac-stat-label">No en obra</div>
+      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
     </div>
   </div>
   {% endif %}

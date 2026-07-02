@@ -4,20 +4,20 @@
 
 {% block extra_css %}
 <style>
-  .worker-chip { display:flex; align-items:center; gap:9px; border:0.5px solid var(--ni-border); border-radius:var(--radius); padding:9px 10px; background:#fafafa; margin-bottom:6px; }
-  .worker-chip.warn { background:var(--ni-warn-bg); border-color:var(--ni-warn-bdr); }
-  .chip-avatar { width:32px; height:32px; border-radius:50%; background:var(--ni-blue-soft); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:var(--ni-blue); flex-shrink:0; }
-  .chip-avatar.warn { background:#fef3e2; color:var(--ni-warn); }
-  .chip-name { font-size:13px; font-weight:500; color:var(--ni-text); }
-  .chip-cargo { font-family:var(--font-mono); font-size:10px; color:var(--ni-text-sub); }
-  .chip-cargo.warn { color:var(--ni-warn); }
-  .chip-remove { margin-left:auto; color:#ccc; font-size:15px; cursor:pointer; background:none; border:none; padding:4px; }
-  .chip-remove.warn { color:var(--ni-warn-bdr); }
+  .worker-chip { display:flex; align-items:center; gap:9px; border:1px solid var(--ac-border); border-radius:var(--radius); padding:9px 10px; background:var(--ac-surface); margin-bottom:6px; }
+  .worker-chip.warn { background:var(--ac-warn-bg); border-color:var(--ac-warn-bdr); }
+  .chip-avatar { width:32px; height:32px; border-radius:50%; background:var(--ac-blue-soft); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--ac-blue); flex-shrink:0; }
+  .chip-avatar.warn { background:var(--ac-warn-bg); color:var(--ac-warn-text); }
+  .chip-name { font-size:13px; font-weight:600; color:var(--ac-text); }
+  .chip-cargo { font-family:var(--font-mono); font-size:10px; color:var(--ac-text-sub); }
+  .chip-cargo.warn { color:var(--ac-warn-text); }
+  .chip-remove { margin-left:auto; color:var(--ac-text-hint); font-size:15px; cursor:pointer; background:none; border:none; padding:4px; }
+  .chip-remove.warn { color:var(--ac-warn-bdr); }
 
   #scan-feedback { min-height:36px; font-size:13px; border-radius:var(--radius); padding:8px 12px; margin-bottom:10px; display:none; }
-  .feedback-ok   { background:#e8f5ee; color:var(--ni-success); display:flex !important; align-items:center; gap:8px; }
-  .feedback-warn { background:var(--ni-warn-bg); color:var(--ni-warn); display:flex !important; align-items:center; gap:8px; }
-  .feedback-error{ background:#fce8e8; color:#c0392b; display:flex !important; align-items:center; gap:8px; }
+  .feedback-ok   { background:var(--ac-success-bg); color:var(--ac-success-text); display:flex !important; align-items:center; gap:8px; }
+  .feedback-warn { background:var(--ac-warn-bg); color:var(--ac-warn-text); display:flex !important; align-items:center; gap:8px; }
+  .feedback-error{ background:var(--ac-danger-bg); color:var(--ac-danger-text); display:flex !important; align-items:center; gap:8px; }
 
   /* ── Cámara ── */
   .camera-wrap {
@@ -33,13 +33,13 @@
   /* Marco de escaneo animado */
   .scan-frame {
     position: absolute; width: 160px; height: 160px;
-    border: 2px solid var(--ni-blue);
+    border: 2px solid var(--ac-blue);
     border-radius: 8px; pointer-events: none;
     box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
   }
   .scan-line {
     position: absolute; left: 0; right: 0; height: 2px;
-    background: var(--ni-blue); opacity: 0.9;
+    background: var(--ac-blue); opacity: 0.9;
     animation: scanline 2s ease-in-out infinite;
   }
   @keyframes scanline { 0%,100%{top:10%} 50%{top:85%} }
@@ -58,7 +58,7 @@
 
   /* Indicador de detección */
   .detect-flash {
-    position: absolute; inset: 0; background: rgba(0,37,236,0.15);
+    position: absolute; inset: 0; background: rgba(0,71,204,0.15);
     pointer-events: none; opacity: 0; transition: opacity 0.1s;
   }
   .detect-flash.active { opacity: 1; }
@@ -66,67 +66,67 @@
   /* Botón cámara */
   .btn-camera {
     display: flex; align-items: center; gap: 6px;
-    border: 0.5px solid var(--ni-border); border-radius: var(--radius);
-    padding: 7px 12px; background: var(--ni-white);
-    font-size: 12px; color: var(--ni-text-sub); cursor: pointer;
+    border: 1px solid var(--ac-border); border-radius: var(--radius);
+    padding: 7px 12px; background: var(--ac-white);
+    font-size: 12px; color: var(--ac-text-sub); cursor: pointer;
     font-family: var(--font-main);
   }
-  .btn-camera:hover { border-color: var(--ni-blue); color: var(--ni-blue); }
-  .btn-camera.active { background: var(--ni-blue); border-color: var(--ni-blue); color: #fff; }
+  .btn-camera:hover { border-color: var(--ac-blue); color: var(--ac-blue); }
+  .btn-camera.active { background: var(--ac-blue); border-color: var(--ac-blue); color: #fff; }
 
   /* Búsqueda */
   .search-input-row { display:flex; gap:8px; }
   #search-input { flex:1; }
   #search-dropdown {
     display:none; position:fixed;
-    background:var(--ni-white); border:1.5px solid var(--ni-blue);
-    border-radius:var(--radius); box-shadow:0 4px 20px rgba(0,37,236,0.13);
+    background:var(--ac-white); border:1.5px solid var(--ac-blue);
+    border-radius:var(--radius); box-shadow:0 4px 20px rgba(0,71,204,0.13);
     z-index:9999; overflow-y:auto; max-height:320px;
   }
   #search-dropdown.visible { display:block; }
-  .dropdown-item { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; transition:background 0.1s; border-bottom:0.5px solid #f5f5f5; }
+  .dropdown-item { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; transition:background 0.1s; border-bottom:1px solid var(--ac-border); }
   .dropdown-item:last-child { border-bottom:none; }
-  .dropdown-item:hover, .dropdown-item.focused { background:var(--ni-blue-soft); }
-  .dropdown-avatar { width:30px; height:30px; border-radius:50%; background:var(--ni-blue-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:var(--ni-blue); flex-shrink:0; }
-  .dropdown-name { font-size:13px; font-weight:500; }
-  .dropdown-meta { font-family:var(--font-mono); font-size:10px; color:var(--ni-text-sub); }
-  .dropdown-rut { margin-left:auto; font-family:var(--font-mono); font-size:11px; color:#bbb; flex-shrink:0; padding-left:8px; }
-  .dropdown-empty { padding:12px; text-align:center; font-size:13px; color:var(--ni-text-sub); }
-  .dropdown-loading { padding:12px; text-align:center; font-size:13px; color:var(--ni-text-sub); }
+  .dropdown-item:hover, .dropdown-item.focused { background:var(--ac-blue-soft); }
+  .dropdown-avatar { width:30px; height:30px; border-radius:50%; background:var(--ac-blue-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--ac-blue); flex-shrink:0; }
+  .dropdown-name { font-size:13px; font-weight:600; }
+  .dropdown-meta { font-family:var(--font-mono); font-size:10px; color:var(--ac-text-sub); }
+  .dropdown-rut { margin-left:auto; font-family:var(--font-mono); font-size:11px; color:var(--ac-text-hint); flex-shrink:0; padding-left:8px; }
+  .dropdown-empty { padding:12px; text-align:center; font-size:13px; color:var(--ac-text-sub); }
+  .dropdown-loading { padding:12px; text-align:center; font-size:13px; color:var(--ac-text-sub); }
 
-  .uid-toggle-btn { background:none; border:none; cursor:pointer; font-size:11px; color:var(--ni-text-sub); font-family:var(--font-mono); display:flex; align-items:center; gap:5px; padding:0; margin-top:10px; }
-  .uid-toggle-btn:hover { color:var(--ni-blue); }
+  .uid-toggle-btn { background:none; border:none; cursor:pointer; font-size:11px; color:var(--ac-text-sub); font-family:var(--font-mono); display:flex; align-items:center; gap:5px; padding:0; margin-top:10px; }
+  .uid-toggle-btn:hover { color:var(--ac-blue); }
   .uid-section { display:none; margin-top:8px; }
   .uid-section.visible { display:block; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ni-timeline">
-  <div class="ni-t-step done">
-    <div class="ni-t-num done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
-    <span class="ni-t-label done">Partida seleccionada</span>
+<div class="ac-timeline">
+  <div class="ac-t-step ac-t-step-done">
+    <div class="ac-t-num ac-t-num-done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
+    <span class="ac-t-label ac-t-label-done">Partida seleccionada</span>
   </div>
-  <div class="ni-t-step active">
-    <div class="ni-t-num active">2</div>
-    <span class="ni-t-label active">Escanear trabajadores</span>
+  <div class="ac-t-step ac-t-step-active">
+    <div class="ac-t-num ac-t-num-active">2</div>
+    <span class="ac-t-label ac-t-label-active">Escanear trabajadores</span>
   </div>
-  <div class="ni-t-step">
-    <div class="ni-t-num pending">3</div>
-    <span class="ni-t-label pending">Confirmar e iniciar</span>
+  <div class="ac-t-step">
+    <div class="ac-t-num ac-t-num-pending">3</div>
+    <span class="ac-t-label ac-t-label-pending">Confirmar e iniciar</span>
   </div>
 </div>
 
-<div style="background:var(--ni-white); border-bottom:0.5px solid var(--ni-border); padding:10px 24px; display:flex; align-items:center; justify-content:space-between;">
-  <a href="{% url 'work:assignment_new' %}" style="display:flex; align-items:center; gap:6px; color:var(--ni-text-sub); font-size:13px; text-decoration:none;">
+<div style="background:var(--ac-white); border-bottom:1px solid var(--ac-border); padding:10px 24px; display:flex; align-items:center; justify-content:space-between;">
+  <a href="{% url 'work:assignment_new' %}" style="display:flex; align-items:center; gap:6px; color:var(--ac-text-sub); font-size:13px; text-decoration:none;">
     <i class="ti ti-arrow-left" aria-hidden="true"></i> Cambiar partida
   </a>
-  <div style="display:flex; align-items:center; gap:8px; background:var(--ni-blue-soft); border-radius:var(--radius); padding:6px 12px;">
-    <span style="font-size:10px; color:#666; font-family:var(--font-mono);">Partida:</span>
-    <span style="font-size:12px; font-weight:500; color:var(--ni-dark);">{{ task.task.name }}</span>
-    <span style="font-size:11px; color:#888;">· {{ stage.name }}</span>
+  <div style="display:flex; align-items:center; gap:8px; background:var(--ac-blue-soft); border-radius:var(--radius); padding:6px 12px;">
+    <span style="font-size:10px; color:var(--ac-text-sub); font-family:var(--font-mono);">Partida:</span>
+    <span style="font-size:12px; font-weight:600; color:var(--ac-dark);">{{ task.task.name }}</span>
+    <span style="font-size:11px; color:var(--ac-text-sub);">· {{ stage.name }}</span>
     {% if task.task.risk_level == 'HIGH_RISK' %}
-      <span style="font-size:10px; background:#fce8e8; color:#c0392b; border-radius:20px; padding:2px 8px;">Alto riesgo</span>
+      <span class="ac-badge ac-badge-red">Alto riesgo</span>
     {% endif %}
   </div>
 </div>
@@ -134,9 +134,9 @@
 <div style="padding:20px 24px; display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
 
   <!-- ── Card izquierda: Cámara + búsqueda ── -->
-  <div class="ni-card" style="flex:1; min-width:280px;">
-    <div class="ni-card-header">
-      <span class="ni-card-title">Cámara QR</span>
+  <div class="ac-card" style="flex:1; min-width:280px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Cámara QR</span>
       <button class="btn-camera" id="btn-camera" onclick="toggleCamera()">
         <i class="ti ti-camera" aria-hidden="true"></i>
         <span id="btn-camera-label">Activar cámara</span>
@@ -148,7 +148,7 @@
       <!-- Estado inicial: placeholder -->
       <div class="camera-placeholder" id="camera-placeholder">
         <i class="ti ti-camera-off" style="font-size:40px; color:rgba(255,255,255,0.3);" aria-hidden="true"></i>
-        <p style="font-size:14px; font-weight:500; color:rgba(255,255,255,0.7);">Cámara desactivada</p>
+        <p style="font-size:14px; font-weight:600; color:rgba(255,255,255,0.7);">Cámara desactivada</p>
         <p style="font-size:12px; color:rgba(255,255,255,0.4);">Toca "Activar cámara" para escanear QRs</p>
       </div>
 
@@ -170,22 +170,22 @@
       </div>
     </div>
 
-    <div style="padding:10px 14px; background:#fafafa; border-top:0.5px solid #f0f0f0; display:flex; align-items:center; gap:8px;">
-      <i class="ti ti-scan" style="color:var(--ni-blue); font-size:16px;" aria-hidden="true"></i>
-      <span style="font-size:12px; color:var(--ni-text-sub);" id="camera-hint">Activa la cámara para escanear QRs automáticamente</span>
+    <div style="padding:10px 14px; background:var(--ac-surface); border-top:1px solid var(--ac-border); display:flex; align-items:center; gap:8px;">
+      <i class="ti ti-scan" style="color:var(--ac-blue); font-size:16px;" aria-hidden="true"></i>
+      <span style="font-size:12px; color:var(--ac-text-sub);" id="camera-hint">Activa la cámara para escanear QRs automáticamente</span>
     </div>
 
     <!-- Búsqueda manual -->
-    <div style="padding:14px; border-top:0.5px solid var(--ni-border);">
-      <p style="font-size:11px; color:var(--ni-text-sub); margin-bottom:8px; font-family:var(--font-mono);">BUSCAR SIN QR — NOMBRE O RUT</p>
+    <div style="padding:14px; border-top:1px solid var(--ac-border);">
+      <p style="font-size:11px; color:var(--ac-text-sub); margin-bottom:8px; font-family:var(--font-mono);">BUSCAR SIN QR — NOMBRE O RUT</p>
       <div class="search-input-row">
-        <input type="text" id="search-input" class="ni-input"
+        <input type="text" id="search-input" class="ac-input"
                placeholder="Nombre o RUT del trabajador..."
                autocomplete="off" spellcheck="false"
                style="font-size:13px; padding:9px 12px;">
         <button id="search-add-btn" onclick="addFromSearch()"
-                class="ni-btn ni-btn-primary ni-btn-sm"
-                style="width:auto; padding:9px 14px; white-space:nowrap; opacity:0.4; pointer-events:none;"
+                class="ac-btn ac-btn-primary ac-btn-sm"
+                style="opacity:0.4; pointer-events:none;"
                 disabled>
           <i class="ti ti-plus" aria-hidden="true"></i> Agregar
         </button>
@@ -197,11 +197,10 @@
       </button>
       <div class="uid-section" id="uid-section">
         <div style="display:flex; gap:8px;">
-          <input type="text" id="manual-uid" class="ni-input"
+          <input type="text" id="manual-uid" class="ac-input"
                  placeholder="Pega el UID del trabajador"
                  style="flex:1; font-size:13px; padding:8px 10px;">
-          <button onclick="processUID()" class="ni-btn ni-btn-secondary ni-btn-sm"
-                  style="width:auto; padding:8px 14px; white-space:nowrap; font-size:12px;">
+          <button onclick="processUID()" class="ac-btn ac-btn-secondary ac-btn-sm">
             Agregar
           </button>
         </div>
@@ -210,10 +209,10 @@
   </div>
 
   <!-- ── Card derecha: Grupo actual ── -->
-  <div class="ni-card" style="width:280px; flex-shrink:0; min-width:260px;">
-    <div class="ni-card-header">
-      <span class="ni-card-title">Grupo actual</span>
-      <span class="ni-badge ni-badge-blue" id="group-count">{{ workers_in_group|length }} trabajadores</span>
+  <div class="ac-card" style="width:280px; flex-shrink:0; min-width:260px;">
+    <div class="ac-card-header">
+      <span class="ac-card-title">Grupo actual</span>
+      <span class="ac-badge ac-badge-blue" id="group-count">{{ workers_in_group|length }} trabajadores</span>
     </div>
     <div style="padding:12px; min-height:80px;" id="workers-list">
       {% for worker in workers_in_group %}
@@ -228,7 +227,7 @@
           </button>
         </div>
       {% empty %}
-        <p style="font-size:13px; color:var(--ni-text-sub); text-align:center; padding:16px 0;" id="empty-msg">
+        <p style="font-size:13px; color:var(--ac-text-sub); text-align:center; padding:16px 0;" id="empty-msg">
           Escanea el QR o busca un trabajador para agregarlo al grupo.
         </p>
       {% endfor %}
@@ -236,15 +235,15 @@
 
     <div id="scan-feedback"></div>
 
-    <div style="padding:12px; border-top:0.5px solid var(--ni-border);">
+    <div style="padding:12px; border-top:1px solid var(--ac-border);">
       <form method="post">
         {% csrf_token %}
-        <button type="submit" name="confirm" class="ni-btn ni-btn-primary"
+        <button type="submit" name="confirm" class="ac-btn ac-btn-primary ac-btn-full"
                 id="confirm-btn" {% if not workers_in_group %}disabled{% endif %}>
           Iniciar grupo (<span id="count-text">{{ workers_in_group|length }}</span> trabajadores)
         </button>
         <a href="{% url 'work:assignment_new' %}"
-           class="ni-btn ni-btn-secondary"
+           class="ac-btn ac-btn-secondary ac-btn-full"
            style="margin-top:8px; text-align:center; display:block;">
           Cancelar
         </a>
@@ -496,7 +495,7 @@ function renderDropdown(results, q) {
 function highlightMatch(text, query) {
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
   if (idx === -1) return text;
-  return text.slice(0, idx) + '<strong style="color:var(--ni-blue);">' + text.slice(idx, idx + query.length) + '</strong>' + text.slice(idx + query.length);
+  return text.slice(0, idx) + '<strong style="color:var(--ac-blue);">' + text.slice(idx, idx + query.length) + '</strong>' + text.slice(idx + query.length);
 }
 
 function selectResource(resource) {
@@ -644,7 +643,7 @@ function removeWorker(workerId, btn) {
     updateCount(data.count);
     if (data.count === 0)
       document.getElementById('workers-list').innerHTML =
-        '<p style="font-size:13px; color:var(--ni-text-sub); text-align:center; padding:16px 0;" id="empty-msg">Escanea el QR o busca un trabajador para agregarlo al grupo.</p>';
+        '<p style="font-size:13px; color:var(--ac-text-sub); text-align:center; padding:16px 0;" id="empty-msg">Escanea el QR o busca un trabajador para agregarlo al grupo.</p>';
   });
 }
 

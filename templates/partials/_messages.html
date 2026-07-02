@@ -1,0 +1,18 @@
+{% if messages %}
+  <div class="ac-messages">
+    {% for message in messages %}
+      <div class="ac-msg ac-msg-{{ message.tags }}">
+        {% if message.tags == 'success' %}
+          <i class="ti ti-circle-check" aria-hidden="true"></i>
+        {% elif message.tags == 'error' %}
+          <i class="ti ti-circle-x" aria-hidden="true"></i>
+        {% elif message.tags == 'warning' %}
+          <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+        {% else %}
+          <i class="ti ti-info-circle" aria-hidden="true"></i>
+        {% endif %}
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

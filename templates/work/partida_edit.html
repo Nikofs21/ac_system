@@ -2,13 +2,12 @@
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">{{ site.name }} · {{ st.stage.name }}</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">{{ site.name }} · {{ st.stage.name }}</p>
   </div>
-  <a href="{% url 'work:partidas_panel' %}?site={{ site.id }}"
-     class="ni-btn ni-btn-secondary" style="width:auto; padding:9px 16px; font-size:13px;">
+  <a href="{% url 'work:partidas_panel' %}?site={{ site.id }}" class="ac-btn ac-btn-secondary ac-btn-sm">
     <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver
   </a>
 </div>
@@ -17,41 +16,41 @@
   <form method="post">
     {% csrf_token %}
 
-    <div class="ni-card" style="margin-bottom:16px;">
-      <div class="ni-card-header"><span class="ni-card-title">Datos de la partida</span></div>
-      <div class="ni-card-body">
+    <div class="ac-card" style="margin-bottom:16px;">
+      <div class="ac-card-header"><span class="ac-card-title">Datos de la partida</span></div>
+      <div class="ac-card-body">
 
-        <div class="ni-field">
-          <label class="ni-label">Partida</label>
-          <input class="ni-input" type="text" value="{{ st.task.name }}" disabled
-                 style="background:var(--ni-light); color:var(--ni-text-sub);">
+        <div class="ac-field">
+          <label class="ac-label">Partida</label>
+          <input class="ac-input" type="text" value="{{ st.task.name }}" disabled
+                 style="background:var(--ac-surface); color:var(--ac-text-sub);">
         </div>
 
-        <div class="ni-field">
-          <label class="ni-label">Subetapa</label>
-          <input class="ni-input" type="text" name="subetapa"
+        <div class="ac-field">
+          <label class="ac-label">Subetapa</label>
+          <input class="ac-input" type="text" name="subetapa"
                  value="{{ st.subetapa|default:'' }}"
                  placeholder="Ej: 1.2.3.3. ARMADURAS DE ACERO">
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-          <div class="ni-field" style="margin-bottom:0;">
-            <label class="ni-label">Cantidad presupuesto</label>
-            <input class="ni-input" type="number" step="0.0001" name="cantidad_presupuesto"
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Cantidad presupuesto</label>
+            <input class="ac-input" type="number" step="0.0001" name="cantidad_presupuesto"
                    value="{{ st.cantidad_presupuesto|default:'' }}"
                    placeholder="730.0">
           </div>
-          <div class="ni-field" style="margin-bottom:0;">
-            <label class="ni-label">Unidad de medida</label>
-            <input class="ni-input" type="text" name="unidad_medida"
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Unidad de medida</label>
+            <input class="ac-input" type="text" name="unidad_medida"
                    value="{{ st.unidad_medida|default:'' }}"
                    placeholder="m2, ml, un...">
           </div>
         </div>
 
-        <div class="ni-field" style="margin-top:14px;">
-          <label class="ni-label">Presupuesto mano obra directa ($)</label>
-          <input class="ni-input" type="number" step="1" name="presupuesto_mo"
+        <div class="ac-field" style="margin-top:14px;">
+          <label class="ac-label">Presupuesto mano obra directa ($)</label>
+          <input class="ac-input" type="number" step="1" name="presupuesto_mo"
                  value="{{ st.presupuesto_mo|default:'' }}"
                  placeholder="18768320">
         </div>
@@ -59,24 +58,24 @@
       </div>
     </div>
 
-    <div class="ni-card" style="margin-bottom:20px;">
-      <div class="ni-card-header"><span class="ni-card-title">Clasificación</span></div>
-      <div class="ni-card-body">
+    <div class="ac-card" style="margin-bottom:20px;">
+      <div class="ac-card-header"><span class="ac-card-title">Clasificación</span></div>
+      <div class="ac-card-body">
 
-        <div class="ni-field">
-          <label class="ni-label">Tipo</label>
-          <select class="ni-select" name="tipo">
+        <div class="ac-field">
+          <label class="ac-label">Tipo</label>
+          <select class="ac-select" name="tipo">
             <option value="casa"        {% if st.tipo == 'casa' %}selected{% endif %}>Casa (MOD propia)</option>
             <option value="subcontrato" {% if st.tipo == 'subcontrato' %}selected{% endif %}>Subcontrato</option>
           </select>
-          <p style="font-size:11px; color:var(--ni-text-sub); margin-top:4px;">
+          <p class="ac-field-hint">
             Este campo se puede modificar en cualquier momento sin afectar el historial de sesiones.
           </p>
         </div>
 
-        <div class="ni-field" style="margin-bottom:0;">
-          <label class="ni-label">Estado</label>
-          <select class="ni-select" name="estado_partida">
+        <div class="ac-field" style="margin-bottom:0;">
+          <label class="ac-label">Estado</label>
+          <select class="ac-select" name="estado_partida">
             <option value="activa"   {% if st.estado_partida == 'activa' %}selected{% endif %}>Activa</option>
             <option value="inactiva" {% if st.estado_partida == 'inactiva' %}selected{% endif %}>Inactiva</option>
           </select>
@@ -86,11 +85,11 @@
     </div>
 
     <div style="display:flex; flex-direction:column; gap:10px;">
-      <button type="submit" class="ni-btn ni-btn-primary">
+      <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
         <i class="ti ti-check" aria-hidden="true"></i> Guardar cambios
       </button>
       <a href="{% url 'work:partidas_panel' %}?site={{ site.id }}"
-         class="ni-btn ni-btn-secondary" style="text-align:center;">Cancelar</a>
+         class="ac-btn ac-btn-secondary ac-btn-full" style="text-align:center;">Cancelar</a>
     </div>
   </form>
 </div>

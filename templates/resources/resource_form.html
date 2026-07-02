@@ -9,107 +9,45 @@
   .type-selector { display: flex; gap: 8px; margin-bottom: 20px; }
   .type-btn {
     flex: 1; height: 56px;
-    border: 1.5px solid var(--ni-border);
+    border: 1.5px solid var(--ac-border);
     border-radius: var(--radius);
-    background: var(--ni-white);
+    background: var(--ac-white);
     cursor: pointer;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 4px;
     transition: border-color 0.15s, background 0.15s;
     font-family: var(--font-main);
   }
-  .type-btn i    { font-size: 20px; color: #bbb; }
-  .type-btn span { font-size: 12px; font-weight: 500; color: var(--ni-text-sub); }
-  .type-btn.selected { border-color: var(--ni-blue); background: var(--ni-blue-soft); }
-  .type-btn.selected i    { color: var(--ni-blue); }
-  .type-btn.selected span { color: var(--ni-blue); }
+  .type-btn i    { font-size: 20px; color: var(--ac-text-hint); }
+  .type-btn span { font-size: 12px; font-weight: 600; color: var(--ac-text-sub); }
+  .type-btn.selected { border-color: var(--ac-blue); background: var(--ac-blue-soft); }
+  .type-btn.selected i    { color: var(--ac-blue); }
+  .type-btn.selected span { color: var(--ac-blue); }
 
   .form-section { display: none; }
   .form-section.visible { display: block; }
 
-  .ni-input.error, .ni-select.error { border-color: #c0392b; }
-  .field-error { font-size: 11px; color: #c0392b; margin-top: 4px; }
-  .field-hint  { font-size: 11px; color: var(--ni-text-sub); margin-top: 4px; }
-
   .cargo-row { display: flex; gap: 8px; align-items: flex-end; }
-  .cargo-row .ni-select { flex: 1; }
+  .cargo-row .ac-select { flex: 1; }
   .btn-add-cargo {
     height: 42px; width: 42px; flex-shrink: 0;
-    border: 1.5px solid var(--ni-border);
+    border: 1.5px solid var(--ac-border);
     border-radius: var(--radius);
-    background: var(--ni-white);
-    cursor: pointer; font-size: 18px; color: var(--ni-blue);
+    background: var(--ac-white);
+    cursor: pointer; font-size: 18px; color: var(--ac-blue);
     display: flex; align-items: center; justify-content: center;
     transition: background 0.12s;
   }
-  .btn-add-cargo:hover { background: var(--ni-blue-soft); border-color: var(--ni-blue); }
-
-  /* Modal cargo */
-  .cargo-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45); z-index: 1000;
-    align-items: flex-end; justify-content: center;
-  }
-  .cargo-overlay.visible { display: flex; }
-  .cargo-sheet {
-    background: var(--ni-white);
-    border-radius: 16px 16px 0 0;
-    width: 100%; max-width: 480px;
-    animation: slideUp 0.2s ease; overflow: hidden;
-  }
-  @media (min-width: 600px) {
-    .cargo-overlay { align-items: center; padding: 16px; }
-    .cargo-sheet   { border-radius: var(--radius-lg); }
-  }
-  @keyframes slideUp {
-    from { transform: translateY(30px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
-  .cargo-header { padding: 14px 16px; border-bottom: 0.5px solid var(--ni-border); }
-  .cargo-title  { font-size: 15px; font-weight: 600; color: var(--ni-dark); }
-  .cargo-sub    { font-size: 12px; color: var(--ni-text-sub); margin-top: 2px; }
-  .cargo-body   { padding: 16px; }
-  .cargo-footer { padding: 12px 16px; border-top: 0.5px solid var(--ni-border); display: flex; gap: 8px; }
-  .btn-cargo-confirm {
-    flex: 1; height: 42px; border: none; border-radius: var(--radius);
-    background: var(--ni-blue); color: #fff;
-    font-family: var(--font-brand); font-weight: 700; font-size: 14px;
-    cursor: pointer; transition: opacity 0.15s;
-  }
-  .btn-cargo-confirm:hover { opacity: 0.88; }
-  .btn-cargo-cancel {
-    height: 42px; border: 1.5px solid var(--ni-border); border-radius: var(--radius);
-    background: var(--ni-white); color: var(--ni-dark);
-    font-family: var(--font-main); font-weight: 500; font-size: 14px;
-    cursor: pointer; padding: 0 14px;
-  }
-
-  /* Modal baja */
-  .baja-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45); z-index: 1000;
-    align-items: flex-end; justify-content: center;
-  }
-  .baja-overlay.visible { display: flex; }
-  .baja-sheet {
-    background: var(--ni-white);
-    border-radius: 16px 16px 0 0;
-    width: 100%; max-width: 480px;
-    animation: slideUp 0.2s ease; overflow: hidden;
-  }
-  @media (min-width: 600px) {
-    .baja-overlay { align-items: center; padding: 16px; }
-    .baja-sheet   { border-radius: var(--radius-lg); }
-  }
+  .btn-add-cargo:hover { background: var(--ac-blue-soft); border-color: var(--ac-blue); }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<div class="ni-page-header">
+<div class="ac-page-header">
   <div>
-    <h1 class="ni-page-title">{{ page_title }}</h1>
-    <p class="ni-page-sub">{{ site.name }}</p>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">{{ site.name }}</p>
   </div>
 </div>
 
@@ -119,7 +57,7 @@
 
     {% if mode == 'create' %}
       <div style="margin-bottom:6px;">
-        <label class="ni-label">Tipo de registro</label>
+        <label class="ac-label">Tipo de registro</label>
       </div>
       <div class="type-selector">
         {% if can_people %}
@@ -144,8 +82,8 @@
     {% endif %}
 
     <!-- NOMBRE -->
-    <div class="ni-field">
-      <label class="ni-label" for="display_name">
+    <div class="ac-field">
+      <label class="ac-label" for="display_name">
         {% if mode == 'edit' %}
           {% if resource.resource_category.resource_type == 'PERSON' %}Nombre completo{% else %}Identificacion{% endif %}
         {% else %}
@@ -153,7 +91,7 @@
         {% endif %}
       </label>
       <input
-        class="ni-input {% if errors.display_name %}error{% endif %}"
+        class="ac-input {% if errors.display_name %}error{% endif %}"
         type="text"
         name="display_name"
         id="display_name"
@@ -163,7 +101,7 @@
         autocomplete="off"
       >
       {% if errors.display_name %}
-        <div class="field-error">{{ errors.display_name }}</div>
+        <div class="ac-field-error">{{ errors.display_name }}</div>
       {% endif %}
     </div>
 
@@ -174,10 +112,10 @@
       {% endif %}"
       id="section-person">
 
-      <div class="ni-field">
-        <label class="ni-label" for="person_rut">RUT</label>
+      <div class="ac-field">
+        <label class="ac-label" for="person_rut">RUT</label>
         <input
-          class="ni-input {% if errors.person_rut %}error{% endif %}"
+          class="ac-input {% if errors.person_rut %}error{% endif %}"
           type="text"
           name="person_rut"
           id="person_rut"
@@ -185,17 +123,17 @@
           placeholder="12345678-9"
           autocomplete="off"
         >
-        <div class="field-hint">Sin puntos, con guión. Ej: 12345678-9</div>
+        <div class="ac-field-hint">Sin puntos, con guión. Ej: 12345678-9</div>
         {% if errors.person_rut %}
-          <div class="field-error">{{ errors.person_rut }}</div>
+          <div class="ac-field-error">{{ errors.person_rut }}</div>
         {% endif %}
       </div>
 
-      <div class="ni-field">
-        <label class="ni-label" for="job_title_select">Cargo</label>
+      <div class="ac-field">
+        <label class="ac-label" for="job_title_select">Cargo</label>
         <div class="cargo-row">
           {# Un solo select para personas — siempre con name="job_title_id" #}
-          <select class="ni-select" name="job_title_id" id="job_title_select">
+          <select class="ac-select" name="job_title_id" id="job_title_select">
             <option value="">Sin cargo asignado</option>
             {% for jt in job_titles %}
               <option value="{{ jt.id }}"
@@ -210,7 +148,7 @@
             <i class="ti ti-plus" aria-hidden="true"></i>
           </button>
           <button type="button" class="btn-add-cargo" onclick="openDeleteCargoModal('PERSON')" title="Eliminar cargo">
-            <i class="ti ti-trash" style="color:#c0392b;" aria-hidden="true"></i>
+            <i class="ti ti-trash" style="color:var(--ac-danger);" aria-hidden="true"></i>
           </button>
         </div>
       </div>
@@ -221,10 +159,10 @@
       {% if mode == 'edit' and resource.resource_category.resource_type == 'MACHINERY' %}visible{% endif %}"
       id="section-machine">
 
-      <div class="ni-field">
-        <label class="ni-label" for="license_plate">Patente</label>
+      <div class="ac-field">
+        <label class="ac-label" for="license_plate">Patente</label>
         <input
-          class="ni-input {% if errors.license_plate %}error{% endif %}"
+          class="ac-input {% if errors.license_plate %}error{% endif %}"
           type="text"
           name="license_plate"
           id="license_plate"
@@ -233,15 +171,15 @@
           autocomplete="off"
         >
         {% if errors.license_plate %}
-          <div class="field-error">{{ errors.license_plate }}</div>
+          <div class="ac-field-error">{{ errors.license_plate }}</div>
         {% endif %}
       </div>
 
-      <div class="ni-field">
-        <label class="ni-label" for="machine_title_select">Tipo de maquinaria</label>
+      <div class="ac-field">
+        <label class="ac-label" for="machine_title_select">Tipo de maquinaria</label>
         <div class="cargo-row">
           {# Select separado para maquinaria — en creacion solo uno estará activo #}
-          <select class="ni-select" name="job_title_id" id="machine_title_select">
+          <select class="ac-select" name="job_title_id" id="machine_title_select">
             <option value="">Sin tipo asignado</option>
             {% for jt in machine_titles %}
               <option value="{{ jt.id }}"
@@ -256,7 +194,7 @@
             <i class="ti ti-plus" aria-hidden="true"></i>
           </button>
           <button type="button" class="btn-add-cargo" onclick="openDeleteCargoModal('MACHINERY')" title="Eliminar cargo">
-            <i class="ti ti-trash" style="color:#c0392b;" aria-hidden="true"></i>
+            <i class="ti ti-trash" style="color:var(--ac-danger);" aria-hidden="true"></i>
           </button>
         </div>
       </div>
@@ -264,21 +202,21 @@
 
     <!-- BOTONES -->
     <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px;">
-      <button type="submit" class="ni-btn ni-btn-primary">
+      <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
         <i class="ti ti-{% if mode == 'create' %}user-plus{% else %}check{% endif %}" aria-hidden="true"></i>
         {% if mode == 'create' %}Agregar{% else %}Guardar cambios{% endif %}
       </button>
 
       {% if mode == 'edit' and resource.status == 'ACTIVE' %}
         {% if perms_ctx.can_crud_people or perms_ctx.can_crud_machines %}
-          <button type="button" class="ni-btn ni-btn-danger" onclick="openBajaModal()">
+          <button type="button" class="ac-btn ac-btn-danger ac-btn-full" onclick="openBajaModal()">
             <i class="ti ti-user-minus" aria-hidden="true"></i>
             Dar de baja
           </button>
         {% endif %}
       {% endif %}
 
-      <a href="{% url 'resources:worker_list' %}" class="ni-btn ni-btn-secondary" style="text-align:center;">
+      <a href="{% url 'resources:worker_list' %}" class="ac-btn ac-btn-secondary ac-btn-full" style="text-align:center;">
         Cancelar
       </a>
     </div>
@@ -286,29 +224,29 @@
 </div>
 
 <!-- MODAL CARGO INLINE -->
-<div class="cargo-overlay" id="cargo-overlay" onclick="handleCargoOverlay(event)">
-  <div class="cargo-sheet">
-    <div class="cargo-header">
-      <div class="cargo-title" id="cargo-modal-title">Nuevo cargo</div>
-      <div class="cargo-sub">Quedará disponible solo en esta obra</div>
+<div class="ac-overlay" id="cargo-overlay" onclick="handleCargoOverlay(event)">
+  <div class="ac-sheet" style="max-width:480px;">
+    <div class="ac-sheet-header">
+      <div class="ac-sheet-title" id="cargo-modal-title">Nuevo cargo</div>
+      <div class="ac-sheet-sub">Quedará disponible solo en esta obra</div>
     </div>
-    <div class="cargo-body">
-      <div class="ni-field" style="margin-bottom:0;">
-        <label class="ni-label" for="new-cargo-name">Nombre del cargo</label>
+    <div class="ac-sheet-body">
+      <div class="ac-field" style="margin-bottom:0;">
+        <label class="ac-label" for="new-cargo-name">Nombre del cargo</label>
         <input
-          class="ni-input"
+          class="ac-input"
           type="text"
           id="new-cargo-name"
           placeholder="Ej: Maestro Carpintero"
           maxlength="120"
           autocomplete="off"
         >
-        <div id="cargo-error" style="font-size:11px; color:#c0392b; margin-top:4px; display:none;"></div>
+        <div id="cargo-error" class="ac-field-error" style="display:none;"></div>
       </div>
     </div>
-    <div class="cargo-footer">
-      <button class="btn-cargo-cancel" onclick="closeCargoModal()">Cancelar</button>
-      <button class="btn-cargo-confirm" onclick="confirmNewCargo()">
+    <div class="ac-sheet-footer">
+      <button class="ac-sheet-cancel" onclick="closeCargoModal()">Cancelar</button>
+      <button class="ac-sheet-confirm" onclick="confirmNewCargo()">
         <i class="ti ti-plus" aria-hidden="true"></i> Agregar
       </button>
     </div>
@@ -317,28 +255,25 @@
 
 <!-- MODAL BAJA -->
 {% if mode == 'edit' %}
-<div class="baja-overlay" id="baja-overlay" onclick="handleBajaOverlay(event)">
-  <div class="baja-sheet">
-    <div style="padding:16px; border-bottom:0.5px solid var(--ni-border);">
-      <div style="font-size:15px; font-weight:600; color:#c0392b;">Dar de baja</div>
-      <div style="font-size:12px; color:var(--ni-text-sub); margin-top:2px;">{{ resource.display_name }}</div>
+<div class="ac-overlay" id="baja-overlay" onclick="handleBajaOverlay(event)">
+  <div class="ac-sheet" style="max-width:480px;">
+    <div class="ac-sheet-header">
+      <div class="ac-sheet-title" style="color:var(--ac-danger);">Dar de baja</div>
+      <div class="ac-sheet-sub">{{ resource.display_name }}</div>
     </div>
-    <div style="padding:16px;">
-      <div class="ni-alert ni-alert-warn" style="margin-bottom:14px; font-size:12px;">
+    <div class="ac-sheet-body">
+      <div class="ac-alert ac-alert-warn" style="font-size:12px;">
         <i class="ti ti-alert-triangle" aria-hidden="true"></i>
         <span>El trabajador dejará de aparecer en las asignaciones. El historial se conserva.</span>
       </div>
-      <div class="ni-field" style="margin-bottom:0;">
-        <label class="ni-label" for="baja-reason">Motivo (opcional)</label>
-        <input class="ni-input" type="text" id="baja-reason" placeholder="Ej: fin de contrato" maxlength="200">
+      <div class="ac-field" style="margin-bottom:0;">
+        <label class="ac-label" for="baja-reason">Motivo (opcional)</label>
+        <input class="ac-input" type="text" id="baja-reason" placeholder="Ej: fin de contrato" maxlength="200">
       </div>
     </div>
-    <div style="padding:12px 16px; border-top:0.5px solid var(--ni-border); display:flex; gap:8px;">
-      <button class="btn-cargo-cancel" onclick="closeBajaModal()">Cancelar</button>
-      <button
-        style="flex:1; height:42px; border:none; border-radius:var(--radius); background:#c0392b; color:#fff; font-family:var(--font-brand); font-weight:700; font-size:14px; cursor:pointer;"
-        onclick="confirmBaja()"
-      >
+    <div class="ac-sheet-footer">
+      <button class="ac-sheet-cancel" onclick="closeBajaModal()">Cancelar</button>
+      <button class="ac-sheet-confirm ac-sheet-confirm-danger" onclick="confirmBaja()">
         Confirmar baja
       </button>
     </div>
@@ -347,24 +282,24 @@
 {% endif %}
 
 <!-- MODAL ELIMINAR CARGO -->
-<div class="cargo-overlay" id="delete-cargo-overlay" onclick="if(event.target===this)closeDeleteCargoModal()">
-  <div class="cargo-sheet">
-    <div class="cargo-header">
-      <div class="cargo-title">Eliminar cargo</div>
-      <div class="cargo-sub">Solo se pueden eliminar cargos sin trabajadores asignados</div>
+<div class="ac-overlay" id="delete-cargo-overlay" onclick="if(event.target===this)closeDeleteCargoModal()">
+  <div class="ac-sheet" style="max-width:480px;">
+    <div class="ac-sheet-header">
+      <div class="ac-sheet-title">Eliminar cargo</div>
+      <div class="ac-sheet-sub">Solo se pueden eliminar cargos sin trabajadores asignados</div>
     </div>
-    <div class="cargo-body">
-      <div class="ni-field" style="margin-bottom:0;">
-        <label class="ni-label">Selecciona el cargo a eliminar</label>
-        <select class="ni-select" id="delete-cargo-select">
+    <div class="ac-sheet-body">
+      <div class="ac-field" style="margin-bottom:0;">
+        <label class="ac-label">Selecciona el cargo a eliminar</label>
+        <select class="ac-select" id="delete-cargo-select">
           <option value="">Selecciona un cargo...</option>
         </select>
-        <div id="delete-cargo-error" style="font-size:11px; color:#c0392b; margin-top:4px; display:none;"></div>
+        <div id="delete-cargo-error" class="ac-field-error" style="display:none;"></div>
       </div>
     </div>
-    <div class="cargo-footer">
-      <button class="btn-cargo-cancel" onclick="closeDeleteCargoModal()">Cancelar</button>
-      <button class="btn-cargo-confirm" style="background:#c0392b;" onclick="confirmDeleteCargo()">
+    <div class="ac-sheet-footer">
+      <button class="ac-sheet-cancel" onclick="closeDeleteCargoModal()">Cancelar</button>
+      <button class="ac-sheet-confirm ac-sheet-confirm-danger" onclick="confirmDeleteCargo()">
         <i class="ti ti-trash" aria-hidden="true"></i> Eliminar
       </button>
     </div>
@@ -384,12 +319,6 @@
   let currentCargoType = 'PERSON';
 
   // ── SELECTOR DE TIPO ─────────────────────────────────────────
-  // En creación: el usuario elige el tipo y selectType() activa/desactiva
-  // el name del select correcto.
-  // En edición: no hay selector de tipo, pero igual hay que desactivar
-  // el name del select que no corresponde para que el POST no envíe
-  // un valor vacío desde el select oculto.
-
   function selectType(type) {
     document.getElementById('resource_type').value = type;
 
@@ -427,7 +356,6 @@
     const initType = document.getElementById('resource_type')?.value || 'PERSON';
     selectType(initType);
   {% else %}
-    // En edición: desactivar el name del select que no corresponde
     const resourceType = "{{ resource.resource_category.resource_type }}";
     const selPerson  = document.getElementById('job_title_select');
     const selMachine = document.getElementById('machine_title_select');
@@ -593,7 +521,6 @@
     .then(r => r.json())
     .then(data => {
       if (data.status === 'ok') {
-        // Quitar del select original
         const source = deleteCargoType === 'PERSON'
           ? document.getElementById('job_title_select')
           : document.getElementById('machine_title_select');

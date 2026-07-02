@@ -27,6 +27,9 @@ urlpatterns = [
     path('roles/', views_provider.role_list, name='role_list'),
     path('roles/<int:role_id>/permisos/', views_provider.role_permissions, name='role_permissions'),
 
+    # Gerencia — alta de usuario con acceso a multiples obras (solo novus_super)
+    path('gerencia/nueva/', views_provider.gerencia_create, name='gerencia_create'),
+
     # RRA
     path('rra/<int:site_id>/',                       views_rra.rra_config,             name='rra_config'),
     path('rra/<int:site_id>/semanas/',               views_rra.rra_week_config_save,   name='rra_week_config_save'),
