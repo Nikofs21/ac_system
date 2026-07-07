@@ -257,6 +257,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;ba
 {{ daily|json_script:"daily-data" }}
 {{ resumen|json_script:"resumen-data" }}
 {{ date_sem|json_script:"datesem-data" }}
+{{ avg_hh|json_script:"avghh-data" }}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
@@ -264,7 +265,7 @@ const DATE_SEM = JSON.parse(document.getElementById('datesem-data').textContent)
 const DAILY    = JSON.parse(document.getElementById('daily-data').textContent);
 const RESUMEN  = JSON.parse(document.getElementById('resumen-data').textContent);
 const TIENE_HM = {{ tiene_hm_js|safe }};
-const AVG_HH   = {{ avg_hh }};
+const AVG_HH   = JSON.parse(document.getElementById('avghh-data').textContent);
 const INITIAL_DATE = "{{ selected_date_str }}";
 const ALL_DATES = Object.keys(DAILY).sort();
 const DOWS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
