@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (
     Stage, TaskCatalog, StageTask, SupervisorTaskPermission,
     WorkSession, WorkSessionChangeLog, MassCloseBatch,
-    MassCloseBatchItem, OvertimePolicy
+    MassCloseBatchItem
 )
 from work.models import ChilePublicHoliday, SiteHoliday
 
@@ -63,17 +63,6 @@ class MassCloseBatchAdmin(admin.ModelAdmin):
     readonly_fields = ('executed_at',)
     inlines = [MassCloseBatchItemInline]
 
-
-@admin.register(OvertimePolicy)
-class OvertimePolicyAdmin(admin.ModelAdmin):
-    list_display  = ('site', 'get_weekday_display', 'normal_end_time', 'auto_close_time', 'all_day_overtime', 'is_active')
-    list_filter   = ('is_active', 'site')
-    ordering      = ('site', 'weekday')
-
-    def get_weekday_display(self, obj):
-        dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo']
-        return dias[obj.weekday] if 0 <= obj.weekday <= 6 else str(obj.weekday)
-    get_weekday_display.short_description = 'Dia'
 
 class SupervisorTaskPermissionInline(admin.TabularInline):
     model = SupervisorTaskPermission

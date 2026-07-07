@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from django.contrib import admin
-from .models import TaskBudget, TaskApuMapping, IndustryBenchmark, WeeklySnapshot
+from .models import (
+    TaskBudget, TaskApuMapping, IndustryBenchmark,
+    WeeklySnapshot, DailyProductivitySnapshot,
+)
 
 
 class TaskApuMappingInline(admin.TabularInline):
@@ -31,4 +34,12 @@ class WeeklySnapshotAdmin(admin.ModelAdmin):
     )
     list_filter = ('is_partial', 'site')
     search_fields = ('task__name', 'stage__name')
+    readonly_fields = ('computed_at',)
+
+
+@admin.register(DailyProductivitySnapshot)
+class DailyProductivitySnapshotAdmin(admin.ModelAdmin):
+    list_display = ('site', 'date', 'trab', 'hh', 'hh_pag', 'icc', 'costo_hh', 'computed_at')
+    list_filter = ('site',)
+    ordering = ('-date',)
     readonly_fields = ('computed_at',)

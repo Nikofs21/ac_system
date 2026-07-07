@@ -136,6 +136,11 @@ PERMISSION_CODES = {
         'module': 'SUBCONTRATOS',
         'level':  'OPERATE',
     },
+    'dashboard.productivity': {
+        'name':   'Ver informe diario de productividad',
+        'module': 'DASHBOARDS',
+        'level':  'VIEW',
+    },
 }
 
 
@@ -158,6 +163,7 @@ ROLE_PERMISSIONS = {
     'gerencia': [
         'weekly_progress.view',
         'organigram.view',
+        'dashboard.productivity',
     ],
 
     'admin_obra': [
@@ -177,6 +183,7 @@ ROLE_PERMISSIONS = {
         'organigram.edit',
         'subcontracts.view_list',
         'subcontracts.operate',
+        'dashboard.productivity',
     ],
 
     'administrativo': [
@@ -224,6 +231,7 @@ ROLE_PERMISSIONS = {
         'bulk_close.own_sessions',
         'subcontracts.view_list',
         'subcontracts.operate',
+        'dashboard.productivity',
     ],
 
     'aac': [
@@ -242,6 +250,7 @@ ROLE_PERMISSIONS = {
         'bulk_close.own_sessions',
         'subcontracts.view_list',
         'subcontracts.operate',
+        'dashboard.productivity',
     ],
 }
 
@@ -496,6 +505,7 @@ def get_user_context_permissions(user, site):
         'can_manage_companies':  'system.manage_companies'    in perms,
         'can_manage_users':      'system.manage_users'        in perms,
         'can_view_subcontracts': 'subcontracts.view_list'     in perms,
+        'can_view_productivity_dashboard': 'dashboard.productivity' in perms,
         'is_novus_super':        is_novus_super(user),
         'role_code':             get_user_role_for_site(user, site).code if get_user_role_for_site(user, site) else '',
     }

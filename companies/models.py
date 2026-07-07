@@ -163,26 +163,93 @@ class SiteWorkdayConfig(models.Model):
     )
     weekday = models.IntegerField(choices=Weekday.choices)
     work_start_time = models.TimeField()
-    work_end_time = models.TimeField()
+    work_end_time = models.TimeField(
+        help_text='Hora oficial de fin de jornada. Define las HH pagadas del dia '
+                  'y se escribe como ended_at en los cierres automaticos.'
+    )
+    auto_close_time = models.TimeField(
+        null=True, blank=True,
+        help_text='Hora en que Celery cierra sesiones abiertas automaticamente. '
+                  'Debe ser posterior a work_end_time (buffer recomendado: 1-2 hrs). '
+                  'Si se deja vacio, esta jornada no tiene cierre automatico.'
+    )
     lunch_start_time = models.TimeField(null=True, blank=True)
     lunch_end_time = models.TimeField(null=True, blank=True)
     deduct_lunch_from_icc = models.BooleanField(default=True)
-    all_day_overtime = models.BooleanField(default=False)
+    all_day_overtime = models.BooleanField(
+        default=False,
+        help_text='Si esta marcado, todo el dia se considera hora extra y no hay cierre automatico.'
+    )
     is_active = models.BooleanField(default=True)
+    effective_from = models.DateField(
+        help_text='Desde cuando aplica esta configuracion de jornada.'
+    )
+    effective_to = models.DateField(
+        null=True, blank=True,
+        help_text='Hasta cuando aplica. Vacio = vigente indefinidamente.'
+    )
 
     class Meta:
         db_table = 'companies_site_workday_config'
         verbose_name = 'Configuracion de jornada'
         verbose_name_plural = 'Configuraciones de jornada'
+        ordering = ['site', 'weekday', '-effective_from']
         constraints = [
             models.UniqueConstraint(
-                fields=['site', 'weekday'],
-                name='unique_workday_per_site'
+                fields=['site', 'weekday', 'effective_from'],
+                name='unique_workday_per_site_effective_from'
             )
         ]
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.auto_close_time and self.work_end_time:
+            if self.auto_close_time <= self.work_end_time:
+                raise ValidationError(
+                    'La hora de cierre automatico debe ser posterior a la hora de fin de jornada.'
+                )
+        if self.effective_to and self.effective_from and self.effective_to < self.effective_from:
+            raise ValidationError(
+                'La fecha de termino de vigencia no puede ser anterior a la de inicio.'
+            )
+
     def __str__(self):
-        return f'{self.site.name} - {self.get_weekday_display()}'
+        rango = f'{self.effective_from}' + (f' a {self.effective_to}' if self.effective_to else ' en adelante')
+        return f'{self.site.name} - {self.get_weekday_display()} ({rango})'
+
+    @classmethod
+    def vigente_para(cls, site, fecha):
+        """
+        Retorna la jornada vigente de una obra para una fecha dada (o None si
+        no hay ninguna configurada). Unico lugar donde vive esta consulta —
+        la usan tanto el cierre automatico (work/tasks.py) como el calculo
+        del informe diario (analytics/calculator.py).
+        """
+        from django.db.models import Q
+        return cls.objects.filter(
+            site=site,
+            weekday=fecha.weekday(),
+            is_active=True,
+            effective_from__lte=fecha,
+        ).filter(
+            Q(effective_to__isnull=True) | Q(effective_to__gte=fecha)
+        ).order_by('-effective_from').first()
+
+    def hh_pagadas(self):
+        """
+        HH netas pagadas segun esta jornada: jornada bruta (work_end_time -
+        work_start_time) menos colacion, si deduct_lunch_from_icc esta activo
+        y hay horario de colacion configurado.
+        """
+        from datetime import datetime, date as date_cls
+        inicio = datetime.combine(date_cls.min, self.work_start_time)
+        fin    = datetime.combine(date_cls.min, self.work_end_time)
+        bruta  = (fin - inicio).total_seconds() / 3600
+        if self.deduct_lunch_from_icc and self.lunch_start_time and self.lunch_end_time:
+            l_inicio = datetime.combine(date_cls.min, self.lunch_start_time)
+            l_fin    = datetime.combine(date_cls.min, self.lunch_end_time)
+            bruta -= (l_fin - l_inicio).total_seconds() / 3600
+        return round(bruta, 2)
 
 class CompanyMembership(models.Model):
 

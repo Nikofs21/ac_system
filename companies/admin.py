@@ -19,6 +19,12 @@ class SiteConfigInline(admin.StackedInline):
 class SiteWorkdayConfigInline(admin.TabularInline):
     model = SiteWorkdayConfig
     extra = 0
+    fields = (
+        'weekday', 'work_start_time', 'work_end_time', 'auto_close_time',
+        'lunch_start_time', 'lunch_end_time', 'deduct_lunch_from_icc',
+        'all_day_overtime', 'effective_from', 'effective_to', 'is_active',
+    )
+    ordering = ('weekday', '-effective_from')
 
 
 class CompanyMembershipInline(admin.TabularInline):

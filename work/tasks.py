@@ -21,20 +21,23 @@ def auto_close_sessions_task():
     Cierra sesiones de trabajo abiertas cuyo auto_close_time ya paso.
     Salta obras si el dia es feriado nacional o dia no laborable de la obra.
     """
-    from companies.models import Site
+    from companies.models import Site, SiteWorkdayConfig
     from work.models import (
-        WorkSession, WorkSessionChangeLog, OvertimePolicy,
+        WorkSession, WorkSessionChangeLog,
         ChilePublicHoliday, SiteHoliday,
     )
     from subcontracts.models import (
         SubcontractSession,
         SubcontractSessionHistory,
     )
+    from analytics.models import DailyProductivitySnapshot
+    from analytics.tasks import generate_daily_snapshot_task
 
-    now_utc             = timezone.now()
-    closed_sessions     = 0
-    closed_sub_sessions = 0
-    skipped_holiday     = 0
+    now_utc              = timezone.now()
+    closed_sessions      = 0
+    closed_sub_sessions  = 0
+    skipped_holiday      = 0
+    snapshots_triggered  = 0
 
     sites = Site.objects.filter(status='ACTIVE').select_related('company')
 
@@ -43,7 +46,6 @@ def auto_close_sessions_task():
             site_tz   = pytz.timezone(site.timezone or 'America/Santiago')
             now_local = now_utc.astimezone(site_tz)
             today     = now_local.date()
-            weekday   = now_local.weekday()
 
             # ── Verificar feriado nacional ────────────────────────────────
             is_national_holiday = ChilePublicHoliday.objects.filter(
@@ -67,25 +69,21 @@ def auto_close_sessions_task():
                 skipped_holiday += 1
                 continue
 
-            # ── Buscar politica del dia ───────────────────────────────────
-            policy = OvertimePolicy.objects.filter(
-                site=site,
-                weekday=weekday,
-                is_active=True,
-            ).first()
+            # ── Buscar la jornada vigente para esta obra+dia ───────────────
+            workday = SiteWorkdayConfig.vigente_para(site, today)
 
-            if not policy:
+            if not workday:
                 continue
 
-            if policy.all_day_overtime:
+            if workday.all_day_overtime:
                 continue
 
-            if not policy.auto_close_time or not policy.normal_end_time:
+            if not workday.auto_close_time or not workday.work_end_time:
                 continue
 
             # ── Verificar si ya paso la hora de cierre automatico ─────────
             auto_close_dt_local = site_tz.localize(
-                datetime.combine(today, policy.auto_close_time)
+                datetime.combine(today, workday.auto_close_time)
             )
             auto_close_dt_utc = auto_close_dt_local.astimezone(pytz.utc)
 
@@ -94,7 +92,7 @@ def auto_close_sessions_task():
 
             # ── Hora oficial de fin de jornada (lo que se escribe) ────────
             normal_end_dt_local = site_tz.localize(
-                datetime.combine(today, policy.normal_end_time)
+                datetime.combine(today, workday.work_end_time)
             )
             normal_end_dt_utc = normal_end_dt_local.astimezone(pytz.utc)
 
@@ -124,12 +122,12 @@ def auto_close_sessions_task():
                         after_json  = {
                             'status':          'AUTO_CLOSED',
                             'ended_at':        normal_end_dt_utc.isoformat(),
-                            'normal_end_time': str(policy.normal_end_time),
-                            'auto_close_time': str(policy.auto_close_time),
+                            'work_end_time':   str(workday.work_end_time),
+                            'auto_close_time': str(workday.auto_close_time),
                         },
                         reason = (
-                            f'Cierre automatico. Jornada oficial: {policy.normal_end_time}. '
-                            f'Cierre configurado a las: {policy.auto_close_time}.'
+                            f'Cierre automatico. Jornada oficial: {workday.work_end_time}. '
+                            f'Cierre configurado a las: {workday.auto_close_time}.'
                         ),
                     )
                     closed_sessions += 1
@@ -159,12 +157,24 @@ def auto_close_sessions_task():
                         change_type = 'FORCE_CLOSE',
                         after_json  = {
                             'ended_at':        normal_end_dt_utc.isoformat(),
-                            'normal_end_time': str(policy.normal_end_time),
-                            'auto_close_time': str(policy.auto_close_time),
+                            'work_end_time':   str(workday.work_end_time),
+                            'auto_close_time': str(workday.auto_close_time),
                             'reason':          'Cierre automatico por fin de jornada',
                         },
                     )
                     closed_sub_sessions += 1
+
+            # ── Generar el snapshot diario del Informe de Productividad ────
+            # Una vez que llegamos aca, el dia de esta obra ya esta cerrado
+            # (auto_close_time paso). Si ya existe snapshot para site+today
+            # no se regenera — los dias pasados son inmutables por diseño.
+            already_exists = DailyProductivitySnapshot.objects.filter(
+                site=site, date=today
+            ).exists()
+
+            if not already_exists:
+                generate_daily_snapshot_task.delay(site.id, today.isoformat())
+                snapshots_triggered += 1
 
         except Exception as e:
             logger.error(
@@ -176,10 +186,12 @@ def auto_close_sessions_task():
     logger.info(
         f'auto_close_sessions: {closed_sessions} sesiones normales, '
         f'{closed_sub_sessions} subcontratos cerrados, '
-        f'{skipped_holiday} obras saltadas por feriado.'
+        f'{skipped_holiday} obras saltadas por feriado, '
+        f'{snapshots_triggered} snapshots diarios encolados.'
     )
     return {
         'closed_sessions':     closed_sessions,
         'closed_sub_sessions': closed_sub_sessions,
         'skipped_holiday':     skipped_holiday,
+        'snapshots_triggered': snapshots_triggered,
     }

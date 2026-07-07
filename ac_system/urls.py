@@ -12,6 +12,7 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
     path('', include('core.urls')),
     path('work/', include('work.urls')),
+    path('reportes/', include('analytics.urls')),
     path('resources/', include('resources.urls')),
     path('tracking/', include('tracking.urls')),
     path('r/<str:uid>/', include('resources.urls_qr')),

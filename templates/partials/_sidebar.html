@@ -60,6 +60,13 @@
       </a>
     {% endif %}
 
+    {% if perms_ctx.can_view_productivity_dashboard %}
+      <a href="{% url 'productivity_dashboard' %}" class="ac-nav-item {% block nav_productivity %}{% endblock %}">
+        <i class="ti ti-report-analytics" aria-hidden="true"></i>
+        <span>Informe diario</span>
+      </a>
+    {% endif %}
+
     {% if perms_ctx.can_view_orgchart and features.orgchart %}
       <a href="#" class="ac-nav-item {% block nav_orgchart %}{% endblock %}">
         <i class="ti ti-sitemap" aria-hidden="true"></i>
