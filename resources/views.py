@@ -129,6 +129,7 @@ def worker_list(request):
         'active_filter': active_filter,
         'counts':        counts,
         'total':         len(workers),
+        'full_screen':   True,
     })
 
 

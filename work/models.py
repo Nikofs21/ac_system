@@ -248,6 +248,7 @@ class WorkSession(models.Model):
     class ClosureOrigin(models.TextChoices):
         MANUAL = 'MANUAL', 'Manual'
         MASS_CLOSE = 'MASS_CLOSE', 'Cierre masivo'
+        TASK_CLOSE = 'TASK_CLOSE', 'Cierre por partida'
         AUTO_CLOSE = 'AUTO_CLOSE', 'Cierre automatico'
         OVERTIME_SPLIT = 'OVERTIME_SPLIT', 'Division hora extra'
 

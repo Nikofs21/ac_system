@@ -29,28 +29,40 @@ html, body { height: 100%; }
 /* ── 2. VARIABLES ─────────────────────────────────────────── */
 
 :root {
-  /* Colores principales */
-  --ac-blue:        #0047CC;
-  --ac-blue-hover:  #003BA8;
-  --ac-blue-soft:   #EEF3FF;
-  --ac-blue-mid:    #DBEAFE;
+  /* Colores principales — paleta "Onio" (rediseño 2026-07) */
+  --ac-blue:        #3D57F5;
+  --ac-blue-hover:  #2E44D6;
+  --ac-blue-soft:   #EEF1FE;
+  --ac-blue-mid:    #DBE2FE;
 
-  --ac-dark:        #1A1F36;
-  --ac-dark-mid:    #2D3748;
+  --ac-dark:        #14141F;
+  --ac-dark-mid:    #4B4D5A;
 
   --ac-white:       #FFFFFF;
-  --ac-bg:          #F0F2F5;
-  --ac-surface:     #F7F8FA;
+  --ac-bg:          #F5F6F9;
+  --ac-surface:     #F5F6F9;
 
-  --ac-border:      #E4E8EF;
-  --ac-border-mid:  #D5D9E0;
+  --ac-border:      #E9EAF1;
+  --ac-border-mid:  #DCDDE5;
 
-  --ac-text:        #1A1F36;
-  --ac-text-sub:    #6B7A99;
-  --ac-text-hint:   #A0ABBB;
+  --ac-text:        #14141F;
+  --ac-text-sub:    #8A8C98;
+  --ac-text-hint:   #ADAFB9;
+
+  /* Tokens especificos del sistema de diseño Onio, sin --ac- porque no
+     reemplazan un token generico existente (colores de marca puntuales,
+     no semanticos) */
+  --ink:            #14141F;
+  --ink-soft:       #4B4D5A;
+  --muted:          #8A8C98;
+  --card:           #F5F6F9;
+  --card-border:    #E9EAF1;
+  --login-ink:         #202137;
+  --login-input-text:  #666666;
+  --login-blue:        #1C5AFA;
 
   /* Semánticos */
-  --ac-success:     #10B981;
+  --ac-success:     #22C55E;
   --ac-success-bg:  #F0FDF4;
   --ac-success-bdr: #BBF7D0;
   --ac-success-text:#065F46;
@@ -60,9 +72,9 @@ html, body { height: 100%; }
   --ac-warn-bdr:    #FDE68A;
   --ac-warn-text:   #7C5800;
 
-  --ac-danger:      #FF4444;
-  --ac-danger-bg:   #FFF1F0;
-  --ac-danger-bdr:  #FFCCC7;
+  --ac-danger:      #EA4342;
+  --ac-danger-bg:   #FEF0F0;
+  --ac-danger-bdr:  #F9D2D1;
   --ac-danger-text: #A8071A;
 
   --ac-purple:      #7C3AED;
@@ -70,22 +82,36 @@ html, body { height: 100%; }
   --ac-purple-bdr:  #DDD6FE;
 
   /* Tipografía */
-  --font-main:  'Inter', sans-serif;
+  --font-main:  'Inter Tight', sans-serif;
   --font-mono:  'Roboto Mono', monospace;
-  --font-brand: 'Inter', sans-serif;
+  --font-brand: 'Inter Tight', sans-serif;
 
   /* Layout */
   --ac-topbar-h:  52px;
   --ac-sidebar-w: 220px;
+  --ac-sidebar-w-desktop: 260px;
 
   /* Radios */
-  --radius:    8px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --radius:      8px;
+  --radius-lg:   10px;
+  --radius-xl:   14px;
+  --radius-pill: 999px;
 
   /* Sombras */
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+
+  /* Transiciones (sistema Onio) */
+  --ease-out:    cubic-bezier(.22,.61,.36,1);
+  --ease-in-out: cubic-bezier(.45,0,.2,1);
+  --dur-fast:    .16s;
+  --dur-base:    .22s;
+  --dur-slow:    .32s;
+
+  /* Breakpoints de referencia (para comentarios/documentacion —
+     los @media no pueden leer variables CSS, se repiten como numeros):
+     tablet:  768px  (calza con el frame is-tablet del prototipo, 834x1194 = iPad vertical)
+     desktop: 1140px (calza con el ancho maximo real del frame is-desktop del prototipo) */
 }
 
 

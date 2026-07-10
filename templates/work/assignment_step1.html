@@ -1,145 +1,172 @@
 {% extends 'base.html' %}
-{% block title %}Nueva asignacion{% endblock %}
-{% block nav_assign %}active{% endblock %}
+{% load static %}
 
-{% block content %}
-<div class="ac-timeline">
-  <div class="ac-t-step ac-t-step-active">
-    <div class="ac-t-num ac-t-num-active">1</div>
-    <span class="ac-t-label ac-t-label-active">Seleccionar partida</span>
-  </div>
-  <div class="ac-t-step">
-    <div class="ac-t-num ac-t-num-pending">2</div>
-    <span class="ac-t-label ac-t-label-pending">Escanear trabajadores</span>
-  </div>
-  <div class="ac-t-step">
-    <div class="ac-t-num ac-t-num-pending">3</div>
-    <span class="ac-t-label ac-t-label-pending">Confirmar e iniciar</span>
-  </div>
-</div>
+{% block title %}Nueva partida{% endblock %}
 
-<div style="padding:24px; max-width:600px;">
-  <div style="margin-bottom:20px;">
-    <h1 class="ac-page-title">Nueva asignacion</h1>
-    <p style="font-size:13px; color:var(--ac-text-sub); margin-top:4px;">{{ site.name }}</p>
-  </div>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/assignment.css' %}">
+{% endblock %}
 
-  {% if preloaded_name %}
-    <div class="ac-alert ac-alert-info" style="margin-bottom:20px;">
-      <i class="ti ti-user-check" aria-hidden="true"></i>
-      <div>
-        <div style="font-weight:600; margin-bottom:2px;">Trabajador pre-cargado</div>
-        <div style="font-size:12px;">
-          <strong>{{ preloaded_name }}</strong> se agregara automaticamente al grupo en el paso 2.
-          Selecciona la etapa y partida para continuar.
+{% block auth_content %}
+<div class="assign-screen">
+  <div class="assign-view">
+    <div class="assign-page">
+
+      <div class="assign-header">
+        <div class="left">
+          <div>
+            <div class="assign-eyebrow">Nueva asignación</div>
+            <div class="assign-title">Seleccionar partida</div>
+          </div>
         </div>
       </div>
-    </div>
-  {% endif %}
 
-  <form method="post">
-    {% csrf_token %}
-
-    <div class="ac-field">
-      <label class="ac-label" for="stage_id">Etapa</label>
-      <select class="ac-select" name="stage_id" id="stage_id" required onchange="filterTasks()">
-        <option value="">Selecciona una etapa...</option>
-        {% for grupo in etapas %}
-          <option value="{{ grupo.stage.id }}">{{ grupo.stage.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="ac-field" id="task-search-container" style="display:none;">
-      <label class="ac-label" for="task-search">Buscar partida</label>
-      <input type="text" id="task-search" class="ac-input" placeholder="Escribe para filtrar... ej: yeso, tabique, hormigon">
-    </div>
-
-    <div class="ac-field">
-      <label class="ac-label" for="task_id">Partida</label>
-      <select class="ac-select" name="task_id" id="task_id" required disabled>
-        <option value="">Primero selecciona una etapa...</option>
-        {% for grupo in etapas %}
-          {% for task in grupo.tasks %}
-            <option value="{{ task.task.id }}" data-stage="{{ grupo.stage.id }}" data-risk="{{ task.task.risk_level }}" style="display:none;">
-              {% if task.subetapa %}{{ task.subetapa }} — {% endif %}{{ task.task.name }}{% if task.task.risk_level == 'HIGH_RISK' %} ⚠{% endif %}
-            </option>
-          {% endfor %}
-        {% endfor %}
-      </select>
-    </div>
-
-    <div id="risk-info" style="display:none; margin-bottom:20px;">
-      <div class="ac-alert ac-alert-warn" id="risk-high" style="display:none;">
-        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-        <span>Esta partida es de <strong>alto riesgo</strong>. Se enviara una alerta al iniciar.</span>
+      <div class="assign-steps">
+        <div class="assign-step is-active"><span class="step-num">1</span><span class="step-label">Partida</span></div>
+        <div class="assign-step-line"></div>
+        <div class="assign-step"><span class="step-num">2</span><span class="step-label">Trabajadores</span></div>
+        <div class="assign-step-line"></div>
+        <div class="assign-step"><span class="step-num">3</span><span class="step-label">Confirmar</span></div>
       </div>
-      <div class="ac-alert ac-alert-info" id="risk-normal" style="display:none;">
-        <i class="ti ti-info-circle" aria-hidden="true"></i>
-        <span>Riesgo <strong>normal</strong>.</span>
-      </div>
-    </div>
 
-    <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
-      <i class="ti ti-arrow-right" aria-hidden="true"></i>
       {% if preloaded_name %}
-        Continuar con {{ preloaded_name }}
-      {% else %}
-        Continuar - escanear trabajadores
+        <div class="assign-risk-note high" style="background:var(--ac-blue-soft);color:var(--login-blue);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+          <span><strong>{{ preloaded_name }}</strong> se agregará automáticamente al grupo en el paso 2. Selecciona la etapa y partida para continuar.</span>
+        </div>
       {% endif %}
-    </button>
-  </form>
+
+      <form method="post" id="step1-form">
+        {% csrf_token %}
+        <input type="hidden" name="stage_id" id="stage_id_input">
+        <input type="hidden" name="task_id" id="task_id_input">
+
+        <div class="assign-field">
+          <label>Etapa</label>
+          <button type="button" class="assign-select" id="etapa-select">
+            <span id="etapa-value">Selecciona una etapa</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="assign-select-options" id="etapa-options">
+            {% for grupo in etapas %}
+              <button type="button" data-stage-id="{{ grupo.stage.id }}">{{ grupo.stage.name }}</button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="assign-field">
+          <label>Partida</label>
+          <button type="button" class="assign-select" id="partida-select" disabled>
+            <span id="partida-value">Primero selecciona una etapa</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="assign-select-options" id="partida-options">
+            <div class="assign-select-search"><input type="text" id="partida-search" placeholder="Filtrar partidas..."></div>
+            {% for grupo in etapas %}
+              {% for st in grupo.tasks %}
+                <button type="button" data-stage-id="{{ grupo.stage.id }}" data-task-id="{{ st.task.id }}" data-risk="{{ st.task.risk_level }}" style="display:none;">
+                  {% if st.subetapa %}{{ st.subetapa }} — {% endif %}{{ st.task.name }}{% if st.task.risk_level == 'HIGH_RISK' %} ⚠{% endif %}
+                </button>
+              {% endfor %}
+            {% endfor %}
+          </div>
+        </div>
+
+        <div id="risk-note-high" class="assign-risk-note high" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+          <span>Esta partida es de <strong>alto riesgo</strong>. Se enviará una alerta al iniciar.</span>
+        </div>
+
+        <div class="assign-footer">
+          <button type="submit" class="btn-primary" id="step1-continue" disabled>
+            <span>{% if preloaded_name %}Continuar con {{ preloaded_name }}{% else %}Continuar{% endif %}</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  {% include 'partials/_home_nav.html' %}
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-  function filterTasks() {
-    const stageId = document.getElementById('stage_id').value;
-    const taskSelect = document.getElementById('task_id');
-    const options = taskSelect.querySelectorAll('option[data-stage]');
-    const riskInfo = document.getElementById('risk-info');
-    const riskHigh = document.getElementById('risk-high');
-    const riskNormal = document.getElementById('risk-normal');
-    const searchContainer = document.getElementById('task-search-container');
-    const searchInput = document.getElementById('task-search');
+const etapaSelect   = document.getElementById('etapa-select');
+const etapaOptions  = document.getElementById('etapa-options');
+const etapaValue    = document.getElementById('etapa-value');
+const partidaSelect = document.getElementById('partida-select');
+const partidaOptions= document.getElementById('partida-options');
+const partidaValue  = document.getElementById('partida-value');
+const partidaSearch = document.getElementById('partida-search');
+const stageInput    = document.getElementById('stage_id_input');
+const taskInput     = document.getElementById('task_id_input');
+const continueBtn   = document.getElementById('step1-continue');
+const riskHigh      = document.getElementById('risk-note-high');
 
-    taskSelect.disabled = !stageId;
-    taskSelect.value = '';
-    riskInfo.style.display = 'none';
+function closeAllDropdowns(except) {
+  [etapaOptions, partidaOptions].forEach(el => { if (el !== except) el.classList.remove('is-open'); });
+}
+
+etapaSelect.addEventListener('click', () => {
+  etapaOptions.classList.toggle('is-open');
+  closeAllDropdowns(etapaOptions);
+});
+
+etapaOptions.querySelectorAll('button[data-stage-id]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const stageId = btn.dataset.stageId;
+    etapaValue.textContent = btn.textContent;
+    stageInput.value = stageId;
+    etapaOptions.classList.remove('is-open');
+
+    // Habilitar y filtrar partidas de esta etapa
+    partidaSelect.removeAttribute('disabled');
+    partidaValue.textContent = 'Selecciona una partida';
+    taskInput.value = '';
     riskHigh.style.display = 'none';
-    riskNormal.style.display = 'none';
+    continueBtn.setAttribute('disabled', 'disabled');
+    partidaSearch.value = '';
 
-    options.forEach(opt => {
-      opt.style.display = opt.dataset.stage === stageId ? '' : 'none';
+    partidaOptions.querySelectorAll('button[data-task-id]').forEach(opt => {
+      opt.style.display = opt.dataset.stageId === stageId ? '' : 'none';
     });
+  });
+});
 
-    if (stageId) {
-      taskSelect.querySelector('option[value=""]').textContent = 'Selecciona una partida...';
-      searchContainer.style.display = 'block';
-      searchInput.value = '';
+partidaSelect.addEventListener('click', () => {
+  if (partidaSelect.hasAttribute('disabled')) return;
+  partidaOptions.classList.toggle('is-open');
+  closeAllDropdowns(partidaOptions);
+});
 
-      searchInput.oninput = function() {
-        const term = this.value.toLowerCase();
-        options.forEach(opt => {
-          if (opt.dataset.stage === stageId) {
-            opt.style.display = opt.textContent.toLowerCase().includes(term) ? '' : 'none';
-          }
-        });
-        taskSelect.value = '';
-        riskInfo.style.display = 'none';
-      };
-    } else {
-      searchContainer.style.display = 'none';
-    }
+partidaOptions.querySelectorAll('button[data-task-id]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    partidaValue.textContent = btn.textContent.trim();
+    taskInput.value = btn.dataset.taskId;
+    partidaOptions.classList.remove('is-open');
+    riskHigh.style.display = btn.dataset.risk === 'HIGH_RISK' ? 'flex' : 'none';
+    continueBtn.removeAttribute('disabled');
+  });
+});
 
-    taskSelect.addEventListener('change', function() {
-      const selected = this.options[this.selectedIndex];
-      const risk = selected ? selected.dataset.risk : '';
-      riskInfo.style.display = risk ? 'block' : 'none';
-      riskHigh.style.display = risk === 'HIGH_RISK' ? 'flex' : 'none';
-      riskNormal.style.display = risk === 'NORMAL' ? 'flex' : 'none';
-    });
-  }
+partidaSearch.addEventListener('input', function() {
+  const term = this.value.toLowerCase();
+  const stageId = stageInput.value;
+  partidaOptions.querySelectorAll('button[data-task-id]').forEach(opt => {
+    const matchesStage = opt.dataset.stageId === stageId;
+    const matchesTerm  = opt.textContent.toLowerCase().includes(term);
+    opt.style.display = (matchesStage && matchesTerm) ? '' : 'none';
+  });
+});
+partidaSearch.addEventListener('click', e => e.stopPropagation());
+
+document.addEventListener('click', (e) => {
+  if (!etapaSelect.contains(e.target) && !etapaOptions.contains(e.target)) etapaOptions.classList.remove('is-open');
+  if (!partidaSelect.contains(e.target) && !partidaOptions.contains(e.target)) partidaOptions.classList.remove('is-open');
+});
 </script>
-{% endblock %}
 {% endblock %}

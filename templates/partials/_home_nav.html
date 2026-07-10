@@ -1,0 +1,134 @@
+{% load static %}
+<nav class="home-nav" id="home-nav">
+  <div class="sidebar-logo">
+    <svg viewBox="0 0 500 402.14" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="currentColor" d="M77.04,74.83h339.2c18.27,0,33.08-14.81,33.08-33.08H43.96c0,18.27,14.81,33.08,33.08,33.08h0Z"/>
+      <path fill="currentColor" d="M401.58,89.76v-.06H97.8v.08c-36.74.32-66.56,30.31-66.56,67.13s30.12,67.15,67.15,67.15c2.49,0,4.96-.16,7.4-.42h10.44v14.51h.24v79.73l29.7,10.82v-90.54h28.1v100.77l29.7,10.82v-111.58h28.1v121.81l17.32,6.31,12.38-3.93v-124.18h28.1v115.22l29.7-9.45v-105.77h28.1v96.83l29.7-9.45v-100.41c0-.51-.06-.99-.16-1.46h16.93c2.43.28,4.9.42,7.4.42,37.02,0,67.15-30.12,67.15-67.15s-30.12-67.15-67.15-67.15l.06-.02ZM208.59,147l30.35,45.95h-30.35v-45.95ZM344.99,192.94h-34.56v-72.55h34.88c-6.84,10.52-10.84,23.06-10.84,36.52s3.88,25.63,10.54,36.05l-.02-.02ZM289.25,192.94h-24.14v-72.55h24.14v72.55ZM243.97,120.39v47.14l-30.99-47.14h30.99ZM187.43,120.39v72.55h-32.43c6.66-10.42,10.54-22.78,10.54-36.05s-3.99-26-10.84-36.52h32.73v.02ZM98.39,190.39c-18.47,0-33.48-15.03-33.48-33.48s15.03-33.48,33.48-33.48,33.48,15.03,33.48,33.48-15.03,33.48-33.48,33.48ZM401.58,190.39c-18.47,0-33.48-15.03-33.48-33.48s15.03-33.48,33.48-33.48,33.48,15.03,33.48,33.48-15.03,33.48-33.48,33.48Z"/>
+    </svg>
+    <span class="sidebar-logo-text">Control de<br>Partidas</span>
+  </div>
+  <div class="sidebar-menu-label">Menú Principal</div>
+
+  {% with current=request.resolver_match.url_name %}
+
+  <a href="{% url 'dashboard' %}" class="nav-item nav-primary {% if current == 'dashboard' %}active{% endif %}">
+    <i class="ti ti-home" aria-hidden="true"></i>
+    <span>Inicio</span>
+  </a>
+
+  {% if perms_ctx.can_start_people or perms_ctx.can_start_machines %}
+    <a href="{% url 'work:assignment_new' %}" class="nav-item nav-primary {% if current == 'assignment_new' %}active{% endif %}">
+      <span class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+      <span>Nueva partida</span>
+    </a>
+    <a href="{% url 'work:active_workers' %}" class="nav-item {% if current == 'active_workers' %}active{% endif %}">
+      <i class="ti ti-users" aria-hidden="true"></i>
+      <span>Trabajadores activos</span>
+    </a>
+  {% endif %}
+
+  {% if perms_ctx.can_view_resources %}
+    <a href="{% url 'resources:worker_list' %}" class="nav-item nav-primary {% if current == 'worker_list' %}active{% endif %}">
+      <i class="ti ti-list-search" aria-hidden="true"></i>
+      <span>Trabajadores</span>
+    </a>
+  {% endif %}
+
+  {% if perms_ctx.can_manage_nos and features.no_on_site %}
+    <a href="{% url 'tracking:no_on_site' %}" class="nav-item {% if current == 'no_on_site' %}active{% endif %}">
+      <i class="ti ti-circle-minus" aria-hidden="true"></i>
+      <span>No en obra</span>
+    </a>
+  {% endif %}
+
+  {% if perms_ctx.can_review_sessions %}
+    <a href="{% url 'work:session_review' %}" class="nav-item {% if current == 'session_review' %}active{% endif %}">
+      <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+      <span>Revisión de partidas</span>
+    </a>
+  {% endif %}
+
+  {% if perms_ctx.can_view_progress and features.planning %}
+    <a href="#" class="nav-item">
+      <i class="ti ti-chart-bar" aria-hidden="true"></i>
+      <span>Avance semanal</span>
+    </a>
+  {% endif %}
+
+  {% if perms_ctx.can_view_productivity_dashboard %}
+    <a href="{% url 'productivity_dashboard' %}" class="nav-item {% if current == 'productivity_dashboard' %}active{% endif %}">
+      <i class="ti ti-report-analytics" aria-hidden="true"></i>
+      <span>Informe diario</span>
+    </a>
+  {% endif %}
+
+  {% if perms_ctx.can_view_orgchart and features.orgchart %}
+    <a href="#" class="nav-item">
+      <i class="ti ti-sitemap" aria-hidden="true"></i>
+      <span>Organigrama</span>
+    </a>
+  {% endif %}
+
+  {% if perms_ctx.can_view_moi %}
+    <a href="{% url 'access:moi_list' %}" class="nav-item {% if current == 'moi_list' %}active{% endif %}">
+      <i class="ti ti-id-badge" aria-hidden="true"></i>
+      <span>Mano de obra indirecta</span>
+    </a>
+  {% endif %}
+
+  {% if perms_ctx.can_manage_companies %}
+    <a href="/prestador/" class="nav-item">
+      <i class="ti ti-building-factory" aria-hidden="true"></i>
+      <span>Empresas y obras</span>
+    </a>
+    <a href="{% url 'work:partidas_panel' %}" class="nav-item {% if current == 'partidas_panel' %}active{% endif %}">
+      <i class="ti ti-clipboard-text" aria-hidden="true"></i>
+      <span>Partidas y etapas</span>
+    </a>
+    <a href="{% url 'resources:workers_bulk_select' %}" class="nav-item">
+      <i class="ti ti-users-plus" aria-hidden="true"></i>
+      <span>Carga masiva trabajadores</span>
+    </a>
+  {% endif %}
+
+  {% if features.subcontracts and perms_ctx.can_view_subcontracts %}
+    <a href="{% url 'subcontracts:subcontract_list' %}" class="nav-item {% if current == 'subcontract_list' %}active{% endif %}">
+      <i class="ti ti-file-invoice" aria-hidden="true"></i>
+      <span>Subcontratos</span>
+    </a>
+  {% endif %}
+
+  {% endwith %}
+
+  <button type="button" class="nav-item nav-more" id="nav-more-toggle" aria-expanded="false">
+    <i class="ti ti-dots" aria-hidden="true"></i>
+    <span>Más</span>
+  </button>
+
+  <a href="{% url 'logout' %}" class="sidebar-profile" id="sidebar-profile-trigger">
+    <span class="sidebar-profile-avatar"></span>
+    <div class="sidebar-profile-text">
+      <div class="sidebar-profile-name">{{ request.user.get_full_name|default:request.user.email }}</div>
+      <div class="sidebar-profile-role">{{ perms_ctx.role_name|default:"" }}</div>
+    </div>
+  </a>
+</nav>
+<div class="nav-more-backdrop" id="nav-more-backdrop"></div>
+
+<script>
+(function(){
+  var toggle = document.getElementById('nav-more-toggle');
+  var nav = document.getElementById('home-nav');
+  var backdrop = document.getElementById('nav-more-backdrop');
+  if (!toggle) return;
+  function close(){
+    nav.classList.remove('is-expanded');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  toggle.addEventListener('click', function(){
+    var open = nav.classList.toggle('is-expanded');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  backdrop.addEventListener('click', close);
+})();
+</script>

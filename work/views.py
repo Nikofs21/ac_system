@@ -105,6 +105,7 @@ def assignment_new(request):
         'step':           1,
         'preloaded_name': preloaded_name,
         'perms_ctx':      get_user_context_permissions(request.user, site),
+        'full_screen':    True,
     })
 
 
@@ -152,6 +153,8 @@ def assignment_scan(request):
         'site':             site,
         'page_title':       'Escanear trabajadores',
         'step':             2,
+        'perms_ctx':        get_user_context_permissions(request.user, site),
+        'full_screen':      True,
     })
 
 
@@ -446,17 +449,20 @@ def assignment_confirm(request):
         return redirect('work:active_workers')
 
     return render(request, 'work/assignment_step3.html', {
-        'stage':                stage,
-        'task':                 stage_task,
-        'task_catalog':         task_catalog,
-        'workers':              workers,
-        'workers_with_session': workers_with_session,
-        'no_on_site_workers':   no_on_site_workers,
-        'has_high_risk':        task_catalog.risk_level == 'HIGH_RISK',
-        'site':                 site,
-        'page_title':           'Confirmar asignacion',
-        'step':                 3,
-        'now':                  timezone.now(),
+        'stage':                    stage,
+        'task':                     stage_task,
+        'task_catalog':             task_catalog,
+        'workers':                  workers,
+        'workers_with_session':     workers_with_session,
+        'workers_with_session_ids': [item['worker'].id for item in workers_with_session],
+        'no_on_site_workers':       no_on_site_workers,
+        'has_high_risk':            task_catalog.risk_level == 'HIGH_RISK',
+        'site':                     site,
+        'page_title':               'Confirmar asignacion',
+        'step':                     3,
+        'now':                      timezone.now(),
+        'perms_ctx':                get_user_context_permissions(request.user, site),
+        'full_screen':              True,
     })
 
 
@@ -592,6 +598,50 @@ def mass_close(request):
 
     messages.success(request, f'{count} sesiones cerradas.')
     return redirect('work:active_workers')
+
+
+@require_active_site
+@require_POST
+def close_by_task(request, task_id):
+    """
+    Atajo del dashboard ('job cards'): cierra todas las sesiones abiertas
+    que el usuario actual inicio para una partida especifica. Misma logica
+    de cierre que mass_close, solo que acotada a una partida en vez de a
+    todas las sesiones del usuario — para poder cerrar "de un solo golpe"
+    a todos los involucrados que el mismo inicio en esa partida, sin tener
+    que ir a la pantalla de trabajadores activos.
+    """
+    site = get_active_site(request)
+
+    if not user_has_permission(request.user, 'bulk_close.own_sessions', site):
+        return redirect('access_denied')
+
+    now = timezone.now()
+
+    open_sessions = WorkSession.objects.filter(
+        site=site,
+        status='OPEN',
+        started_by=request.user,
+        task_id=task_id,
+    )
+
+    count = 0
+    with transaction.atomic():
+        for session in open_sessions:
+            duration = int((now - session.started_at).total_seconds() / 60)
+            session.ended_at         = now
+            session.status           = 'CLOSED'
+            session.ended_by         = request.user
+            session.closure_origin   = 'TASK_CLOSE'
+            session.duration_minutes = duration
+            session.save()
+            count += 1
+
+    if request.headers.get('HX-Request'):
+        return HttpResponse(status=204, headers={'HX-Trigger': 'sessionClosed'})
+
+    messages.success(request, f'{count} sesiones cerradas para esa partida.')
+    return redirect('dashboard')
 
 
 @require_active_site

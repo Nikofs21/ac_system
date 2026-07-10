@@ -22,8 +22,11 @@ def dashboard(request):
     perms_ctx = get_user_context_permissions(request.user, site)
     role_code = perms_ctx.get('role_code', '')
 
-    # Prestador usa el mismo dashboard que admin_obra
-    if request.user.actor_type == 'PROVIDER':
+    # Prestador y novus_super usan el mismo dashboard que admin_obra.
+    # Se chequean ambas condiciones por separado (no solo actor_type) porque
+    # is_novus_super no garantiza actor_type=PROVIDER si alguien lo edita
+    # a mano desde el admin — son dos campos independientes.
+    if request.user.actor_type == 'PROVIDER' or request.user.is_novus_super:
         role_code = 'admin_obra'
 
     context = _build_dashboard_context(request.user, site, role_code, perms_ctx)
@@ -61,37 +64,41 @@ def _build_dashboard_context(user, site, role_code, perms_ctx):
     open_count      = open_sessions.count()
     unassigned_count = max(0, assigned_count - open_count - no_on_site_today)
 
+    # ── Job cards: partidas que el usuario inicio y siguen abiertas ────────────
+    # Disponible para CUALQUIER rol con permiso de iniciar sesiones, no una
+    # lista fija de roles — un administrativo con autorizacion tambien debe
+    # verlas, igual que un supervisor.
+    from core.permissions import user_has_permission
+    puede_iniciar_sesiones = (
+        user_has_permission(user, 'sessions.start_people', site) or
+        user_has_permission(user, 'sessions.start_machines', site)
+    )
+    mis_partidas_activas = []
+    if puede_iniciar_sesiones:
+        mis_partidas_activas = _agrupar_partidas_activas(
+            open_sessions.filter(started_by=user)
+        )
+
     base = {
-        'site':             site,
-        'page_title':       'Dashboard',
-        'perms_ctx':        perms_ctx,
-        'role_code':        role_code,
-        'now':              now,
-        'today':            today,
-        'open_count':       open_count,
-        'closed_today':     closed_today,
-        'no_on_site_today': no_on_site_today,
-        'unassigned_count': unassigned_count,
-        'assigned_count':   assigned_count,
+        'site':                   site,
+        'page_title':             'Dashboard',
+        'perms_ctx':              perms_ctx,
+        'role_code':              role_code,
+        'full_screen':            True,
+        'now':                    now,
+        'today':                  today,
+        'open_count':             open_count,
+        'closed_today':           closed_today,
+        'no_on_site_today':       no_on_site_today,
+        'unassigned_count':       unassigned_count,
+        'assigned_count':         assigned_count,
+        'puede_iniciar_sesiones': puede_iniciar_sesiones,
+        'mis_partidas_activas':   mis_partidas_activas,
     }
 
     # ── Supervisor ────────────────────────────────────────────────────────────
     if role_code == 'supervisor':
         my_sessions = open_sessions.filter(started_by=user)
-
-        # Agrupar sesiones por partida
-        partidas_activas = {}
-        for s in my_sessions:
-            key = s.task.name
-            if key not in partidas_activas:
-                partidas_activas[key] = {
-                    'task_name':  s.task.name,
-                    'stage_name': s.stage.name,
-                    'workers':    [],
-                    'count':      0,
-                }
-            partidas_activas[key]['workers'].append(s.resource.display_name)
-            partidas_activas[key]['count'] += 1
 
         # Detectar sesiones largas (más de 10 horas abiertas)
         sesiones_largas = []
@@ -113,31 +120,13 @@ def _build_dashboard_context(user, site, role_code, perms_ctx):
                 status__in=['CLOSED', 'AUTO_CLOSED'],
                 started_at__date=today,
             ).count(),
-            'partidas_activas': list(partidas_activas.values()),
+            'partidas_activas': mis_partidas_activas,
             'sesiones_largas':  sesiones_largas,
         })
         return base
 
     # ── Jefe de terreno y AAC ─────────────────────────────────────────────────
     if role_code in ('jefe_terreno', 'aac'):
-        # Top 3 partidas con más trabajadores ahora
-        partidas_map = {}
-        for s in open_sessions:
-            key = s.task.name
-            if key not in partidas_map:
-                partidas_map[key] = {
-                    'task_name':  s.task.name,
-                    'stage_name': s.stage.name,
-                    'count':      0,
-                }
-            partidas_map[key]['count'] += 1
-
-        top_partidas = sorted(
-            partidas_map.values(),
-            key=lambda x: x['count'],
-            reverse=True
-        )[:3]
-
         # Sesiones largas (más de 10 horas)
         sesiones_largas = []
         for s in open_sessions:
@@ -150,14 +139,14 @@ def _build_dashboard_context(user, site, role_code, perms_ctx):
                 })
 
         base.update({
-            'dashboard_type': 'jefe_terreno',
-            'top_partidas':   top_partidas,
+            'dashboard_type':  'jefe_terreno',
+            'top_partidas':    _top_partidas_por_gente(open_sessions, limit=3),
             'sesiones_largas': sesiones_largas,
         })
         return base
 
     # ── Administrador de obra y Prestador ─────────────────────────────────────
-    if role_code in ('admin_obra', 'administrativo'):
+    if role_code == 'admin_obra':
         # HH registradas esta semana vs semana anterior
         from datetime import timedelta
         monday_this = today - timedelta(days=today.weekday())
@@ -170,31 +159,27 @@ def _build_dashboard_context(user, site, role_code, perms_ctx):
         two_weeks_ago = today - timedelta(weeks=2)
         partidas_dormidas = _get_dormant_tasks(site, two_weeks_ago)
 
-        # Top 3 partidas activas ahora
-        partidas_map = {}
-        for s in open_sessions:
-            key = s.task.name
-            if key not in partidas_map:
-                partidas_map[key] = {
-                    'task_name':  s.task.name,
-                    'stage_name': s.stage.name,
-                    'count':      0,
-                }
-            partidas_map[key]['count'] += 1
-
-        top_partidas = sorted(
-            partidas_map.values(),
-            key=lambda x: x['count'],
-            reverse=True
-        )[:3]
-
         base.update({
-            'dashboard_type':    'admin_obra',
-            'hh_this_week':      round(hh_this_week, 1),
-            'hh_last_week':      round(hh_last_week, 1),
-            'hh_delta_pct':      _pct_delta(hh_this_week, hh_last_week),
-            'partidas_dormidas': partidas_dormidas,
-            'top_partidas':      top_partidas,
+            'dashboard_type':      'admin_obra',
+            'hh_this_week':        round(hh_this_week, 1),
+            'hh_last_week':        round(hh_last_week, 1),
+            'hh_delta_pct':        _pct_delta(hh_this_week, hh_last_week),
+            'partidas_dormidas':   partidas_dormidas,
+            'top_partidas':        _top_partidas_por_gente(open_sessions, limit=3),
+            'top_partidas_presupuesto': _top_partidas_por_presupuesto(open_sessions, limit=5),
+        })
+        return base
+
+    # ── Administrativo ───────────────────────────────────────────────────────
+    # Rol distinto de admin_obra: gestiona trabajadores/maquinas, MOI y
+    # organigrama — no hace seguimiento de partidas ni HH, asi que no ve
+    # ese tipo de datos aca (solo lo que ya viene en 'base': sesiones
+    # abiertas, cierres de hoy, y sus job cards si se le dio autorizacion
+    # explicita para iniciar sesiones — eso ya se resuelve por permiso,
+    # no por rol, mas arriba).
+    if role_code == 'administrativo':
+        base.update({
+            'dashboard_type': 'administrativo',
         })
         return base
 
@@ -210,17 +195,96 @@ def _build_dashboard_context(user, site, role_code, perms_ctx):
         hh_last_week = _sum_hh(site, monday_last, monday_this - timedelta(days=1))
 
         base.update({
-            'dashboard_type':  'gerencia',
-            'pct_asistencia':  pct_asistencia,
-            'hh_this_week':    round(hh_this_week, 1),
-            'hh_last_week':    round(hh_last_week, 1),
-            'hh_delta_pct':    _pct_delta(hh_this_week, hh_last_week),
+            'dashboard_type':      'gerencia',
+            'pct_asistencia':      pct_asistencia,
+            'hh_this_week':        round(hh_this_week, 1),
+            'hh_last_week':        round(hh_last_week, 1),
+            'hh_delta_pct':        _pct_delta(hh_this_week, hh_last_week),
+            'top_partidas':        _top_partidas_por_gente(open_sessions, limit=3),
+            'top_partidas_presupuesto': _top_partidas_por_presupuesto(open_sessions, limit=5),
         })
         return base
 
     # ── Default (rol no reconocido) ───────────────────────────────────────────
     base['dashboard_type'] = 'default'
     return base
+
+
+def _agrupar_partidas_activas(sessions_qs):
+    """
+    Agrupa sesiones abiertas por partida (stage+task). Usada para las
+    'job cards' del dashboard — sesiones que el propio usuario inicio y
+    siguen abiertas, para poder cerrarlas todas de una partida con un
+    solo atajo (ver work.views.close_by_task).
+    """
+    partidas = {}
+    for s in sessions_qs:
+        key = (s.stage_id, s.task_id)
+        if key not in partidas:
+            partidas[key] = {
+                'task_id':    s.task_id,
+                'task_name':  s.task.name,
+                'stage_name': s.stage.name,
+                'workers':    [],
+                'count':      0,
+            }
+        partidas[key]['workers'].append(s.resource.display_name)
+        partidas[key]['count'] += 1
+    return list(partidas.values())
+
+
+def _top_partidas_por_gente(open_sessions, limit=3):
+    """Partidas con sesion abierta ahora, ordenadas por cantidad de gente."""
+    partidas_map = {}
+    for s in open_sessions:
+        key = (s.stage_id, s.task_id)
+        if key not in partidas_map:
+            partidas_map[key] = {
+                'task_name':  s.task.name,
+                'stage_name': s.stage.name,
+                'count':      0,
+            }
+        partidas_map[key]['count'] += 1
+
+    return sorted(
+        partidas_map.values(), key=lambda x: x['count'], reverse=True
+    )[:limit]
+
+
+def _top_partidas_por_presupuesto(open_sessions, limit=5):
+    """
+    Partidas con sesion abierta ahora, ordenadas por presupuesto_total —
+    no por cantidad de gente. Una partida con poca gente pero mucho
+    presupuesto en juego (ej. mayoritariamente materiales) no deberia
+    pasar desapercibida solo porque tiene pocos trabajadores asignados.
+    """
+    from work.models import StageTask
+
+    combos_activos = set(open_sessions.values_list('stage_id', 'task_id').distinct())
+    if not combos_activos:
+        return []
+
+    stage_ids = {c[0] for c in combos_activos}
+    task_ids  = {c[1] for c in combos_activos}
+
+    stage_tasks = StageTask.objects.filter(
+        stage_id__in=stage_ids,
+        task_id__in=task_ids,
+        presupuesto_total__isnull=False,
+    ).select_related('stage', 'task')
+
+    resultado = [
+        {
+            'task_name':             st.task.name,
+            'stage_name':            st.stage.name,
+            'presupuesto_total':     st.presupuesto_total,
+            'presupuesto_total_fmt': f'{int(st.presupuesto_total):,}'.replace(',', '.'),
+        }
+        for st in stage_tasks
+        if (st.stage_id, st.task_id) in combos_activos
+    ]
+    resultado.sort(key=lambda x: x['presupuesto_total'], reverse=True)
+    return resultado[:limit]
 
 
 def _sum_hh(site, date_from, date_to):
@@ -310,6 +374,7 @@ def select_site(request):
     return render(request, 'select_site.html', {
         'site_memberships': site_memberships,
         'page_title':       'Seleccionar obra',
+        'full_screen':      True,
     })
 
 

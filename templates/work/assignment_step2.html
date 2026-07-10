@@ -1,273 +1,129 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}Escanear trabajadores{% endblock %}
-{% block nav_assign %}active{% endblock %}
 
 {% block extra_css %}
-<style>
-  .worker-chip { display:flex; align-items:center; gap:9px; border:1px solid var(--ac-border); border-radius:var(--radius); padding:9px 10px; background:var(--ac-surface); margin-bottom:6px; }
-  .worker-chip.warn { background:var(--ac-warn-bg); border-color:var(--ac-warn-bdr); }
-  .chip-avatar { width:32px; height:32px; border-radius:50%; background:var(--ac-blue-soft); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--ac-blue); flex-shrink:0; }
-  .chip-avatar.warn { background:var(--ac-warn-bg); color:var(--ac-warn-text); }
-  .chip-name { font-size:13px; font-weight:600; color:var(--ac-text); }
-  .chip-cargo { font-family:var(--font-mono); font-size:10px; color:var(--ac-text-sub); }
-  .chip-cargo.warn { color:var(--ac-warn-text); }
-  .chip-remove { margin-left:auto; color:var(--ac-text-hint); font-size:15px; cursor:pointer; background:none; border:none; padding:4px; }
-  .chip-remove.warn { color:var(--ac-warn-bdr); }
-
-  #scan-feedback { min-height:36px; font-size:13px; border-radius:var(--radius); padding:8px 12px; margin-bottom:10px; display:none; }
-  .feedback-ok   { background:var(--ac-success-bg); color:var(--ac-success-text); display:flex !important; align-items:center; gap:8px; }
-  .feedback-warn { background:var(--ac-warn-bg); color:var(--ac-warn-text); display:flex !important; align-items:center; gap:8px; }
-  .feedback-error{ background:var(--ac-danger-bg); color:var(--ac-danger-text); display:flex !important; align-items:center; gap:8px; }
-
-  /* ── Cámara ── */
-  .camera-wrap {
-    position: relative; background: #000;
-    overflow: hidden; min-height: 220px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  #qr-video {
-    width: 100%; max-height: 280px; object-fit: cover; display: block;
-  }
-  #qr-canvas { display: none; }
-
-  /* Marco de escaneo animado */
-  .scan-frame {
-    position: absolute; width: 160px; height: 160px;
-    border: 2px solid var(--ac-blue);
-    border-radius: 8px; pointer-events: none;
-    box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
-  }
-  .scan-line {
-    position: absolute; left: 0; right: 0; height: 2px;
-    background: var(--ac-blue); opacity: 0.9;
-    animation: scanline 2s ease-in-out infinite;
-  }
-  @keyframes scanline { 0%,100%{top:10%} 50%{top:85%} }
-
-  /* Estado de la cámara */
-  .camera-status {
-    position: absolute; bottom: 8px; left: 0; right: 0;
-    text-align: center; font-size: 11px; font-family: var(--font-mono);
-    color: rgba(255,255,255,0.7);
-  }
-  .camera-placeholder {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; padding: 32px 16px; gap: 10px;
-    color: rgba(255,255,255,0.6); text-align: center;
-  }
-
-  /* Indicador de detección */
-  .detect-flash {
-    position: absolute; inset: 0; background: rgba(0,71,204,0.15);
-    pointer-events: none; opacity: 0; transition: opacity 0.1s;
-  }
-  .detect-flash.active { opacity: 1; }
-
-  /* Botón cámara */
-  .btn-camera {
-    display: flex; align-items: center; gap: 6px;
-    border: 1px solid var(--ac-border); border-radius: var(--radius);
-    padding: 7px 12px; background: var(--ac-white);
-    font-size: 12px; color: var(--ac-text-sub); cursor: pointer;
-    font-family: var(--font-main);
-  }
-  .btn-camera:hover { border-color: var(--ac-blue); color: var(--ac-blue); }
-  .btn-camera.active { background: var(--ac-blue); border-color: var(--ac-blue); color: #fff; }
-
-  /* Búsqueda */
-  .search-input-row { display:flex; gap:8px; }
-  #search-input { flex:1; }
-  #search-dropdown {
-    display:none; position:fixed;
-    background:var(--ac-white); border:1.5px solid var(--ac-blue);
-    border-radius:var(--radius); box-shadow:0 4px 20px rgba(0,71,204,0.13);
-    z-index:9999; overflow-y:auto; max-height:320px;
-  }
-  #search-dropdown.visible { display:block; }
-  .dropdown-item { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; transition:background 0.1s; border-bottom:1px solid var(--ac-border); }
-  .dropdown-item:last-child { border-bottom:none; }
-  .dropdown-item:hover, .dropdown-item.focused { background:var(--ac-blue-soft); }
-  .dropdown-avatar { width:30px; height:30px; border-radius:50%; background:var(--ac-blue-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--ac-blue); flex-shrink:0; }
-  .dropdown-name { font-size:13px; font-weight:600; }
-  .dropdown-meta { font-family:var(--font-mono); font-size:10px; color:var(--ac-text-sub); }
-  .dropdown-rut { margin-left:auto; font-family:var(--font-mono); font-size:11px; color:var(--ac-text-hint); flex-shrink:0; padding-left:8px; }
-  .dropdown-empty { padding:12px; text-align:center; font-size:13px; color:var(--ac-text-sub); }
-  .dropdown-loading { padding:12px; text-align:center; font-size:13px; color:var(--ac-text-sub); }
-
-  .uid-toggle-btn { background:none; border:none; cursor:pointer; font-size:11px; color:var(--ac-text-sub); font-family:var(--font-mono); display:flex; align-items:center; gap:5px; padding:0; margin-top:10px; }
-  .uid-toggle-btn:hover { color:var(--ac-blue); }
-  .uid-section { display:none; margin-top:8px; }
-  .uid-section.visible { display:block; }
-</style>
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/assignment.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="ac-timeline">
-  <div class="ac-t-step ac-t-step-done">
-    <div class="ac-t-num ac-t-num-done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
-    <span class="ac-t-label ac-t-label-done">Partida seleccionada</span>
-  </div>
-  <div class="ac-t-step ac-t-step-active">
-    <div class="ac-t-num ac-t-num-active">2</div>
-    <span class="ac-t-label ac-t-label-active">Escanear trabajadores</span>
-  </div>
-  <div class="ac-t-step">
-    <div class="ac-t-num ac-t-num-pending">3</div>
-    <span class="ac-t-label ac-t-label-pending">Confirmar e iniciar</span>
-  </div>
-</div>
+{% block auth_content %}
+<div class="assign-screen">
+  <div class="assign-view">
+    <div class="assign-page">
 
-<div style="background:var(--ac-white); border-bottom:1px solid var(--ac-border); padding:10px 24px; display:flex; align-items:center; justify-content:space-between;">
-  <a href="{% url 'work:assignment_new' %}" style="display:flex; align-items:center; gap:6px; color:var(--ac-text-sub); font-size:13px; text-decoration:none;">
-    <i class="ti ti-arrow-left" aria-hidden="true"></i> Cambiar partida
-  </a>
-  <div style="display:flex; align-items:center; gap:8px; background:var(--ac-blue-soft); border-radius:var(--radius); padding:6px 12px;">
-    <span style="font-size:10px; color:var(--ac-text-sub); font-family:var(--font-mono);">Partida:</span>
-    <span style="font-size:12px; font-weight:600; color:var(--ac-dark);">{{ task.task.name }}</span>
-    <span style="font-size:11px; color:var(--ac-text-sub);">· {{ stage.name }}</span>
-    {% if task.task.risk_level == 'HIGH_RISK' %}
-      <span class="ac-badge ac-badge-red">Alto riesgo</span>
-    {% endif %}
-  </div>
-</div>
-
-<div style="padding:20px 24px; display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
-
-  <!-- ── Card izquierda: Cámara + búsqueda ── -->
-  <div class="ac-card" style="flex:1; min-width:280px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title">Cámara QR</span>
-      <button class="btn-camera" id="btn-camera" onclick="toggleCamera()">
-        <i class="ti ti-camera" aria-hidden="true"></i>
-        <span id="btn-camera-label">Activar cámara</span>
-      </button>
-    </div>
-
-    <!-- Área de video -->
-    <div class="camera-wrap" id="camera-wrap">
-      <!-- Estado inicial: placeholder -->
-      <div class="camera-placeholder" id="camera-placeholder">
-        <i class="ti ti-camera-off" style="font-size:40px; color:rgba(255,255,255,0.3);" aria-hidden="true"></i>
-        <p style="font-size:14px; font-weight:600; color:rgba(255,255,255,0.7);">Cámara desactivada</p>
-        <p style="font-size:12px; color:rgba(255,255,255,0.4);">Toca "Activar cámara" para escanear QRs</p>
-      </div>
-
-      <!-- Video real -->
-      <video id="qr-video" autoplay playsinline muted style="display:none;"></video>
-      <canvas id="qr-canvas"></canvas>
-
-      <!-- Marco de escaneo (visible solo cuando cámara activa) -->
-      <div class="scan-frame" id="scan-frame" style="display:none;">
-        <div class="scan-line"></div>
-      </div>
-
-      <!-- Flash al detectar -->
-      <div class="detect-flash" id="detect-flash"></div>
-
-      <!-- Estado texto -->
-      <div class="camera-status" id="camera-status" style="display:none;">
-        Apunta al código QR del trabajador
-      </div>
-    </div>
-
-    <div style="padding:10px 14px; background:var(--ac-surface); border-top:1px solid var(--ac-border); display:flex; align-items:center; gap:8px;">
-      <i class="ti ti-scan" style="color:var(--ac-blue); font-size:16px;" aria-hidden="true"></i>
-      <span style="font-size:12px; color:var(--ac-text-sub);" id="camera-hint">Activa la cámara para escanear QRs automáticamente</span>
-    </div>
-
-    <!-- Búsqueda manual -->
-    <div style="padding:14px; border-top:1px solid var(--ac-border);">
-      <p style="font-size:11px; color:var(--ac-text-sub); margin-bottom:8px; font-family:var(--font-mono);">BUSCAR SIN QR — NOMBRE O RUT</p>
-      <div class="search-input-row">
-        <input type="text" id="search-input" class="ac-input"
-               placeholder="Nombre o RUT del trabajador..."
-               autocomplete="off" spellcheck="false"
-               style="font-size:13px; padding:9px 12px;">
-        <button id="search-add-btn" onclick="addFromSearch()"
-                class="ac-btn ac-btn-primary ac-btn-sm"
-                style="opacity:0.4; pointer-events:none;"
-                disabled>
-          <i class="ti ti-plus" aria-hidden="true"></i> Agregar
-        </button>
-      </div>
-
-      <button class="uid-toggle-btn" onclick="toggleUID()" type="button">
-        <i class="ti ti-chevron-right" id="uid-chevron" style="font-size:11px; transition:transform 0.2s;" aria-hidden="true"></i>
-        Ingresar UID directamente
-      </button>
-      <div class="uid-section" id="uid-section">
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="manual-uid" class="ac-input"
-                 placeholder="Pega el UID del trabajador"
-                 style="flex:1; font-size:13px; padding:8px 10px;">
-          <button onclick="processUID()" class="ac-btn ac-btn-secondary ac-btn-sm">
-            Agregar
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Card derecha: Grupo actual ── -->
-  <div class="ac-card" style="width:280px; flex-shrink:0; min-width:260px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title">Grupo actual</span>
-      <span class="ac-badge ac-badge-blue" id="group-count">{{ workers_in_group|length }} trabajadores</span>
-    </div>
-    <div style="padding:12px; min-height:80px;" id="workers-list">
-      {% for worker in workers_in_group %}
-        <div class="worker-chip" id="chip-{{ worker.id }}">
-          <div class="chip-avatar">{{ worker.display_name|slice:":1" }}{{ worker.display_name.split|last|slice:":1" }}</div>
+      <div class="assign-header">
+        <div class="left">
           <div>
-            <p class="chip-name">{{ worker.display_name }}</p>
-            <p class="chip-cargo">{{ worker.job_title.name|default:"Sin cargo" }}</p>
+            <div class="assign-eyebrow">{{ task.task.name }}</div>
+            <div class="assign-title">Trabajadores</div>
           </div>
-          <button class="chip-remove" onclick="removeWorker({{ worker.id }}, this)" title="Quitar del grupo">
-            <i class="ti ti-x" aria-hidden="true"></i>
-          </button>
         </div>
-      {% empty %}
-        <p style="font-size:13px; color:var(--ac-text-sub); text-align:center; padding:16px 0;" id="empty-msg">
-          Escanea el QR o busca un trabajador para agregarlo al grupo.
-        </p>
-      {% endfor %}
-    </div>
+      </div>
 
-    <div id="scan-feedback"></div>
+      <div class="assign-steps">
+        <div class="assign-step is-done"><span class="step-num">✓</span><span class="step-label">Partida</span></div>
+        <div class="assign-step-line is-done"></div>
+        <div class="assign-step is-active"><span class="step-num">2</span><span class="step-label">Trabajadores</span></div>
+        <div class="assign-step-line"></div>
+        <div class="assign-step"><span class="step-num">3</span><span class="step-label">Confirmar</span></div>
+      </div>
 
-    <div style="padding:12px; border-top:1px solid var(--ac-border);">
-      <form method="post">
+      <div class="newp-step2-grid">
+        <div class="newp-step2-left">
+          <button type="button" class="newp-scan-box" id="newp-scan-box" aria-label="Cámara QR">
+            <div class="newp-scan-placeholder" id="camera-placeholder">
+              <svg class="scan-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 8V5a1 1 0 0 1 1-1h3"/><path d="M20 8V5a1 1 0 0 0-1-1h-3"/>
+                <path d="M4 16v3a1 1 0 0 0 1 1h3"/><path d="M20 16v3a1 1 0 0 1-1 1h-3"/><line x1="6" y1="12" x2="18" y2="12"/>
+              </svg>
+              <p>Cámara desactivada</p>
+            </div>
+            <video id="qr-video" autoplay playsinline muted></video>
+            <canvas id="qr-canvas"></canvas>
+            <div class="newp-scan-frame" id="scan-frame"></div>
+            <div class="newp-detect-flash" id="detect-flash"></div>
+          </button>
+
+          <button type="button" class="btn-camera-toggle" id="btn-camera">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span id="btn-camera-label">Activar cámara</span>
+          </button>
+          <div class="newp-scan-caption" id="camera-hint">Activa la cámara para escanear QRs automáticamente</div>
+
+          <div class="newp-divider"><span>o busca sin QR</span></div>
+
+          <div class="assign-field newp-search-wrap">
+            <label>Nombre o RUT</label>
+            <input type="text" id="search-input" placeholder="Escribe para buscar..." autocomplete="off" spellcheck="false"
+                   style="width:100%;font-family:var(--font-brand);font-size:14px;color:var(--ink);border:1.4px solid #e3e4ea;border-radius:12px;padding:14px 16px;outline:none;">
+          </div>
+
+          <button type="button" class="uid-toggle-btn" id="uid-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+            Ingresar UID directamente
+          </button>
+          <div class="uid-section" id="uid-section">
+            <div class="newp-manual-row">
+              <input type="text" id="manual-uid" placeholder="Pega el UID del trabajador">
+              <button type="button" onclick="processUID()">Agregar</button>
+            </div>
+          </div>
+
+          <div id="scan-feedback"></div>
+        </div>
+
+        <div class="newp-step2-right">
+          <div class="newp-group-header">
+            <span>Grupo actual</span>
+            <span class="newp-group-count" id="group-count">{{ workers_in_group|length }}</span>
+          </div>
+          <div class="newp-group-list" id="workers-list">
+            {% for worker in workers_in_group %}
+              <div class="newp-group-row" id="chip-{{ worker.id }}">
+                <div class="newp-group-avatar">{{ worker.display_name|slice:":1" }}{{ worker.display_name.split|last|slice:":1" }}</div>
+                <div class="newp-group-info">
+                  <div class="newp-group-name">{{ worker.display_name }}</div>
+                  <div class="newp-group-cargo">{{ worker.job_title.name|default:"Sin cargo" }}</div>
+                </div>
+                <button type="button" class="newp-group-remove" onclick="removeWorker({{ worker.id }}, this)" title="Quitar del grupo">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                </button>
+              </div>
+            {% empty %}
+              <div class="newp-group-empty" id="empty-msg">Escanea el QR o busca un trabajador para agregarlo al grupo.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <form method="post" id="step2-form">
         {% csrf_token %}
-        <button type="submit" name="confirm" class="ac-btn ac-btn-primary ac-btn-full"
-                id="confirm-btn" {% if not workers_in_group %}disabled{% endif %}>
-          Iniciar grupo (<span id="count-text">{{ workers_in_group|length }}</span> trabajadores)
-        </button>
-        <a href="{% url 'work:assignment_new' %}"
-           class="ac-btn ac-btn-secondary ac-btn-full"
-           style="margin-top:8px; text-align:center; display:block;">
-          Cancelar
-        </a>
+        <div class="assign-footer">
+          <button type="submit" name="confirm" class="btn-primary" id="confirm-btn" {% if not workers_in_group %}disabled{% endif %}>
+            <span>Continuar (<span id="count-text">{{ workers_in_group|length }}</span> trabajadores)</span>
+          </button>
+          <a href="{% url 'work:assignment_new' %}" class="btn-secondary">Cancelar</a>
+        </div>
       </form>
+
     </div>
   </div>
 
+  {% include 'partials/_home_nav.html' %}
 </div>
 
-<!-- Dropdown búsqueda -->
+<!-- Dropdown de búsqueda -->
 <div id="search-dropdown">
-  <div class="dropdown-loading" id="dropdown-loading" style="display:none;">
-    <span style="font-size:12px;">Buscando...</span>
-  </div>
+  <div class="dropdown-loading" id="dropdown-loading" style="display:none;">Buscando...</div>
   <div id="dropdown-list"></div>
-  <div class="dropdown-empty" id="dropdown-empty" style="display:none;">
-    Sin resultados para "<span id="empty-query"></span>"
-  </div>
+  <div class="dropdown-empty" id="dropdown-empty" style="display:none;">Sin resultados para "<span id="empty-query"></span>"</div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
-<!-- jsQR: lectura de QR desde canvas -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 const SCAN_URL   = "{% url 'work:scan_qr' %}";
@@ -275,55 +131,45 @@ const REMOVE_URL = "{% url 'work:remove_from_group' %}";
 const SEARCH_URL = "{% url 'work:search_resources' %}";
 const CSRF       = "{{ csrf_token }}";
 
-let workerCount     = {{ workers_in_group|length }};
-let selectedResource = null;
+let workerCount        = {{ workers_in_group|length }};
+let selectedResource    = null;
 let searchDebounceTimer = null;
-let focusedIndex    = -1;
-let currentResults  = [];
+let focusedIndex        = -1;
+let currentResults      = [];
 
 // ── Cámara ────────────────────────────────────────────────────────────────
 let cameraActive   = false;
 let cameraStream   = null;
-let scanLoopId     = null;
+let scanLoopId      = null;
 let lastScannedUID = '';
-let scanCooldown   = false;  // evita procesar el mismo QR múltiples veces seguidas
+let scanCooldown   = false;
 
-const video        = document.getElementById('qr-video');
-const canvas       = document.getElementById('qr-canvas');
-const ctx          = canvas.getContext('2d');
+const video  = document.getElementById('qr-video');
+const canvas = document.getElementById('qr-canvas');
+const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+
+document.getElementById('btn-camera').addEventListener('click', toggleCamera);
+document.getElementById('newp-scan-box').addEventListener('click', toggleCamera);
 
 async function toggleCamera() {
-  if (cameraActive) {
-    stopCamera();
-  } else {
-    await startCamera();
-  }
+  if (cameraActive) { stopCamera(); } else { await startCamera(); }
 }
 
 async function startCamera() {
   try {
-    // Preferir cámara trasera en móvil
-    const constraints = {
-      video: {
-        facingMode: { ideal: 'environment' },
-        width:  { ideal: 1280 },
-        height: { ideal: 720 },
-      }
-    };
+    const constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
     cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = cameraStream;
     await video.play();
 
-    // Mostrar UI de cámara activa
     document.getElementById('camera-placeholder').style.display = 'none';
     video.style.display = 'block';
     document.getElementById('scan-frame').style.display = 'block';
-    document.getElementById('camera-status').style.display = 'block';
     document.getElementById('camera-hint').textContent = 'Cada escaneo agrega al trabajador automáticamente';
 
     const btn = document.getElementById('btn-camera');
     btn.classList.add('active');
-    document.getElementById('btn-camera-label').textContent = 'Desactivar';
+    document.getElementById('btn-camera-label').textContent = 'Desactivar cámara';
 
     cameraActive = true;
     scanLoop();
@@ -337,58 +183,39 @@ async function startCamera() {
 }
 
 function stopCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(t => t.stop());
-    cameraStream = null;
-  }
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
   cancelAnimationFrame(scanLoopId);
   video.style.display = 'none';
   document.getElementById('camera-placeholder').style.display = 'flex';
   document.getElementById('scan-frame').style.display = 'none';
-  document.getElementById('camera-status').style.display = 'none';
   document.getElementById('camera-hint').textContent = 'Activa la cámara para escanear QRs automáticamente';
 
   const btn = document.getElementById('btn-camera');
   btn.classList.remove('active');
   document.getElementById('btn-camera-label').textContent = 'Activar cámara';
-
   cameraActive = false;
 }
 
 function scanLoop() {
   if (!cameraActive) return;
-
   if (video.readyState === video.HAVE_ENOUGH_DATA) {
-    canvas.width  = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'dontInvert',
-    });
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
 
     if (code && code.data && !scanCooldown) {
-      const url = code.data;
-      // Extraer UID de la URL: /r/<uid>/
-      const match = url.match(/\/r\/([a-f0-9]{32})\/?/);
+      const match = code.data.match(/\/r\/([a-f0-9]{32})\/?/);
       if (match) {
         const uid = match[1];
         if (uid !== lastScannedUID) {
-          lastScannedUID = uid;
-          scanCooldown   = true;
-          flashDetect();
-          processScan(uid);
-          // Cooldown de 2 segundos para no procesar el mismo QR repetidamente
-          setTimeout(() => {
-            scanCooldown   = false;
-            lastScannedUID = '';
-          }, 2000);
+          lastScannedUID = uid; scanCooldown = true;
+          flashDetect(); processScan(uid);
+          setTimeout(() => { scanCooldown = false; lastScannedUID = ''; }, 2000);
         }
       }
     }
   }
-
   scanLoopId = requestAnimationFrame(scanLoop);
 }
 
@@ -408,12 +235,7 @@ function processScan(uid) {
   .then(data => {
     if (data.status === 'ok') {
       addWorkerChip(data.worker, data.warning || null);
-      showFeedback(
-        data.warning
-          ? data.worker.name + ' agregado. ' + data.warning.message
-          : data.worker.name + ' agregado al grupo.',
-        data.warning ? 'warn' : 'ok'
-      );
+      showFeedback(data.warning ? data.worker.name + ' agregado. ' + data.warning.message : data.worker.name + ' agregado al grupo.', data.warning ? 'warn' : 'ok');
     } else if (data.status === 'already_in_group') {
       showFeedback(data.message, 'warn');
     } else {
@@ -423,16 +245,14 @@ function processScan(uid) {
   .catch(() => showFeedback('Error de conexión.', 'error'));
 }
 
-// Detener cámara al salir de la página
 window.addEventListener('beforeunload', stopCamera);
 
 // ── Búsqueda ──────────────────────────────────────────────────────────────
-const searchInput   = document.getElementById('search-input');
-const dropdown      = document.getElementById('search-dropdown');
-const dropdownList  = document.getElementById('dropdown-list');
-const dropdownEmpty = document.getElementById('dropdown-empty');
-const dropdownLoading = document.getElementById('dropdown-loading');
-const addBtn        = document.getElementById('search-add-btn');
+const searchInput    = document.getElementById('search-input');
+const dropdown       = document.getElementById('search-dropdown');
+const dropdownList   = document.getElementById('dropdown-list');
+const dropdownEmpty  = document.getElementById('dropdown-empty');
+const dropdownLoading= document.getElementById('dropdown-loading');
 
 function positionDropdown() {
   const rect = searchInput.getBoundingClientRect();
@@ -440,14 +260,12 @@ function positionDropdown() {
   dropdown.style.left  = rect.left + 'px';
   dropdown.style.width = rect.width + 'px';
 }
-
 window.addEventListener('scroll', () => { if (dropdown.classList.contains('visible')) positionDropdown(); }, { passive: true });
 window.addEventListener('resize', () => { if (dropdown.classList.contains('visible')) positionDropdown(); });
 
 searchInput.addEventListener('input', function() {
   const q = this.value.trim();
   selectedResource = null;
-  setAddBtnState(false);
   focusedIndex = -1;
   if (q.length < 2) { closeDropdown(); return; }
   clearTimeout(searchDebounceTimer);
@@ -459,126 +277,93 @@ function fetchSearch(q) {
   positionDropdown();
   fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), { headers: { 'X-CSRFToken': CSRF } })
     .then(r => r.json())
-    .then(data => { currentResults = data.results; renderDropdown(data.results, q); })
+    .then(data => renderDropdown(data.results, q))
     .catch(() => closeDropdown());
 }
 
 function renderDropdown(results, q) {
+  currentResults = results;
+  positionDropdown();
   dropdownLoading.style.display = 'none';
-  dropdownList.innerHTML = '';
-  focusedIndex = -1;
   if (results.length === 0) {
-    dropdownEmpty.style.display = 'block';
+    dropdownList.innerHTML = '';
     document.getElementById('empty-query').textContent = q;
+    dropdownEmpty.style.display = 'block';
     dropdown.classList.add('visible');
     return;
   }
   dropdownEmpty.style.display = 'none';
-  results.forEach((r, i) => {
-    const item = document.createElement('div');
-    item.className = 'dropdown-item';
-    item.innerHTML = `
-      <div class="dropdown-avatar">${r.initials}</div>
-      <div style="flex:1; min-width:0;">
-        <div class="dropdown-name">${highlightMatch(r.name, q)}</div>
-        <div class="dropdown-meta">${r.cargo || 'Sin cargo'}</div>
-      </div>
-      ${r.rut ? '<div class="dropdown-rut">' + r.rut + '</div>' : ''}
-    `;
-    item.addEventListener('mousedown', e => { e.preventDefault(); selectResource(r); });
-    dropdownList.appendChild(item);
-  });
+  dropdownList.innerHTML = results.map((r, i) => `
+    <div class="dd-row" data-idx="${i}" onclick='selectResource(${JSON.stringify(r).replace(/'/g, "&#39;")})'>
+      <div class="dd-avatar">${r.initials}</div>
+      <div><div class="dd-name">${highlightMatch(r.name, q)}</div><div class="dd-cargo">${r.cargo || 'Sin cargo'}${r.rut ? ' · ' + r.rut : ''}</div></div>
+    </div>`).join('');
   dropdown.classList.add('visible');
-  if (results.length === 1) { focusedIndex = 0; updateFocus(); }
 }
 
 function highlightMatch(text, query) {
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
   if (idx === -1) return text;
-  return text.slice(0, idx) + '<strong style="color:var(--ac-blue);">' + text.slice(idx, idx + query.length) + '</strong>' + text.slice(idx + query.length);
+  return text.slice(0, idx) + '<mark>' + text.slice(idx, idx + query.length) + '</mark>' + text.slice(idx + query.length);
 }
 
 function selectResource(resource) {
-  selectedResource = resource;
-  searchInput.value = resource.name;
+  processScan_bySearch(resource);
+  searchInput.value = '';
   closeDropdown();
-  setAddBtnState(true);
-  searchInput.focus();
 }
 
-function setAddBtnState(enabled) {
-  addBtn.disabled = !enabled;
-  addBtn.style.opacity = enabled ? '1' : '0.4';
-  addBtn.style.pointerEvents = enabled ? 'auto' : 'none';
-}
-
-function showDropdownLoading() {
-  dropdownList.innerHTML = '';
-  dropdownEmpty.style.display = 'none';
-  dropdownLoading.style.display = 'block';
-  dropdown.classList.add('visible');
-}
-
-function closeDropdown() {
-  dropdown.classList.remove('visible');
-  dropdownLoading.style.display = 'none';
-  dropdownEmpty.style.display = 'none';
-  focusedIndex = -1;
-  currentResults = [];
-}
-
-document.addEventListener('mousedown', e => {
-  if (!dropdown.contains(e.target) && e.target !== searchInput) closeDropdown();
-});
-
-searchInput.addEventListener('keydown', e => {
-  if (!dropdown.classList.contains('visible')) return;
-  const items = dropdownList.querySelectorAll('.dropdown-item');
-  if (e.key === 'ArrowDown')  { e.preventDefault(); focusedIndex = Math.min(focusedIndex + 1, items.length - 1); updateFocus(); }
-  else if (e.key === 'ArrowUp')   { e.preventDefault(); focusedIndex = Math.max(focusedIndex - 1, 0); updateFocus(); }
-  else if (e.key === 'Enter') { e.preventDefault(); if (focusedIndex >= 0 && currentResults[focusedIndex]) selectResource(currentResults[focusedIndex]); else if (selectedResource) addFromSearch(); }
-  else if (e.key === 'Escape') closeDropdown();
-});
-
-function updateFocus() {
-  dropdownList.querySelectorAll('.dropdown-item').forEach((item, i) => item.classList.toggle('focused', i === focusedIndex));
-  if (focusedIndex >= 0 && currentResults[focusedIndex]) { selectedResource = currentResults[focusedIndex]; setAddBtnState(true); }
-}
-
-function addFromSearch() {
-  if (!selectedResource) return;
+function processScan_bySearch(resource) {
   fetch(SCAN_URL, {
     method: 'POST',
     headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'uid=' + encodeURIComponent(selectedResource.uid),
+    body: 'uid=' + encodeURIComponent(resource.uid),
   })
   .then(r => r.json())
   .then(data => {
     if (data.status === 'ok') {
       addWorkerChip(data.worker, data.warning || null);
-      showFeedback(data.warning ? data.worker.name + ' agregado. Advertencia: ' + data.warning.message : data.worker.name + ' agregado al grupo.', data.warning ? 'warn' : 'ok');
-      searchInput.value = ''; selectedResource = null; setAddBtnState(false); closeDropdown(); searchInput.focus();
-    } else if (data.status === 'already_in_group') {
-      showFeedback(data.message, 'warn');
-      searchInput.value = ''; selectedResource = null; setAddBtnState(false); closeDropdown();
+      showFeedback(data.warning ? data.worker.name + ' agregado. ' + data.warning.message : data.worker.name + ' agregado al grupo.', data.warning ? 'warn' : 'ok');
     } else {
-      showFeedback(data.message || 'Error al agregar.', 'error');
+      showFeedback(data.message || 'No se pudo agregar.', 'error');
     }
   })
   .catch(() => showFeedback('Error de conexión.', 'error'));
 }
 
-// ── UID manual ────────────────────────────────────────────────────────────
-function toggleUID() {
-  const section = document.getElementById('uid-section');
-  const chevron = document.getElementById('uid-chevron');
-  const visible = section.classList.toggle('visible');
-  chevron.style.transform = visible ? 'rotate(90deg)' : 'rotate(0deg)';
+function showDropdownLoading() {
+  dropdownList.innerHTML = ''; dropdownEmpty.style.display = 'none';
+  dropdownLoading.style.display = 'block'; dropdown.classList.add('visible');
 }
+function closeDropdown() { dropdown.classList.remove('visible'); focusedIndex = -1; }
+
+document.addEventListener('click', (e) => {
+  if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) closeDropdown();
+});
+
+searchInput.addEventListener('keydown', function(e) {
+  const rows = dropdownList.querySelectorAll('.dd-row');
+  if (e.key === 'ArrowDown') { e.preventDefault(); focusedIndex = Math.min(focusedIndex + 1, rows.length - 1); updateFocus(rows); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); focusedIndex = Math.max(focusedIndex - 1, 0); updateFocus(rows); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (focusedIndex >= 0 && currentResults[focusedIndex]) selectResource(currentResults[focusedIndex]); }
+  else if (e.key === 'Escape') { closeDropdown(); }
+});
+function updateFocus(rows) {
+  rows.forEach((r, i) => r.classList.toggle('is-focused', i === focusedIndex));
+  if (rows[focusedIndex]) rows[focusedIndex].scrollIntoView({ block: 'nearest' });
+}
+
+// ── UID manual ────────────────────────────────────────────────────────────
+const uidToggle  = document.getElementById('uid-toggle');
+const uidSection = document.getElementById('uid-section');
+uidToggle.addEventListener('click', () => {
+  uidToggle.classList.toggle('open');
+  uidSection.classList.toggle('is-open');
+});
 
 function processUID() {
   const input = document.getElementById('manual-uid');
-  const uid   = input.value.trim();
+  const uid = input.value.trim();
   if (!uid) return;
   fetch(SCAN_URL, {
     method: 'POST',
@@ -587,23 +372,24 @@ function processUID() {
   })
   .then(r => r.json())
   .then(data => {
-    if (data.status === 'ok')              { addWorkerChip(data.worker, data.warning || null); showFeedback(data.worker.name + ' agregado al grupo.', 'ok'); input.value = ''; }
-    else if (data.status === 'already_in_group') { showFeedback(data.message, 'warn'); }
-    else                                         { showFeedback(data.message || 'Error al procesar el UID.', 'error'); }
+    if (data.status === 'ok') {
+      addWorkerChip(data.worker, data.warning || null);
+      showFeedback(data.worker.name + ' agregado al grupo.', data.warning ? 'warn' : 'ok');
+      input.value = '';
+    } else {
+      showFeedback(data.message || 'UID no encontrado.', 'error');
+    }
   })
   .catch(() => showFeedback('Error de conexión.', 'error'));
 }
-
-document.getElementById('manual-uid').addEventListener('keydown', e => {
+document.getElementById('manual-uid').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') { e.preventDefault(); processUID(); }
 });
 
-// ── Chips ─────────────────────────────────────────────────────────────────
+// ── Chips del grupo ──────────────────────────────────────────────────────
 function getInitials(name) {
   const parts = name.trim().split(' ');
-  return parts.length >= 2
-    ? parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase()
-    : parts[0][0].toUpperCase();
+  return parts.length >= 2 ? parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase() : parts[0][0].toUpperCase();
 }
 
 function addWorkerChip(worker, warning) {
@@ -611,23 +397,24 @@ function addWorkerChip(worker, warning) {
   if (emptyMsg) emptyMsg.remove();
   const isWarn = warning && warning.type === 'no_on_site';
   const chip = document.createElement('div');
-  chip.className = 'worker-chip' + (isWarn ? ' warn' : '');
+  chip.className = 'newp-group-row' + (isWarn ? ' warn' : '');
   chip.id = 'chip-' + worker.id;
   chip.innerHTML =
-    '<div class="chip-avatar' + (isWarn ? ' warn' : '') + '">' + getInitials(worker.name) + '</div>' +
-    '<div><p class="chip-name">' + worker.name + '</p>' +
-    '<p class="chip-cargo' + (isWarn ? ' warn' : '') + '">' + (worker.cargo || 'Sin cargo') + (isWarn ? ' · No en obra' : '') + '</p></div>' +
-    '<button class="chip-remove' + (isWarn ? ' warn' : '') + '" onclick="removeWorker(' + worker.id + ', this)" title="Quitar del grupo">' +
-    '<i class="ti ti-x" aria-hidden="true"></i></button>';
+    '<div class="newp-group-avatar' + (isWarn ? ' warn' : '') + '">' + getInitials(worker.name) + '</div>' +
+    '<div class="newp-group-info"><div class="newp-group-name">' + worker.name + '</div>' +
+    '<div class="newp-group-cargo' + (isWarn ? ' warn' : '') + '">' + (worker.cargo || 'Sin cargo') + (isWarn ? ' · No en obra' : '') + '</div></div>' +
+    '<button type="button" class="newp-group-remove" onclick="removeWorker(' + worker.id + ', this)" title="Quitar del grupo">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>';
   document.getElementById('workers-list').appendChild(chip);
   updateCount(++workerCount);
 }
 
 function updateCount(count) {
   workerCount = count;
-  document.getElementById('group-count').textContent = count + ' trabajadores';
-  document.getElementById('count-text').textContent  = count;
-  document.getElementById('confirm-btn').disabled    = count === 0;
+  document.getElementById('group-count').textContent = count;
+  document.getElementById('count-text').textContent   = count;
+  const btn = document.getElementById('confirm-btn');
+  if (count === 0) btn.setAttribute('disabled', 'disabled'); else btn.removeAttribute('disabled');
 }
 
 function removeWorker(workerId, btn) {
@@ -641,20 +428,19 @@ function removeWorker(workerId, btn) {
     const chip = document.getElementById('chip-' + workerId);
     if (chip) chip.remove();
     updateCount(data.count);
-    if (data.count === 0)
-      document.getElementById('workers-list').innerHTML =
-        '<p style="font-size:13px; color:var(--ac-text-sub); text-align:center; padding:16px 0;" id="empty-msg">Escanea el QR o busca un trabajador para agregarlo al grupo.</p>';
+    if (data.count === 0) {
+      document.getElementById('workers-list').innerHTML = '<div class="newp-group-empty" id="empty-msg">Escanea el QR o busca un trabajador para agregarlo al grupo.</div>';
+    }
   });
 }
 
 // ── Feedback ──────────────────────────────────────────────────────────────
 function showFeedback(message, type) {
-  const fb   = document.getElementById('scan-feedback');
+  const fb = document.getElementById('scan-feedback');
   fb.className = 'feedback-' + type;
-  const icon = type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x';
-  fb.innerHTML = '<i class="ti ti-' + icon + '" aria-hidden="true"></i> ' + message;
+  fb.textContent = message;
   clearTimeout(fb._timer);
-  fb._timer = setTimeout(() => { fb.style.display = 'none'; }, 3500);
+  fb._timer = setTimeout(() => { fb.className = ''; }, 3500);
 }
 </script>
 {% endblock %}

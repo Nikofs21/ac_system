@@ -20,6 +20,7 @@ urlpatterns = [
     path('activos/', views.active_workers, name='active_workers'),
     path('cerrar/<int:session_id>/', views.close_session, name='close_session'),
     path('cierre-masivo/', views.mass_close, name='mass_close'),
+    path('cerrar-partida/<int:task_id>/', views.close_by_task, name='close_by_task'),
 
     # Revision de partidas
     path('revision/', views_review.session_review, name='session_review'),

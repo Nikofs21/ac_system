@@ -483,6 +483,7 @@ def site_feature_enabled(site, feature_code):
 
 def get_user_context_permissions(user, site):
     perms = get_user_permissions_for_site(user, site)
+    _role = get_user_role_for_site(user, site)
 
     return {
         'can_start_people':      'sessions.start_people'      in perms,
@@ -507,7 +508,8 @@ def get_user_context_permissions(user, site):
         'can_view_subcontracts': 'subcontracts.view_list'     in perms,
         'can_view_productivity_dashboard': 'dashboard.productivity' in perms,
         'is_novus_super':        is_novus_super(user),
-        'role_code':             get_user_role_for_site(user, site).code if get_user_role_for_site(user, site) else '',
+        'role_code':             _role.code if _role else '',
+        'role_name':             _role.name if _role else '',
     }
 
 

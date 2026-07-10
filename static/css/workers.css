@@ -1,0 +1,203 @@
+/* ============================================================
+   WORKERS.CSS — Pantalla Trabajadores
+   Migrado desde el prototipo Onio (onio-prototipo-18.html, view-workers).
+
+   Dos diferencias deliberadas frente al mockup, porque la funcionalidad
+   real ya existente no coincide 1:1 con la demo:
+   - 4 tabs (Activos / Con sesión / Sin sesión / Inactivos), no 3
+     ("Todos" / "Activos" / "No en obra") — el filtro real de la app ya
+     distingue "asignado a la obra" de "con sesion abierta ahora", cosa
+     que el mockup no modelaba.
+   - La barra de accion masiva descarga QRs en PDF (funcion real ya
+     existente), no "cerrar partida" (eso no es lo que hace hoy el
+     checkbox masivo de esta pantalla).
+
+   Mismo criterio de breakpoint que el resto: base = telefono/tablet
+   vertical, @media(min-width:1024px) = escritorio con sidebar.
+   ============================================================ */
+
+/* .wk-screen y .wk-view: definidos en dashboard.css (shell compartido
+   por Home/Trabajadores/Nueva Partida) — no se redefinen acá a propósito,
+   para que el layout base solo exista en un lugar. */
+.wk-scroll{ flex: 1; overflow-y: auto; min-height: 0; padding-bottom: 100px; }
+
+.wk-header{ padding: 20px 20px 0; flex-shrink: 0; }
+.wk-header h2{ font-family: var(--font-brand); font-weight: 400; font-size: 22px; color: #202137; letter-spacing: -0.01em; }
+.wk-header .wk-sub{ font-family: var(--font-brand); font-size: 13px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+
+.wk-tabs{
+  display: flex; gap: 20px; padding: 0 20px; border-bottom: 1px solid #eee; flex-shrink: 0;
+  position: sticky; top: 0; background: var(--ac-white); z-index: 2; overflow-x: auto;
+}
+.wk-tab{
+  background: none; border: none; font-family: var(--font-brand); font-size: 13.5px; font-weight: 400;
+  color: var(--muted); padding: 10px 1px 9px; cursor: pointer; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; white-space: nowrap; text-decoration: none;
+}
+.wk-tab.active{ color: var(--login-blue); border-bottom-color: var(--login-blue); }
+.wk-tab .wk-tab-count{ opacity: .65; }
+
+.wk-search{ padding: 10px 20px 8px; flex-shrink: 0; }
+.wk-search-inner{ display: flex; align-items: center; gap: 10px; background: #f3f4f6; border-radius: 999px; padding: 10px 16px; }
+.wk-search-inner svg{ width: 16px; height: 16px; color: var(--muted); flex-shrink: 0; }
+.wk-search-inner input{
+  border: none; background: none; outline: none; width: 100%;
+  font-family: var(--font-brand); font-size: 14px; color: var(--login-input-text);
+}
+.wk-search-inner input::placeholder{ color: #9c9ea9; }
+
+/* ---------- Seleccionar todos (solo en tab "activos") ---------- */
+.wk-select-row{ display: none; align-items: center; padding: 16px 20px 12px; flex-shrink: 0; }
+.wk-select-row.is-visible{ display: flex; }
+.wk-checkbox{ display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.wk-checkbox input{ position: absolute; opacity: 0; width: 0; height: 0; }
+.wk-checkbox-box{
+  width: 22px; height: 22px; border: 2px solid #1a1a1a; border-radius: 6px; flex-shrink: 0;
+  position: relative; transition: background .15s ease, border-color .15s ease;
+}
+.wk-checkbox input:checked + .wk-checkbox-box{ background: var(--login-blue); border-color: var(--login-blue); }
+.wk-checkbox input:checked + .wk-checkbox-box::after{
+  content: ''; position: absolute; left: 7px; top: 3px; width: 6px; height: 11px;
+  border: solid white; border-width: 0 2px 2px 0; transform: rotate(40deg);
+}
+.wk-checkbox input:indeterminate + .wk-checkbox-box{ background: var(--login-blue); border-color: var(--login-blue); }
+.wk-checkbox-label{ font-family: var(--font-brand); font-weight: 400; font-size: 14.5px; color: #1a1a1a; }
+
+/* ---------- Lista ---------- */
+.wk-list{ padding: 2px 20px 18px; }
+.wk-row{ display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eee; }
+.wk-row:last-child{ border-bottom: none; }
+.wk-row.wk-hidden{ display: none; }
+.wk-row.wk-selected{ background: var(--ac-blue-soft); border-radius: 12px; }
+.wk-avatar{
+  width: 38px; height: 38px; border-radius: 50%; background: #ececee; color: #6b6d78;
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-brand);
+  font-weight: 600; font-size: 12.5px; flex-shrink: 0;
+}
+.wk-avatar.has-session{ background: var(--ac-success-bg); color: var(--ac-success-text); }
+.wk-info{ flex: 1; min-width: 0; }
+.wk-name-row{ display: flex; align-items: center; gap: 6px; }
+.wk-name{ font-family: var(--font-brand); font-weight: 400; font-size: 14.5px; color: var(--ink); }
+.wk-dot{ width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+.wk-role{ font-family: var(--font-brand); font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.wk-row[data-state="inactive"] .wk-name{ color: #9a9ca5; }
+.wk-row[data-state="inactive"] .wk-role{ color: #c2c4cf; }
+
+.wk-action{ flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+.icon-circle{
+  width: 32px; height: 32px; border-radius: 50%; border: none; background: #f2f3f6;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink-soft);
+  text-decoration: none; flex-shrink: 0;
+}
+.icon-circle:hover{ background: #e9eaf0; }
+.icon-circle svg, .icon-circle i{ width: 15px; height: 15px; font-size: 15px; }
+.btn-wk-assign{
+  display: flex; align-items: center; gap: 5px; font-family: var(--font-brand); font-size: 12px; font-weight: 500;
+  color: var(--login-blue); background: var(--ac-blue-soft); border: none; border-radius: 999px; padding: 8px 12px;
+  cursor: pointer; flex-shrink: 0; text-decoration: none; white-space: nowrap;
+}
+.btn-wk-assign:hover{ filter: brightness(0.97); }
+.btn-wk-assign svg{ width: 12px; height: 12px; }
+
+.wk-group-header{
+  font-family: var(--font-brand); font-weight: 600; font-size: 12px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .03em; padding: 16px 0 8px;
+}
+.wk-group-header:first-child{ padding-top: 4px; }
+
+.picker-empty{
+  text-align: center; padding: 40px 20px; font-family: var(--font-brand); font-size: 13.5px; color: var(--muted);
+}
+
+/* ---------- Marcar nuevo trabajador (tab inactivos) ---------- */
+.wk-mark-wrap{ padding: 14px 20px 10px; flex-shrink: 0; }
+
+/* ---------- Barra de acción masiva (descargar QRs) ---------- */
+.wk-footer{
+  display: none; align-items: center; justify-content: space-between; gap: 14px; flex-shrink: 0;
+  padding: 16px 20px 20px; border-top: 1px solid #eee;
+  background: var(--ac-white); box-shadow: 0 -8px 20px -12px rgba(20,20,31,.12);
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+}
+.wk-footer.is-visible{ display: flex; }
+.wk-bulk-count{ font-family: var(--font-brand); font-size: 13.5px; color: var(--muted); font-weight: 500; flex-shrink: 0; }
+.btn-bulk-qr{
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: var(--font-brand); font-weight: 600; font-size: 14px; color: var(--ac-white);
+  background: var(--login-blue); border: none; border-radius: 999px; padding: 14px; cursor: pointer;
+}
+.btn-bulk-qr:hover{ filter: brightness(0.95); }
+.btn-bulk-cancel{
+  font-family: var(--font-brand); font-size: 13px; color: var(--muted); background: none; border: none; cursor: pointer;
+  padding: 8px;
+}
+
+/* ---------- Modal QR individual / masivo ---------- */
+.qr-card{
+  background: var(--ac-white); border-radius: 20px; width: 100%; max-width: 360px;
+  padding: 24px 22px 22px; text-align: center;
+}
+.qr-loading{ display: flex; align-items: center; justify-content: center; gap: 8px; padding: 50px 10px; color: var(--muted); font-family: var(--font-brand); font-size: 13px; }
+.qr-worker-name{ font-family: var(--font-brand); font-weight: 600; font-size: 17px; color: #202137; margin-bottom: 2px; }
+.qr-worker-sub{ font-family: var(--font-brand); font-size: 13px; color: var(--muted); }
+.qr-code-box{
+  background: var(--ac-white); border: 1.5px solid var(--card-border); border-radius: 14px; padding: 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 18px 0; width: 100%; box-sizing: border-box;
+}
+.qr-worker-uid{ font-family: var(--font-mono); font-size: 10px; color: var(--ac-text-hint); }
+.qr-actions{ display: flex; flex-direction: column; gap: 10px; }
+.qr-actions button{
+  width: 100%; font-family: var(--font-brand); font-size: 14px; font-weight: 600; border-radius: 999px;
+  padding: 13px; cursor: pointer; border: 1.4px solid #e3e4ea; background: var(--ac-white); color: #1a1a1a;
+}
+.qr-actions button.qr-close{ border: none; color: var(--muted); }
+.qr-actions button:hover{ background: #f9fafb; }
+
+/* ---------- Toast ---------- */
+.wk-toast{
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(10px);
+  background: var(--ink); color: var(--ac-white); font-size: 12.5px; font-weight: 500; font-family: var(--font-brand);
+  padding: 10px 16px; border-radius: 11px; opacity: 0; visibility: hidden;
+  transition: opacity .2s ease, transform .2s ease, visibility .2s; z-index: 45; white-space: nowrap;
+}
+.wk-toast.is-shown{ opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+@media (min-width: 600px) and (max-width: 899px) {
+  .wk-header{ padding: 32px 40px 0; }
+  .wk-header h2{ font-size: 24px; }
+  .wk-header .wk-sub{ font-size: 15px; }
+  .wk-tabs{ padding: 0 40px; gap: 28px; }
+  .wk-tab{ font-size: 14px; padding: 16px 1px 14px; }
+  .wk-search{ padding: 18px 40px 16px; }
+  .wk-search-inner{ padding: 15px 20px; max-width: 420px; }
+  .wk-select-row{ padding: 16px 40px 12px; }
+  .wk-mark-wrap{ padding: 14px 40px 10px; }
+  .wk-list{ padding: 2px 40px 22px; }
+  .wk-row{ padding: 16px 0; gap: 16px; }
+  .wk-avatar{ width: 46px; height: 46px; font-size: 14px; }
+  .wk-name{ font-size: 16px; }
+  .wk-role{ font-size: 13.5px; }
+  .wk-footer{ padding: 18px 40px 24px; }
+}
+
+/* =========================================================
+   DESKTOP (>=1024px)
+   ========================================================= */
+@media (min-width: 900px) {
+  /* .wk-screen y .wk-view (desktop): definidos en dashboard.css */
+  .wk-header, .wk-tabs, .wk-search, .wk-select-row, .wk-mark-wrap, .wk-list, .wk-footer{
+    padding-left: 44px; padding-right: 44px;
+    max-width: 1280px; margin-left: auto; margin-right: auto; box-sizing: border-box;
+  }
+  .wk-info{ flex: 0 1 460px; }
+  .wk-action{ margin-left: auto; }
+  .wk-search-inner{ max-width: 420px; }
+  .wk-avatar{ width: 42px; height: 42px; font-size: 14px; }
+  .wk-name{ font-size: 15.5px; }
+  .wk-role{ font-size: 13px; }
+  .wk-row{ padding: 10px 0; }
+  .wk-footer{ position: static; box-shadow: none; }
+}

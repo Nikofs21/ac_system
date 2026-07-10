@@ -1,331 +1,201 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard{% endblock %}
+{% load static %}
+
+{% block title %}Inicio{% endblock %}
 
 {% block extra_css %}
-<style>
-  .ac-dash-wrap { padding: 20px 24px; max-width: 900px; }
-
-  .ac-dash-greeting { font-size: 18px; font-weight: 700; color: var(--ac-dark); }
-  .ac-dash-sub { font-size: 13px; color: var(--ac-text-sub); margin-top: 2px; }
-  .ac-dash-header { margin-bottom: 20px; }
-
-  .ac-worker-pill {
-    display: inline-flex; align-items: center;
-    background: var(--ac-blue-soft); color: var(--ac-blue);
-    border-radius: 20px; padding: 2px 10px;
-    font-size: 11px; margin: 2px;
-  }
-
-  .ac-delta-up   { color: var(--ac-danger);  font-size: 11px; }
-  .ac-delta-down { color: var(--ac-success); font-size: 11px; }
-  .ac-delta-flat { color: var(--ac-text-sub); font-size: 11px; }
-</style>
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="ac-dash-wrap">
+{% block auth_content %}
+<div class="home-screen">
+  <div class="home-view">
 
-  <div class="ac-dash-header">
-    <div class="ac-dash-greeting">Bienvenido, {{ request.user.first_name }} 👋</div>
-    <div class="ac-dash-sub">{{ site.name }} &nbsp;·&nbsp; {{ today|date:"l j \d\e F" }}</div>
-  </div>
+    <div class="home-top">
+      <svg class="logo-real" viewBox="0 0 500 402.14" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path fill="currentColor" d="M77.04,74.83h339.2c18.27,0,33.08-14.81,33.08-33.08H43.96c0,18.27,14.81,33.08,33.08,33.08h0Z"/>
+        <path fill="currentColor" d="M401.58,89.76v-.06H97.8v.08c-36.74.32-66.56,30.31-66.56,67.13s30.12,67.15,67.15,67.15c2.49,0,4.96-.16,7.4-.42h10.44v14.51h.24v79.73l29.7,10.82v-90.54h28.1v100.77l29.7,10.82v-111.58h28.1v121.81l17.32,6.31,12.38-3.93v-124.18h28.1v115.22l29.7-9.45v-105.77h28.1v96.83l29.7-9.45v-100.41c0-.51-.06-.99-.16-1.46h16.93c2.43.28,4.9.42,7.4.42,37.02,0,67.15-30.12,67.15-67.15s-30.12-67.15-67.15-67.15l.06-.02ZM208.59,147l30.35,45.95h-30.35v-45.95ZM344.99,192.94h-34.56v-72.55h34.88c-6.84,10.52-10.84,23.06-10.84,36.52s3.88,25.63,10.54,36.05l-.02-.02ZM289.25,192.94h-24.14v-72.55h24.14v72.55ZM243.97,120.39v47.14l-30.99-47.14h30.99ZM187.43,120.39v72.55h-32.43c6.66-10.42,10.54-22.78,10.54-36.05s-3.99-26-10.84-36.52h32.73v.02ZM98.39,190.39c-18.47,0-33.48-15.03-33.48-33.48s15.03-33.48,33.48-33.48,33.48,15.03,33.48,33.48-15.03,33.48-33.48,33.48ZM401.58,190.39c-18.47,0-33.48-15.03-33.48-33.48s15.03-33.48,33.48-33.48,33.48,15.03,33.48,33.48-15.03,33.48-33.48,33.48Z"/>
+      </svg>
+      <a href="{% url 'select_site' %}" class="site-switcher" aria-label="Cambiar de obra">
+        <span class="site-switcher-current">{{ site.name }}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </a>
+    </div>
 
-  {% if dashboard_type == 'supervisor' %}
-  <!-- ══════════════════════════════════════════════════════════
-       SUPERVISOR
-  ══════════════════════════════════════════════════════════ -->
+    <div class="home-body">
+      <div class="dash-site-title">{{ site.name }}</div>
 
-  <div class="ac-stats-grid-3">
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Mis activos ahora</div>
-      <div class="ac-stat-value ac-stat-value-blue">{{ my_open_count }}</div>
-      <div class="ac-stat-sub">sesiones abiertas</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Cerrados hoy</div>
-      <div class="ac-stat-value ac-stat-value-green">{{ my_closed_today }}</div>
-      <div class="ac-stat-sub">por mí</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">No en obra hoy</div>
-      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
-      <div class="ac-stat-sub">en la obra</div>
-    </div>
-  </div>
-
-  {% if partidas_activas %}
-  <div class="ac-card" style="margin-bottom:16px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title">Mis partidas en curso</span>
-      <span style="font-size:11px; color:var(--ac-text-sub);">{{ my_open_count }} trabajadores</span>
-    </div>
-    {% for p in partidas_activas %}
-    <div style="padding:12px 16px; border-bottom:1px solid var(--ac-border);">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-        <div>
-          <div style="font-size:13px; font-weight:600; color:var(--ac-dark);">{{ p.task_name }}</div>
-          <div style="font-size:11px; color:var(--ac-text-sub);">{{ p.stage_name }}</div>
-        </div>
-        <span style="font-size:13px; font-weight:700; color:var(--ac-blue); font-family:var(--font-mono);">{{ p.count }} pers.</span>
-      </div>
-      <div>
-        {% for w in p.workers %}
-          <span class="ac-worker-pill">{{ w }}</span>
-        {% endfor %}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="ac-card" style="margin-bottom:16px;">
-    <div class="ac-empty">
-      <i class="ti ti-clipboard-off" aria-hidden="true"></i>
-      <div class="ac-empty-title">Sin sesiones activas</div>
-      <div class="ac-empty-sub">No tienes trabajadores asignados en este momento.</div>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if sesiones_largas %}
-  <div class="ac-card" style="margin-bottom:16px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title" style="color:var(--ac-danger-text);">⚠ Sesiones largas (+10 hrs)</span>
-    </div>
-    {% for s in sesiones_largas %}
-    <div class="ac-list-item">
-      <span class="ac-dot ac-dot-red"></span>
-      <div style="flex:1;">
-        <span style="font-weight:600;">{{ s.worker }}</span>
-        <span style="color:var(--ac-text-sub);"> · {{ s.task }}</span>
-      </div>
-      <span style="font-family:var(--font-mono); font-size:12px; color:var(--ac-danger);">{{ s.horas }} hrs</span>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-
-  {% elif dashboard_type == 'jefe_terreno' %}
-  <!-- ══════════════════════════════════════════════════════════
-       JEFE DE TERRENO / AAC
-  ══════════════════════════════════════════════════════════ -->
-
-  <div class="ac-stats-grid-4">
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Activos ahora</div>
-      <div class="ac-stat-value ac-stat-value-blue">{{ open_count }}</div>
-      <div class="ac-stat-sub">sesiones abiertas</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Sin asignar</div>
-      <div class="ac-stat-value {% if unassigned_count > 0 %}ac-stat-value-amber{% else %}ac-stat-value-green{% endif %}">{{ unassigned_count }}</div>
-      <div class="ac-stat-sub">trabajadores</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Cerrados hoy</div>
-      <div class="ac-stat-value ac-stat-value-green">{{ closed_today }}</div>
-      <div class="ac-stat-sub">sesiones</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">No en obra</div>
-      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
-      <div class="ac-stat-sub">hoy</div>
-    </div>
-  </div>
-
-  {% if top_partidas %}
-  <div class="ac-card" style="margin-bottom:16px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title">Top partidas activas ahora</span>
-    </div>
-    {% for p in top_partidas %}
-    <div class="ac-partida-item">
-      <span class="ac-status-bar ac-status-bar-blue"></span>
-      <div style="flex:1; min-width:0;">
-        <div class="ac-partida-name">{{ forloop.counter }}. {{ p.task_name }}</div>
-        <div class="ac-partida-etapa">{{ p.stage_name }}</div>
-      </div>
-      <div class="ac-partida-right">
-        <div class="ac-partida-pers">{{ p.count }} pers.</div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if sesiones_largas %}
-  <div class="ac-card" style="margin-bottom:16px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title" style="color:var(--ac-danger-text);">⚠ Sesiones largas (+10 hrs)</span>
-    </div>
-    {% for s in sesiones_largas %}
-    <div class="ac-list-item">
-      <span class="ac-dot ac-dot-red"></span>
-      <div style="flex:1;">
-        <span style="font-weight:600;">{{ s.worker }}</span>
-        <span style="color:var(--ac-text-sub);"> · {{ s.task }}</span>
-      </div>
-      <span style="font-family:var(--font-mono); font-size:12px; color:var(--ac-danger);">{{ s.horas }} hrs</span>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <div style="margin-top:8px;">
-    <a href="{% url 'work:session_review' %}" class="ac-btn ac-btn-secondary">
-      <i class="ti ti-clipboard-list" aria-hidden="true"></i>
-      Ir a revisión de partidas
-    </a>
-  </div>
-
-
-  {% elif dashboard_type == 'admin_obra' %}
-  <!-- ══════════════════════════════════════════════════════════
-       ADMINISTRADOR DE OBRA / PRESTADOR
-  ══════════════════════════════════════════════════════════ -->
-
-  <div class="ac-stats-grid-4">
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Activos ahora</div>
-      <div class="ac-stat-value ac-stat-value-blue">{{ open_count }}</div>
-      <div class="ac-stat-sub">de {{ assigned_count }} asignados</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Sin asignar hoy</div>
-      <div class="ac-stat-value {% if unassigned_count > 0 %}ac-stat-value-amber{% else %}ac-stat-value-green{% endif %}">{{ unassigned_count }}</div>
-      <div class="ac-stat-sub">trabajadores</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">HH esta semana</div>
-      <div class="ac-stat-value ac-stat-value-blue">{{ hh_this_week }}</div>
-      <div class="ac-stat-sub">
-        {% if hh_delta_pct is not None %}
-          {% if hh_delta_pct > 0 %}
-            <span class="ac-delta-up">▲ {{ hh_delta_pct }}% vs sem. ant.</span>
-          {% elif hh_delta_pct < 0 %}
-            <span class="ac-delta-down">▼ {{ hh_delta_pct|slice:"1:" }}% vs sem. ant.</span>
-          {% else %}
-            <span class="ac-delta-flat">= igual sem. ant.</span>
-          {% endif %}
+      {# ── Stat cards: distintas por rol, usando datos que ya calcula la vista ── #}
+      <div class="stats">
+        {% if dashboard_type == 'supervisor' %}
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ my_open_count }}</div><div class="label">Mis sesiones activas</div></div>
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ my_closed_today }}</div><div class="label">Cerradas hoy</div></div>
+        {% elif dashboard_type == 'jefe_terreno' %}
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ open_count }}</div><div class="label">Trabajadores activos</div></div>
+          <div class="stat-card"><span class="dot red"></span><div class="num">{{ no_on_site_today }}</div><div class="label">No en obra</div></div>
+        {% elif dashboard_type == 'admin_obra' %}
+          <div class="stat-card">
+            <span class="dot {% if hh_delta_pct is not None and hh_delta_pct < 0 %}red{% else %}green{% endif %}"></span>
+            <div class="num">{{ hh_this_week }}</div><div class="label">HH esta semana</div>
+          </div>
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ open_count }}</div><div class="label">Trabajadores activos</div></div>
+        {% elif dashboard_type == 'administrativo' %}
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ open_count }}</div><div class="label">Trabajadores activos</div></div>
+          <div class="stat-card"><span class="dot red"></span><div class="num">{{ unassigned_count }}</div><div class="label">Sin asignar</div></div>
+        {% elif dashboard_type == 'gerencia' %}
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ pct_asistencia }}%</div><div class="label">Asistencia hoy</div></div>
+          <div class="stat-card">
+            <span class="dot {% if hh_delta_pct is not None and hh_delta_pct < 0 %}red{% else %}green{% endif %}"></span>
+            <div class="num">{{ hh_this_week }}</div><div class="label">HH esta semana</div>
+          </div>
         {% else %}
-          vs {{ hh_last_week }} sem. ant.
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ open_count }}</div><div class="label">Trabajadores activos</div></div>
+          <div class="stat-card"><span class="dot red"></span><div class="num">{{ no_on_site_today }}</div><div class="label">No en obra</div></div>
         {% endif %}
       </div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">No en obra hoy</div>
-      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
-      <div class="ac-stat-sub">trabajadores</div>
-    </div>
-  </div>
 
-  {% if top_partidas %}
-  <div class="ac-card" style="margin-bottom:16px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title">Top partidas activas ahora</span>
-    </div>
-    {% for p in top_partidas %}
-    <div class="ac-partida-item">
-      <span class="ac-status-bar ac-status-bar-blue"></span>
-      <div style="flex:1; min-width:0;">
-        <div class="ac-partida-name">{{ forloop.counter }}. {{ p.task_name }}</div>
-        <div class="ac-partida-etapa">{{ p.stage_name }}</div>
-      </div>
-      <div class="ac-partida-right">
-        <div class="ac-partida-pers">{{ p.count }} pers.</div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if partidas_dormidas %}
-  <div class="ac-card" style="margin-bottom:16px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title" style="color:var(--ac-warn-text);">⚠ Partidas sin actividad (+14 días)</span>
-      <span style="font-size:11px; color:var(--ac-text-sub);">con registro histórico</span>
-    </div>
-    {% for p in partidas_dormidas %}
-    <div class="ac-list-item">
-      <span class="ac-dot ac-dot-amber"></span>
-      <div style="flex:1; min-width:0;">
-        <div style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-          {{ p.task_name }}
+      {# ── Job cards: partidas que YO inicié y siguen abiertas (por permiso, no por rol) ── #}
+      {% if puede_iniciar_sesiones %}
+        <div class="section-title">
+          <span class="dot"></span>
+          <span>Partidas en curso ({{ mis_partidas_activas|length }})</span>
         </div>
-        <div style="font-size:11px; color:var(--ac-text-sub);">
-          Última sesión: {{ p.last_seen|date:"d/m/Y" }}
-        </div>
-      </div>
-      <span style="font-family:var(--font-mono); font-size:12px; color:var(--ac-warn); flex-shrink:0; margin-left:8px;">
-        {{ p.days_ago }} días
-      </span>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
-
-  {% elif dashboard_type == 'gerencia' %}
-  <!-- ══════════════════════════════════════════════════════════
-       GERENCIA
-  ══════════════════════════════════════════════════════════ -->
-
-  <div class="ac-stats-grid-2">
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Asistencia hoy</div>
-      <div class="ac-stat-value ac-stat-value-blue">{{ pct_asistencia }}%</div>
-      <div class="ac-stat-sub">{{ open_count }} activos de {{ assigned_count }} asignados</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">No en obra hoy</div>
-      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
-      <div class="ac-stat-sub">trabajadores</div>
-    </div>
-  </div>
-
-  <div class="ac-stats-grid-2">
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">HH esta semana</div>
-      <div class="ac-stat-value ac-stat-value-blue">{{ hh_this_week }}</div>
-      <div class="ac-stat-sub">horas registradas</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">HH semana anterior</div>
-      <div class="ac-stat-value" style="color:var(--ac-text-sub);">{{ hh_last_week }}</div>
-      <div class="ac-stat-sub">
-        {% if hh_delta_pct is not None %}
-          {% if hh_delta_pct > 0 %}
-            <span class="ac-delta-up">▲ {{ hh_delta_pct }}% más que sem. ant.</span>
-          {% elif hh_delta_pct < 0 %}
-            <span class="ac-delta-down">▼ {{ hh_delta_pct|slice:"1:" }}% menos que sem. ant.</span>
-          {% else %}
-            <span class="ac-delta-flat">Sin variación</span>
-          {% endif %}
+        {% if mis_partidas_activas %}
+          <div class="job-list" id="job-list">
+            {% for p in mis_partidas_activas %}
+            <div class="job-card">
+              <h3>{{ p.task_name }}</h3>
+              <div class="sub">{{ p.stage_name }}</div>
+              <div class="row">
+                <div class="who">{{ p.workers|join:" · " }}</div>
+                <form method="post" action="{% url 'work:close_by_task' p.task_id %}" class="close-job-form">
+                  {% csrf_token %}
+                  <button type="button" class="btn-close-job" data-job-name="{{ p.task_name|escapejs }}">
+                    Cerrar partida
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                  </button>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-hint">No tienes partidas en curso ahora mismo.</div>
         {% endif %}
+
+        <a href="{% url 'work:assignment_new' %}" class="btn-new">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva Partida
+        </a>
+      {% endif %}
+
+      {# ── Sesiones abiertas hace mas de 10 horas (supervisor, jefe_terreno, aac) ── #}
+      {% if sesiones_largas %}
+        <div class="section-title"><span class="dot" style="background:#ea4342"></span><span>Sesiones abiertas hace +10h</span></div>
+        <div class="info-card-list">
+          {% for s in sesiones_largas %}
+          <div class="info-card">
+            <div class="info-main"><div class="info-title">{{ s.worker }}</div><div class="info-sub">{{ s.task }}</div></div>
+            <div class="info-val danger">{{ s.horas }} h</div>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# ── Top partidas por cantidad de gente (jefe_terreno, aac, admin_obra, gerencia) ── #}
+      {% if top_partidas %}
+        <div class="section-title"><span>Partidas con más gente ahora</span></div>
+        <div class="info-card-list">
+          {% for p in top_partidas %}
+          <div class="info-card">
+            <div class="info-main"><div class="info-title">{{ p.task_name }}</div><div class="info-sub">{{ p.stage_name }}</div></div>
+            <div class="info-val">{{ p.count }} pers.</div>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# ── Top partidas por presupuesto total en curso (admin_obra, gerencia) ── #}
+      {% if top_partidas_presupuesto %}
+        <div class="section-title"><span>Mayor presupuesto en curso</span></div>
+        <div class="info-card-list">
+          {% for p in top_partidas_presupuesto %}
+          <div class="info-card">
+            <div class="info-main"><div class="info-title">{{ p.task_name }}</div><div class="info-sub">{{ p.stage_name }}</div></div>
+            <div class="info-val">${{ p.presupuesto_total_fmt }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# ── Partidas sin actividad hace 2+ semanas (admin_obra) ── #}
+      {% if partidas_dormidas %}
+        <div class="section-title"><span>Partidas sin actividad</span></div>
+        <div class="info-card-list">
+          {% for p in partidas_dormidas %}
+          <div class="info-card">
+            <div class="info-main"><div class="info-title">{{ p.task_name }}</div><div class="info-sub">hace {{ p.days_ago }} días</div></div>
+            <div class="info-val warn">⚠</div>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {% include 'partials/_home_nav.html' %}
+
+  <div class="modal-overlay" id="confirm-overlay">
+    <div class="confirm-card">
+      <div class="confirm-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16.5" x2="12" y2="16.51"/></svg>
+      </div>
+      <h4>¿Cerrar esta partida?</h4>
+      <p id="confirm-message">Esta acción no se puede deshacer.</p>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-cancel" id="confirm-cancel">Cancelar</button>
+        <button type="button" class="confirm-accept" id="confirm-accept">Aceptar</button>
       </div>
     </div>
   </div>
-
-
-  {% else %}
-  <!-- ══════════════════════════════════════════════════════════
-       DEFAULT
-  ══════════════════════════════════════════════════════════ -->
-  <div class="ac-stats-grid-3">
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Activos ahora</div>
-      <div class="ac-stat-value ac-stat-value-blue">{{ open_count }}</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Cerrados hoy</div>
-      <div class="ac-stat-value ac-stat-value-green">{{ closed_today }}</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">No en obra</div>
-      <div class="ac-stat-value ac-stat-value-amber">{{ no_on_site_today }}</div>
-    </div>
-  </div>
-  {% endif %}
-
 </div>
+
+<script>
+(function(){
+  let pendingForm = null;
+  const overlay = document.getElementById('confirm-overlay');
+  const msgEl   = document.getElementById('confirm-message');
+  const cancel  = document.getElementById('confirm-cancel');
+  const accept  = document.getElementById('confirm-accept');
+
+  document.querySelectorAll('.btn-close-job').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      pendingForm = btn.closest('form');
+      const jobName = btn.getAttribute('data-job-name');
+      msgEl.textContent = 'Se cerrará la partida "' + jobName + '" y los trabajadores asignados quedarán disponibles.';
+      overlay.classList.add('is-open');
+    });
+  });
+
+  cancel.addEventListener('click', function(){
+    overlay.classList.remove('is-open');
+    pendingForm = null;
+  });
+
+  accept.addEventListener('click', function(){
+    if (pendingForm) { pendingForm.submit(); }
+    overlay.classList.remove('is-open');
+  });
+
+  overlay.addEventListener('click', function(e){
+    if (e.target === overlay) {
+      overlay.classList.remove('is-open');
+      pendingForm = null;
+    }
+  });
+})();
+</script>
 {% endblock %}

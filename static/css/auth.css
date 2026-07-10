@@ -1,0 +1,199 @@
+/* ============================================================
+   AUTH.CSS — Pantallas de autenticación (login, selección de obra)
+   Migrado 1:1 desde el prototipo Onio (onio-prototipo-18.html).
+
+   El prototipo solo define 2 estados reales para estas pantallas:
+   movil apilado (default) y escritorio partido (.phone.is-desktop).
+   No hay un tercer estado de "tablet" propio — por eso ac solo hay
+   UN breakpoint, no tres. Una tablet en vertical (~768px) recibe el
+   layout de telefono (funciona bien ahi, ya que es basicamente una
+   columna centrada); una tablet en horizontal o un notebook chico
+   (>=1024px) recibe el layout de escritorio.
+
+   1024px se eligio porque:
+   - Es el breakpoint "lg" que usan Tailwind y la mayoria de sistemas
+     de diseño modernos para el salto a layout de escritorio.
+   - Es el ancho horizontal exacto de un iPad en landscape — o sea,
+     el dispositivo tablet mas comun cae justo en el lado "desktop"
+     cuando esta acostado, y en el lado "telefono" cuando esta de pie,
+     que es el comportamiento esperable.
+   - El layout partido (hero + formulario) necesita al menos ~900px
+     para no verse apretado; 1024px da margen.
+
+   Mobile-first:
+   - Base (sin @media)         = telefono y tablet vertical
+   - @media (min-width:1024px) = escritorio y tablet horizontal
+   ============================================================ */
+
+.auth-screen{
+  min-height: 100vh;
+  width: 100%;
+  background: var(--ac-white);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Logo (wordmark SVG, usado en las 3 pantallas) ---------- */
+.logo-real{ display: block; }
+.logo-real path{ fill: currentColor; }
+
+/* ================= LOGIN ================= */
+.login-screen{
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px;
+}
+.login-panel{ width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; }
+.login-mobile-logo{ width: 76px; height: auto; color: var(--login-ink); margin-bottom: 22px; }
+.login-panel h2{
+  font-family: var(--font-brand); font-weight: 400;
+  font-size: 23px; text-align: center; line-height: 1.28;
+  color: var(--login-ink); margin-bottom: 28px; letter-spacing: -0.01em;
+}
+.login-brand{ display: none; }
+.login-heading-desktop{ display: none; }
+.login-hero{ display: none; }
+
+.login-panel form{ width: 100%; display: flex; flex-direction: column; align-items: center; }
+
+.ac-field-pill{ width: 100%; margin-bottom: 14px; }
+.ac-field-pill input{
+  width: 100%; font-family: var(--font-brand); font-weight: 400; font-size: 14.5px;
+  color: var(--login-input-text); background: var(--ac-white);
+  border: 1.4px solid #E3E4EA; border-radius: var(--radius-pill);
+  padding: 16px 24px; outline: none; transition: border-color var(--dur-fast) ease;
+}
+.ac-field-pill input::placeholder{ color: #9C9EA9; }
+.ac-field-pill input:focus{ border-color: var(--login-blue); }
+.ac-field-pill.shake{ animation: ac-shake .32s ease; }
+@keyframes ac-shake{
+  0%, 100%{ transform: translateX(0); }
+  25%{ transform: translateX(-6px); }
+  75%{ transform: translateX(6px); }
+}
+
+.login-forgot{
+  align-self: flex-start; font-family: var(--font-brand); font-size: 13px;
+  color: var(--login-blue); font-weight: 400; text-decoration: none; margin-bottom: 26px;
+}
+
+.login-error-msg{
+  font-size: 12.5px; color: var(--ac-danger); margin: -6px 0 14px;
+  align-self: flex-start; min-height: 14px; width: 100%;
+}
+
+.ac-btn-pill-primary{
+  width: 100%; font-family: var(--font-brand); font-weight: 400; font-size: 15px;
+  color: var(--ac-white); background: var(--login-blue); border: none;
+  border-radius: var(--radius-pill); padding: 16px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: filter var(--dur-fast) ease, transform .1s ease;
+}
+.ac-btn-pill-primary:hover{ filter: brightness(.92); }
+.ac-btn-pill-primary:active{ transform: scale(.98); }
+.ac-btn-pill-primary[disabled]{ opacity: .75; cursor: default; }
+
+.ac-btn-pill-secondary{
+  width: 100%; font-family: var(--font-brand); font-weight: 400; font-size: 15px;
+  color: var(--login-ink); background: var(--ac-white); border: 1.4px solid #E3E4EA;
+  border-radius: var(--radius-pill); padding: 14.5px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: background var(--dur-fast) ease;
+  text-decoration: none;
+}
+.ac-btn-pill-secondary:hover{ background: #FAFAFB; }
+
+.login-divider{ display: flex; align-items: center; gap: 10px; margin: 16px 0; width: 100%; }
+.login-divider .line{ flex: 1; height: 1px; background: var(--ac-border); }
+.login-divider span{ font-size: 12px; color: var(--ac-text-sub); font-family: var(--font-brand); }
+
+.login-footer{
+  display: none;
+  text-align: center; font-size: 12px; color: var(--ac-text-sub);
+  margin-top: 20px; font-family: var(--font-brand);
+}
+
+/* ================= SELECCIONAR OBRA ================= */
+.select-site-screen{ padding: 0; }
+.select-site-top{
+  display: flex; justify-content: flex-start; align-items: center;
+  padding: 22px 20px 16px; border-bottom: 1px solid #F3F4F6; flex-shrink: 0;
+}
+.select-site-top .logo-real{ color: #1A1A1A; height: 26px; width: auto; }
+.select-site-body{ flex: 1; padding: 32px 26px 0; }
+.select-site-greeting{
+  font-family: var(--font-brand); font-weight: 400; font-size: 21px; color: #9A9CA5; margin-bottom: 4px;
+}
+.select-site-title{
+  font-family: var(--font-brand); font-weight: 400; font-size: 23px; color: #1A1A1A;
+  line-height: 1.28; margin-bottom: 30px; letter-spacing: -0.01em;
+}
+.select-site-list{ display: flex; flex-direction: column; gap: 14px; list-style: none; }
+.select-site-row{
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: #F3F4F6; border: none; border-radius: 20px; padding: 22px 22px; cursor: pointer;
+  font-family: var(--font-brand); font-weight: 400; font-size: 16px; color: #1A1A1A; text-align: left;
+  transition: background var(--dur-fast) ease, transform .1s ease;
+}
+.select-site-row:hover{ background: #ECECEF; }
+.select-site-row:active{ transform: scale(.99); }
+.select-site-row .chev{ width: 20px; height: 20px; color: #8A8C98; flex-shrink: 0; }
+.select-site-footer{
+  text-align: center; padding: 20px 20px 30px; font-family: var(--font-brand); font-weight: 400;
+  font-size: 13.5px; color: #C7C8CF; flex-shrink: 0;
+}
+.select-site-empty{
+  background: var(--ac-danger-bg); border: 1px solid var(--ac-danger-bdr);
+  border-radius: var(--radius-lg); padding: 16px 18px; color: var(--ac-danger-text);
+  font-family: var(--font-brand); font-size: 13.5px;
+}
+
+/* =========================================================
+   DESKTOP (>=1024px) — layout de 2 columnas con hero azul,
+   igual que .phone.is-desktop en el prototipo. El contenedor
+   se acota a 1140px (el ancho de diseño real) y se centra
+   cuando la ventana es mas ancha que eso.
+   ========================================================= */
+@media (min-width: 1024px) {
+  .login-panel{ max-width: 400px; }
+
+  .login-screen{
+    flex-direction: row; align-items: stretch; justify-content: flex-start; padding: 0;
+    max-width: 1140px; margin: 0 auto; width: 100%;
+  }
+  .login-hero{
+    display: flex; flex-direction: column; justify-content: center;
+    width: 44%; min-width: 340px;
+    background: var(--login-blue); padding: 0 64px; box-sizing: border-box;
+  }
+  .login-hero .logo-real{ width: 64px; height: auto; color: var(--ac-white); margin-bottom: 30px; }
+  .login-hero-title{
+    font-family: var(--font-brand); font-weight: 400; font-size: 34px; color: var(--ac-white);
+    line-height: 1.28; letter-spacing: -0.01em;
+  }
+  .login-panel-wrap{
+    flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+    padding: 0 72px; position: relative; box-sizing: border-box;
+  }
+  .login-mobile-logo{ display: none; }
+  .login-panel h2#login-heading-mobile{ display: none; }
+  .login-brand{
+    display: flex; align-items: center; gap: 9px; position: absolute; top: 40px; left: 72px;
+  }
+  .login-brand svg{ width: 24px; height: 24px; color: var(--login-blue); }
+  .login-brand span{
+    font-family: var(--font-brand); font-weight: 800; font-size: 14px; letter-spacing: .03em; color: #1A1A1A;
+  }
+  .login-heading-desktop{
+    display: block; font-family: var(--font-brand); font-weight: 400; font-size: 25px; color: #1A1A1A;
+    margin-bottom: 24px; text-align: left;
+  }
+  .login-panel{ max-width: 400px; width: 100%; align-items: flex-start; }
+  .login-footer{
+    display: block; position: absolute; bottom: 34px; left: 72px; margin: 0;
+    font-size: 12px; color: var(--ac-text-sub); text-align: left;
+  }
+
+  .select-site-body{ max-width: 520px; margin: 0 auto; width: 100%; }
+  .select-site-top{ padding-left: 64px; padding-right: 64px; }
+}

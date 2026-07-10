@@ -1,329 +1,180 @@
 {% extends 'base.html' %}
-{% block title %}Confirmar asignacion{% endblock %}
-{% block nav_assign %}active{% endblock %}
+{% load static %}
+
+{% block title %}Confirmar partida{% endblock %}
 
 {% block extra_css %}
-<style>
-  .risk-header {
-    background: var(--ac-danger);
-    padding: 16px 20px;
-    display: flex; align-items: center; gap: 12px;
-  }
-  .risk-header i   { font-size: 24px; color: #fff; flex-shrink: 0; }
-  .risk-header-title { font-size: 16px; font-weight: 700; color: #fff; }
-  .risk-header-sub   { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px; }
-
-  .risk-body-msg {
-    font-size: 13px; color: var(--ac-text); line-height: 1.6;
-    margin-bottom: 14px;
-  }
-
-  .risk-worker-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-  .risk-worker-item {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--ac-danger-bg); border: 1px solid var(--ac-danger-bdr);
-    border-radius: var(--radius); padding: 9px 12px;
-  }
-  .risk-worker-avatar {
-    width: 30px; height: 30px; border-radius: 50%;
-    background: var(--ac-danger); color: #fff;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700; flex-shrink: 0;
-  }
-  .risk-worker-name  { font-size: 13px; font-weight: 600; }
-  .risk-worker-task  { font-size: 11px; color: var(--ac-danger); font-family: var(--font-mono); }
-
-  .risk-checkbox-row {
-    display: flex; align-items: flex-start; gap: 10px;
-    background: var(--ac-danger-bg); border: 1px solid var(--ac-danger-bdr);
-    border-radius: var(--radius); padding: 12px;
-    cursor: pointer;
-  }
-  .risk-checkbox-row input[type="checkbox"] {
-    width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px;
-    accent-color: var(--ac-danger); cursor: pointer;
-  }
-  .risk-checkbox-label {
-    font-size: 13px; color: var(--ac-text); line-height: 1.5;
-    cursor: pointer;
-  }
-
-  .btn-risk-confirm {
-    flex: 1; height: 44px; border: none; border-radius: var(--radius);
-    background: var(--ac-danger); color: #fff;
-    font-family: var(--font-brand); font-weight: 700; font-size: 14px;
-    cursor: pointer; opacity: 0.4; pointer-events: none;
-    transition: opacity 0.15s;
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-  }
-  .btn-risk-confirm.enabled { opacity: 1; pointer-events: auto; }
-  .btn-risk-confirm.enabled:hover { opacity: 0.88; }
-</style>
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/assignment.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="ac-timeline">
-  <div class="ac-t-step ac-t-step-done">
-    <div class="ac-t-num ac-t-num-done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
-    <span class="ac-t-label ac-t-label-done">Partida seleccionada</span>
-  </div>
-  <div class="ac-t-step ac-t-step-done">
-    <div class="ac-t-num ac-t-num-done"><i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i></div>
-    <span class="ac-t-label ac-t-label-done">Trabajadores escaneados</span>
-  </div>
-  <div class="ac-t-step ac-t-step-active">
-    <div class="ac-t-num ac-t-num-active">3</div>
-    <span class="ac-t-label ac-t-label-active">Confirmar e iniciar</span>
-  </div>
-</div>
+{% block auth_content %}
+<div class="assign-screen">
+  <div class="assign-view">
+    <div class="assign-page">
 
-<div style="padding:24px; max-width:520px;">
-
-  {% if workers_with_session %}
-    <div class="ac-alert ac-alert-warn" style="margin-bottom:16px;">
-      <i class="ti ti-alert-triangle" style="flex-shrink:0;" aria-hidden="true"></i>
-      <div>
-        <div style="font-weight:600; margin-bottom:6px;">
-          {{ workers_with_session|length }} trabajador{% if workers_with_session|length != 1 %}es{% endif %} con sesion abierta
-        </div>
-        {% for item in workers_with_session %}
-          <div style="font-size:12px; margin-bottom:2px;">
-            <strong>{{ item.worker.display_name }}</strong>
-            — sesion en <em>{{ item.open_session.task_name_snapshot }}</em>
-            · {{ item.open_session.stage_name_snapshot }}
-            (desde {{ item.open_session.started_at|time:"H:i" }})
+      <div class="assign-header">
+        <div class="left">
+          <div>
+            <div class="assign-eyebrow">Nueva asignación</div>
+            <div class="assign-title">Confirmar</div>
           </div>
-        {% endfor %}
-        <div style="font-size:12px; margin-top:6px; opacity:0.85;">
-          Al confirmar, estas sesiones se cerraran automaticamente.
         </div>
       </div>
-    </div>
-  {% endif %}
 
-  {% if no_on_site_workers %}
-    <div class="ac-alert ac-alert-warn" style="margin-bottom:16px;">
-      <i class="ti ti-circle-minus" style="flex-shrink:0;" aria-hidden="true"></i>
-      <div>
-        <div style="font-weight:600; margin-bottom:4px;">Trabajadores con marca No en obra</div>
-        {% for item in no_on_site_workers %}
-          <div style="font-size:12px;">{{ item.worker.display_name }} — {{ item.reason }}</div>
-        {% endfor %}
-        <div style="font-size:12px; margin-top:4px; opacity:0.85;">Se iniciara sesion de todas formas.</div>
+      <div class="assign-steps">
+        <div class="assign-step is-done"><span class="step-num">✓</span><span class="step-label">Partida</span></div>
+        <div class="assign-step-line is-done"></div>
+        <div class="assign-step is-done"><span class="step-num">✓</span><span class="step-label">Trabajadores</span></div>
+        <div class="assign-step-line is-done"></div>
+        <div class="assign-step is-active"><span class="step-num">3</span><span class="step-label">Confirmar</span></div>
       </div>
-    </div>
-  {% endif %}
 
-  <!-- RESUMEN -->
-  <div class="ac-card" style="margin-bottom:16px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title">Resumen</span>
-      {% if has_high_risk %}
-        <span class="ac-badge ac-badge-red">
-          <i class="ti ti-alert-triangle" style="font-size:10px; margin-right:3px;" aria-hidden="true"></i>
-          Alto riesgo
-        </span>
-      {% endif %}
-    </div>
-    <div style="padding:0;">
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:1px solid var(--ac-border);">
-        <span style="font-size:13px; color:var(--ac-text-sub);">Etapa</span>
-        <span style="font-size:13px; font-weight:600;">{{ stage.name }}</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:1px solid var(--ac-border);">
-        <span style="font-size:13px; color:var(--ac-text-sub);">Partida</span>
-        <span style="font-size:13px; font-weight:600;">{{ task.task.name }}</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:1px solid var(--ac-border);">
-        <span style="font-size:13px; color:var(--ac-text-sub);">Riesgo</span>
-        {% if task.task.risk_level == 'HIGH_RISK' %}
-          <span class="ac-badge ac-badge-red">Alto riesgo</span>
-        {% else %}
-          <span class="ac-badge ac-badge-green">Normal</span>
-        {% endif %}
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px; border-bottom:1px solid var(--ac-border);">
-        <span style="font-size:13px; color:var(--ac-text-sub);">Trabajadores</span>
-        <span style="font-size:13px; font-weight:600;">{{ workers|length }} persona{% if workers|length != 1 %}s{% endif %}</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:11px 16px;">
-        <span style="font-size:13px; color:var(--ac-text-sub);">Hora de inicio</span>
-        <span style="font-size:13px; font-weight:600; font-family:var(--font-mono);">{{ now|time:"H:i" }}</span>
-      </div>
-    </div>
-  </div>
+      <div class="newp-step3-grid">
+        <div class="newp-step3-left">
 
-  <!-- LISTA TRABAJADORES -->
-  <div class="ac-card" style="margin-bottom:20px;">
-    <div class="ac-card-header">
-      <span class="ac-card-title">Trabajadores</span>
-    </div>
-    <div style="padding:12px; display:flex; flex-direction:column; gap:6px;">
-      {% for worker in workers %}
-        {% comment %}Chip advertencia si tiene sesion abierta{% endcomment %}
-        {% for item in workers_with_session %}
-          {% if item.worker.id == worker.id %}
-            <div style="display:flex; align-items:center; gap:9px; border:1px solid var(--ac-warn-bdr); border-radius:var(--radius); padding:8px 10px; background:var(--ac-warn-bg);">
-              <div style="width:30px; height:30px; border-radius:50%; background:var(--ac-warn-bg); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--ac-warn-text); flex-shrink:0;">
-                {{ worker.display_name|slice:":1" }}
+          {% if workers_with_session %}
+            <div class="newp-alert">
+              <svg class="newp-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+              <div>
+                <div class="newp-alert-title">{{ workers_with_session|length }} trabajador{% if workers_with_session|length != 1 %}es{% endif %} con sesión abierta</div>
+                {% for item in workers_with_session %}
+                  <div class="newp-alert-name">{{ item.worker.display_name }}</div>
+                  <div class="newp-alert-note">Sesión en {{ item.open_session.task_name_snapshot }} · {{ item.open_session.stage_name_snapshot }} (desde {{ item.open_session.started_at|time:"H:i" }})</div>
+                {% endfor %}
+                <div class="newp-alert-note" style="margin-top:8px;">Al confirmar, estas sesiones se cerrarán automáticamente.</div>
               </div>
-              <div style="flex:1; min-width:0;">
-                <p style="font-size:12px; font-weight:600;">{{ worker.display_name }}</p>
-                <p style="font-family:var(--font-mono); font-size:10px; color:var(--ac-warn-text);">
-                  {{ worker.job_title.name|default:"Sin cargo" }} · Sesion activa se cerrara
-                </p>
-              </div>
-              <i class="ti ti-arrow-right" style="font-size:12px; color:var(--ac-warn-text);" aria-hidden="true"></i>
             </div>
           {% endif %}
-        {% endfor %}
 
-        <div style="display:flex; align-items:center; gap:9px; border:1px solid var(--ac-border); border-radius:var(--radius); padding:8px 10px; background:var(--ac-surface);">
-          <div style="width:30px; height:30px; border-radius:50%; background:var(--ac-blue-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--ac-blue); flex-shrink:0;">
-            {{ worker.display_name|slice:":1" }}
+          {% if no_on_site_workers %}
+            <div class="newp-alert">
+              <svg class="newp-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <div>
+                <div class="newp-alert-title">Trabajadores marcados "No en obra"</div>
+                {% for item in no_on_site_workers %}
+                  <div class="newp-alert-name">{{ item.worker.display_name }} — {{ item.reason }}</div>
+                {% endfor %}
+                <div class="newp-alert-note" style="margin-top:8px;">Se iniciará sesión de todas formas.</div>
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="newp-summary-card">
+            <div class="newp-summary-label">Partida</div>
+            <div class="newp-summary-title">{{ task.task.name }}</div>
+            <div class="newp-summary-sub">Etapa: {{ stage.name }}</div>
+            {% if has_high_risk %}<span class="newp-summary-badge">⚠ Alto riesgo</span>{% endif %}
+
+            <div class="newp-info-row"><span>Trabajadores</span><span>{{ workers|length }} persona{% if workers|length != 1 %}s{% endif %}</span></div>
+            <div class="newp-info-row"><span>Hora de inicio</span><span>{{ now|time:"H:i" }}</span></div>
           </div>
-          <div>
-            <p style="font-size:12px; font-weight:600;">{{ worker.display_name }}</p>
-            <p style="font-family:var(--font-mono); font-size:10px; color:var(--ac-text-sub);">{{ worker.job_title.name|default:"Sin cargo" }}</p>
+        </div>
+
+        <div class="newp-step3-right">
+          <div class="newp-summary-label" style="margin-bottom:10px;">Trabajadores</div>
+          <div class="newp-confirm-list">
+            {% for worker in workers %}
+              {% if worker.id in workers_with_session_ids %}
+                <div class="newp-confirm-row warn">
+                  <div class="newp-confirm-avatar warn">{{ worker.display_name|slice:":1" }}</div>
+                  <div>
+                    <div class="newp-confirm-name">{{ worker.display_name }}</div>
+                    <div class="newp-confirm-cargo warn">{{ worker.job_title.name|default:"Sin cargo" }} · sesión se cerrará</div>
+                  </div>
+                </div>
+              {% else %}
+                <div class="newp-confirm-row">
+                  <div class="newp-confirm-avatar">{{ worker.display_name|slice:":1" }}</div>
+                  <div>
+                    <div class="newp-confirm-name">{{ worker.display_name }}</div>
+                    <div class="newp-confirm-cargo">{{ worker.job_title.name|default:"Sin cargo" }}</div>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
           </div>
+        </div>
+      </div>
+
+      <form method="post" id="confirm-form">
+        {% csrf_token %}
+        <div class="assign-footer">
+          <button
+            type="{% if has_high_risk %}button{% else %}submit{% endif %}"
+            name="start" value="1" id="btn-start" class="btn-primary"
+            {% if has_high_risk %}onclick="openRiskModal()"{% endif %}
+            {% if has_high_risk %}style="background:var(--ac-danger);"{% endif %}>
+            <span>
+              {% if workers_with_session %}Cerrar sesiones anteriores e iniciar {{ workers|length }}
+              {% else %}Confirmar e iniciar {{ workers|length }} sesión{% if workers|length != 1 %}es{% endif %}{% endif %}
+            </span>
+          </button>
+          <a href="{% url 'work:assignment_scan' %}" class="btn-secondary">Volver a editar grupo</a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  {% include 'partials/_home_nav.html' %}
+</div>
+
+{% if has_high_risk %}
+<div class="modal-overlay" id="risk-overlay">
+  <div class="risk-card">
+    <div class="risk-card-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+    </div>
+    <h4>Partida de alto riesgo</h4>
+    <p>La partida <strong>{{ task.task.name }}</strong> está clasificada como alto riesgo. Los siguientes trabajadores quedarán asignados:</p>
+
+    <div class="risk-worker-list">
+      {% for worker in workers %}
+        <div class="risk-worker-item">
+          <div class="risk-worker-avatar">{{ worker.display_name|slice:":1" }}</div>
+          <div class="risk-worker-name">{{ worker.display_name }}</div>
         </div>
       {% endfor %}
     </div>
-  </div>
 
-  <form method="post" id="confirm-form">
-    {% csrf_token %}
-    <button
-      type="{% if has_high_risk %}button{% else %}submit{% endif %}"
-      name="start"
-      id="btn-start"
-      class="ac-btn ac-btn-primary ac-btn-full"
-      {% if has_high_risk %}onclick="openRiskModal()"{% endif %}
-      style="{% if has_high_risk %}background:var(--ac-danger);{% endif %}"
-    >
-      <i class="ti ti-player-play" aria-hidden="true"></i>
-      {% if workers_with_session %}
-        Cerrar sesiones anteriores e iniciar {{ workers|length }}
-      {% else %}
-        Confirmar e iniciar {{ workers|length }} sesion{% if workers|length != 1 %}es{% endif %}
-      {% endif %}
-    </button>
-    <a href="{% url 'work:assignment_scan' %}" class="ac-btn ac-btn-secondary ac-btn-full" style="margin-top:10px; text-align:center; display:block;">
-      <i class="ti ti-arrow-left" aria-hidden="true"></i>
-      Volver a editar grupo
-    </a>
-  </form>
+    <label class="risk-checkbox-row" for="risk-confirm-check">
+      <input type="checkbox" id="risk-confirm-check" onchange="toggleRiskConfirm(this)">
+      <span class="risk-checkbox-label">Confirmo que los trabajadores cuentan con los elementos de protección personal (EPP) necesarios y están en condiciones de realizar esta actividad de alto riesgo.</span>
+    </label>
 
-</div>
-
-<!-- ═══════════════════════════════════════ -->
-<!-- MODAL ALTO RIESGO -->
-<!-- ═══════════════════════════════════════ -->
-{% if has_high_risk %}
-<div class="ac-overlay" id="risk-overlay">
-  <div class="ac-sheet" style="max-width:520px;">
-
-    <div class="risk-header">
-      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-      <div>
-        <div class="risk-header-title">Partida de alto riesgo</div>
-        <div class="risk-header-sub">Se requiere confirmacion explicita</div>
-      </div>
+    <div class="risk-actions">
+      <button type="button" class="risk-confirm" id="btn-risk-confirm" onclick="submitWithRisk()">Confirmar e iniciar</button>
+      <button type="button" class="risk-cancel" onclick="closeRiskModal()">Cancelar</button>
     </div>
-
-    <div class="ac-sheet-body">
-      <p class="risk-body-msg">
-        La partida <strong>{{ task.task.name }}</strong> esta clasificada como
-        <strong>alto riesgo</strong>. Los siguientes trabajadores quedarán
-        asignados a esta partida:
-      </p>
-
-      <div class="risk-worker-list">
-        {% for worker in workers %}
-          <div class="risk-worker-item">
-            <div class="risk-worker-avatar">
-              {{ worker.display_name|slice:":1" }}{{ worker.display_name.split|last|slice:":1" }}
-            </div>
-            <div>
-              <div class="risk-worker-name">{{ worker.display_name }}</div>
-              <div class="risk-worker-task">{{ task.task.name }} · {{ stage.name }}</div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-
-      <label class="risk-checkbox-row" for="risk-confirm-check">
-        <input
-          type="checkbox"
-          id="risk-confirm-check"
-          onchange="toggleRiskConfirm(this)"
-        >
-        <span class="risk-checkbox-label">
-          Confirmo que los trabajadores cuentan con los elementos de proteccion
-          personal (EPP) necesarios y estan en condiciones de realizar esta
-          actividad de alto riesgo.
-        </span>
-      </label>
-    </div>
-
-    <div class="ac-sheet-footer">
-      <button class="ac-sheet-cancel" onclick="closeRiskModal()">Cancelar</button>
-      <button
-        class="btn-risk-confirm"
-        id="btn-risk-confirm"
-        onclick="submitWithRisk()"
-      >
-        <i class="ti ti-player-play" aria-hidden="true"></i>
-        Confirmar e iniciar
-      </button>
-    </div>
-
   </div>
 </div>
 {% endif %}
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
   {% if has_high_risk %}
   function openRiskModal() {
-    document.getElementById('risk-overlay').classList.add('visible');
+    document.getElementById('risk-overlay').classList.add('is-open');
     document.body.style.overflow = 'hidden';
-    // Resetear checkbox cada vez que se abre
     const cb = document.getElementById('risk-confirm-check');
     if (cb) { cb.checked = false; toggleRiskConfirm(cb); }
   }
-
   function closeRiskModal() {
-    document.getElementById('risk-overlay').classList.remove('visible');
+    document.getElementById('risk-overlay').classList.remove('is-open');
     document.body.style.overflow = '';
   }
-
   function toggleRiskConfirm(checkbox) {
-    const btn = document.getElementById('btn-risk-confirm');
-    if (checkbox.checked) {
-      btn.classList.add('enabled');
-    } else {
-      btn.classList.remove('enabled');
-    }
+    document.getElementById('btn-risk-confirm').classList.toggle('enabled', checkbox.checked);
   }
-
   function submitWithRisk() {
     const cb = document.getElementById('risk-confirm-check');
     if (!cb || !cb.checked) return;
     closeRiskModal();
-    // Agregar campo hidden y enviar el form
-    const form = document.getElementById('confirm-form');
-    const input = document.createElement('input');
-    input.type  = 'hidden';
-    input.name  = 'start';
-    input.value = '1';
-    form.appendChild(input);
-    form.submit();
+    document.getElementById('confirm-form').submit();
   }
-
-  // Cerrar con click fuera del sheet
   document.getElementById('risk-overlay').addEventListener('click', function(e) {
     if (e.target === this) closeRiskModal();
   });

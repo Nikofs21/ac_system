@@ -1,75 +1,46 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}Seleccionar obra{% endblock %}
 
-{% block content %}
-<div style="min-height:calc(100vh - var(--ac-topbar-h)); display:flex; align-items:center; justify-content:center; padding:24px;">
-  <div style="width:100%; max-width:480px;">
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
 
-    <div style="margin-bottom:24px;">
-      <h1 style="font-size:20px; font-weight:700; color:var(--ac-dark); margin-bottom:4px;">Selecciona tu obra</h1>
-      <p style="font-size:13px; color:var(--ac-text-sub);">Elige la obra en la que vas a trabajar hoy.</p>
-    </div>
+{% block auth_content %}
+<div class="auth-screen select-site-screen">
+
+  <div class="select-site-top">
+    <svg class="logo-real" viewBox="0 0 500 402.14" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M77.04,74.83h339.2c18.27,0,33.08-14.81,33.08-33.08H43.96c0,18.27,14.81,33.08,33.08,33.08h0Z"/>
+      <path d="M401.58,89.76v-.06H97.8v.08c-36.74.32-66.56,30.31-66.56,67.13s30.12,67.15,67.15,67.15c2.49,0,4.96-.16,7.4-.42h10.44v14.51h.24v79.73l29.7,10.82v-90.54h28.1v100.77l29.7,10.82v-111.58h28.1v121.81l17.32,6.31,12.38-3.93v-124.18h28.1v115.22l29.7-9.45v-105.77h28.1v96.83l29.7-9.45v-100.41c0-.51-.06-.99-.16-1.46h16.93c2.43.28,4.9.42,7.4.42,37.02,0,67.15-30.12,67.15-67.15s-30.12-67.15-67.15-67.15l.06-.02ZM208.59,147l30.35,45.95h-30.35v-45.95ZM344.99,192.94h-34.56v-72.55h34.88c-6.84,10.52-10.84,23.06-10.84,36.52s3.88,25.63,10.54,36.05l-.02-.02ZM289.25,192.94h-24.14v-72.55h24.14v72.55ZM243.97,120.39v47.14l-30.99-47.14h30.99ZM187.43,120.39v72.55h-32.43c6.66-10.42,10.54-22.78,10.54-36.05s-3.99-26-10.84-36.52h32.73v.02ZM98.39,190.39c-18.47,0-33.48-15.03-33.48-33.48s15.03-33.48,33.48-33.48,33.48,15.03,33.48,33.48-15.03,33.48-33.48,33.48ZM401.58,190.39c-18.47,0-33.48-15.03-33.48-33.48s15.03-33.48,33.48-33.48,33.48,15.03,33.48,33.48-15.03,33.48-33.48,33.48Z"/>
+    </svg>
+  </div>
+
+  <div class="select-site-body">
+    <div class="select-site-greeting">Hola {{ request.user.first_name|default:request.user.email }}</div>
+    <div class="select-site-title">Selecciona la obra en la<br>que vas a trabajar hoy</div>
 
     {% if site_memberships %}
-      <form method="post">
+      <form method="post" id="select-site-form">
         {% csrf_token %}
-        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+        <div class="select-site-list" id="select-site-list">
           {% for membership in site_memberships %}
-            <label style="cursor:pointer;">
-              <input type="radio" name="site_membership_id" value="{{ membership.id }}" style="display:none;" class="site-radio">
-              <div class="site-card" style="background:var(--ac-white); border:1.5px solid var(--ac-border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; align-items:center; gap:14px; transition:border-color 0.15s, background 0.15s;">
-                <div style="width:42px; height:42px; border-radius:10px; background:var(--ac-blue-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                  <i class="ti ti-building" style="font-size:20px; color:var(--ac-blue);" aria-hidden="true"></i>
-                </div>
-                <div style="flex:1;">
-                  <div style="font-size:15px; font-weight:600; color:var(--ac-dark);">{{ membership.site.name }}</div>
-                  <div style="font-size:12px; color:var(--ac-text-sub); margin-top:2px;">
-                    {{ membership.site.company.name }}
-                    &nbsp;&middot;&nbsp;
-                    <span style="font-family:var(--font-mono); font-size:11px;">{{ membership.site.code }}</span>
-                  </div>
-                </div>
-                <div style="text-align:right; flex-shrink:0;">
-                  <span class="ac-badge ac-badge-blue">{{ membership.role.name }}</span>
-                </div>
-              </div>
-            </label>
+            <button type="submit" name="site_membership_id" value="{{ membership.id }}" class="select-site-row">
+              {{ membership.site.name }}
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
           {% endfor %}
         </div>
-        <button type="submit" class="ac-btn ac-btn-primary ac-btn-full" id="submit-btn" disabled>
-          <i class="ti ti-arrow-right" aria-hidden="true"></i>
-          Ingresar a la obra
-        </button>
       </form>
-
-      <script>
-        const radios = document.querySelectorAll('.site-radio');
-        const cards = document.querySelectorAll('.site-card');
-        const submitBtn = document.getElementById('submit-btn');
-
-        radios.forEach((radio, index) => {
-          radio.addEventListener('change', () => {
-            cards.forEach(c => {
-              c.style.borderColor = 'var(--ac-border)';
-              c.style.background = 'var(--ac-white)';
-            });
-            cards[index].style.borderColor = 'var(--ac-blue)';
-            cards[index].style.background = 'var(--ac-blue-soft)';
-            submitBtn.disabled = false;
-          });
-        });
-      </script>
-
     {% else %}
-      <div class="ac-alert ac-alert-warn">
-        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-        <div>
-          <div style="font-weight:600; margin-bottom:2px;">Sin obras asignadas</div>
-          <div style="font-size:12px;">No tienes obras activas asignadas. Contacta al administrador del sistema.</div>
-        </div>
+      <div class="select-site-empty">
+        <strong>Sin obras asignadas.</strong><br>
+        No tienes obras activas asignadas. Contacta al administrador del sistema.
       </div>
     {% endif %}
-
   </div>
+
+  <div class="select-site-footer">Novus Imperium</div>
 </div>
 {% endblock %}

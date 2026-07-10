@@ -156,7 +156,7 @@ def productivity_dashboard(request):
         'date_sem':      date_sem,
         'avg_hh':        avg_hh,
         'tiene_hm_js':   'true' if tiene_hm else 'false',
-        'hm_col1':       '290px' if tiene_hm else '210px',
+        'hm_col1':       '340px' if tiene_hm else '260px',
         'selected_date_str': selected_str,
     }
     return render(request, 'analytics/productivity_dashboard.html', context)

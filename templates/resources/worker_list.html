@@ -1,214 +1,164 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}Trabajadores{% endblock %}
-{% block nav_list %}active{% endblock %}
 
 {% block extra_css %}
-<style>
-  .select-all-bar {
-    padding: 8px 16px;
-    background: var(--ac-surface); border-bottom: 1px solid var(--ac-border);
-    font-size: 12px; color: var(--ac-text-sub);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .select-all-check { accent-color: var(--ac-blue); width: 16px; height: 16px; cursor: pointer; }
-
-  .bulk-bar {
-    display: none; align-items: center; gap: 10px;
-    padding: 8px 16px;
-    background: var(--ac-blue-soft); border-bottom: 1px solid var(--ac-blue-mid);
-    font-size: 13px; color: var(--ac-blue);
-  }
-  .bulk-bar.visible { display: flex; }
-  .bulk-count { font-weight: 700; font-family: var(--font-mono); }
-  .bulk-actions { margin-left: auto; display: flex; gap: 8px; }
-  .btn-bulk {
-    height: 32px; border-radius: var(--radius);
-    border: 1px solid var(--ac-blue); background: var(--ac-white); color: var(--ac-blue);
-    font-size: 12px; cursor: pointer; padding: 0 12px;
-    display: flex; align-items: center; gap: 5px;
-    font-family: var(--font-main); white-space: nowrap;
-  }
-  .btn-bulk:hover { background: var(--ac-blue); color: #fff; }
-  .btn-bulk-cancel {
-    height: 32px; border-radius: var(--radius);
-    border: none; background: none; color: var(--ac-blue);
-    font-size: 12px; cursor: pointer; padding: 0 8px;
-    font-family: var(--font-main);
-  }
-
-  .row-check {
-    width: 18px; height: 18px; flex-shrink: 0;
-    accent-color: var(--ac-blue); cursor: pointer;
-  }
-
-  .ac-item-avatar-session { background: var(--ac-success-bg); color: var(--ac-success-text); }
-</style>
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/workers.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="ac-page-header">
-  <div>
-    <h1 class="ac-page-title">Trabajadores</h1>
-    <p class="ac-page-sub">{{ site.name }}</p>
-  </div>
-  {% if perms_ctx.can_crud_people %}
-    <a href="{% url 'resources:resource_create' %}" class="ac-btn ac-btn-primary ac-btn-sm">
-      <i class="ti ti-plus" aria-hidden="true"></i> Nuevo
-    </a>
-  {% endif %}
-</div>
+{% block auth_content %}
+<div class="wk-screen">
+  <div class="wk-view">
+    <div class="wk-scroll">
 
-<!-- Filtros -->
-<div class="ac-filter-bar">
-  <button class="ac-filter-btn {% if active_filter == 'active' %}active{% endif %}" onclick="setFilter('active')">
-    Activos <span style="opacity:.6;">({{ counts.active }})</span>
-  </button>
-  <button class="ac-filter-btn {% if active_filter == 'with_session' %}active{% endif %}" onclick="setFilter('with_session')">
-    Con sesión <span style="opacity:.6;">({{ counts.with_session }})</span>
-  </button>
-  <button class="ac-filter-btn {% if active_filter == 'without_session' %}active{% endif %}" onclick="setFilter('without_session')">
-    Sin sesión <span style="opacity:.6;">({{ counts.without_session }})</span>
-  </button>
-  <button class="ac-filter-btn {% if active_filter == 'inactive' %}active{% endif %}" onclick="setFilter('inactive')">
-    Inactivos <span style="opacity:.6;">({{ counts.inactive }})</span>
-  </button>
-  <div style="position:relative; margin-left:auto; flex-shrink:0;">
-    <i class="ti ti-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--ac-text-sub); pointer-events:none;" aria-hidden="true"></i>
-    <input type="text" id="worker-search" class="ac-filter-btn"
-           placeholder="Buscar..."
-           style="padding-left:30px; border-radius:20px; width:160px; cursor:text;"
-           oninput="filterWorkers(this.value)">
-  </div>
-</div>
+      <div class="wk-header">
+        <h2>Trabajadores</h2>
+        <div class="wk-sub">{{ site.name }}</div>
+      </div>
 
-{% if active_filter == 'active' %}
-<!-- Seleccionar todos -->
-<div class="select-all-bar" id="select-all-bar">
-  <input type="checkbox" class="select-all-check" id="check-all" onchange="toggleAll(this)">
-  <label for="check-all" style="cursor:pointer;">Seleccionar todos ({{ counts.active }})</label>
-</div>
+      <div class="wk-tabs">
+        <a href="?filter=active" class="wk-tab {% if active_filter == 'active' %}active{% endif %}">
+          Activos <span class="wk-tab-count">({{ counts.active }})</span>
+        </a>
+        <a href="?filter=with_session" class="wk-tab {% if active_filter == 'with_session' %}active{% endif %}">
+          Con sesión <span class="wk-tab-count">({{ counts.with_session }})</span>
+        </a>
+        <a href="?filter=without_session" class="wk-tab {% if active_filter == 'without_session' %}active{% endif %}">
+          Sin sesión <span class="wk-tab-count">({{ counts.without_session }})</span>
+        </a>
+        <a href="?filter=inactive" class="wk-tab {% if active_filter == 'inactive' %}active{% endif %}">
+          Inactivos <span class="wk-tab-count">({{ counts.inactive }})</span>
+        </a>
+      </div>
 
-<!-- Barra acciones masivas -->
-<div class="bulk-bar" id="bulk-bar">
-  <span class="bulk-count" id="bulk-count">0</span>
-  <span>seleccionados</span>
-  <div class="bulk-actions">
-    {% if perms_ctx.can_view_qr %}
-      <button class="btn-bulk" onclick="downloadQRs()">
-        <i class="ti ti-qrcode" aria-hidden="true"></i> Descargar QRs
-      </button>
-    {% endif %}
-    <button class="btn-bulk-cancel" onclick="clearSelection()">✕ Deseleccionar</button>
-  </div>
-</div>
-{% endif %}
-
-<!-- Lista -->
-<div class="ac-list" style="margin: 12px 16px 24px;">
-  {% if workers %}
-    {% for worker in workers %}
-      <div class="ac-list-item" id="wrow-{{ worker.id }}">
-
-        {% if active_filter == 'active' %}
-          <input type="checkbox" class="row-check" value="{{ worker.id }}"
-                 onchange="onCheckChange(this)" aria-label="Seleccionar {{ worker.display_name }}">
-        {% endif %}
-
-        <div class="ac-item-avatar {% if not worker.is_active_assignment %}ac-item-avatar-inactive{% elif worker.has_open_session %}ac-item-avatar-session{% endif %}">
-          {{ worker.display_name|slice:":2"|upper }}
-        </div>
-
-        <div class="ac-item-info">
-          <div class="ac-item-name">{{ worker.display_name }}</div>
-          <div class="ac-item-meta">
-            {% if worker.job_title %}{{ worker.job_title.name }}{% endif %}
-            {% if worker.person_rut %}&nbsp;·&nbsp;{{ worker.person_rut }}{% endif %}
-          </div>
-        </div>
-
-        <div style="flex-shrink:0; display:flex; gap:6px;">
-          {% if perms_ctx.can_view_qr %}
-            <button class="ac-row-btn" onclick="openQRModal({{ worker.id }})" title="Ver QR">
-              <i class="ti ti-qrcode" aria-hidden="true"></i>
-            </button>
-          {% endif %}
-          {% if perms_ctx.can_start_people and worker.is_active_assignment and not worker.has_open_session %}
-            <a href="{% url 'work:assignment_preload' worker.id %}" class="ac-row-btn" title="Asignar partida">
-              <i class="ti ti-plus" aria-hidden="true"></i> Asignar
-            </a>
-          {% endif %}
-          {% if perms_ctx.can_crud_people %}
-            <a href="{% url 'resources:resource_edit' worker.id %}" class="ac-row-btn">
-              <i class="ti ti-pencil" aria-hidden="true"></i>
-            </a>
-          {% endif %}
+      <div class="wk-search">
+        <div class="wk-search-inner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="worker-search" placeholder="Busca por nombre" oninput="filterWorkers(this.value)">
         </div>
       </div>
-    {% endfor %}
-  {% else %}
-    <div class="ac-empty">
-      <i class="ti ti-users-minus" aria-hidden="true"></i>
-      <div class="ac-empty-title">Sin trabajadores</div>
-      <div class="ac-empty-sub">No hay trabajadores en esta categoría.</div>
+
+      {% if active_filter == 'active' %}
+        <div class="wk-select-row is-visible" id="wk-select-row">
+          <label class="wk-checkbox">
+            <input type="checkbox" id="check-all" onchange="toggleAll(this)">
+            <span class="wk-checkbox-box"></span>
+            <span class="wk-checkbox-label">Seleccionar todos ({{ counts.active }})</span>
+          </label>
+        </div>
+      {% endif %}
+
+      <div class="wk-list" id="wk-list">
+        {% if workers %}
+          {% for worker in workers %}
+            <div class="wk-row" id="wrow-{{ worker.id }}" data-state="{% if not worker.is_active_assignment %}inactive{% else %}active{% endif %}">
+
+              {% if active_filter == 'active' %}
+                <label class="wk-checkbox" style="margin-right:-4px;">
+                  <input type="checkbox" class="row-check" value="{{ worker.id }}"
+                         onchange="onCheckChange(this)" aria-label="Seleccionar {{ worker.display_name }}">
+                  <span class="wk-checkbox-box"></span>
+                </label>
+              {% endif %}
+
+              <div class="wk-avatar {% if worker.has_open_session %}has-session{% endif %}">
+                {{ worker.display_name|slice:":2"|upper }}
+              </div>
+
+              <div class="wk-info">
+                <div class="wk-name-row">
+                  <span class="wk-name">{{ worker.display_name }}</span>
+                  {% if worker.has_open_session %}<span class="wk-dot"></span>{% endif %}
+                </div>
+                <div class="wk-role">
+                  {% if worker.job_title %}{{ worker.job_title.name }}{% endif %}
+                  {% if worker.person_rut %}&nbsp;·&nbsp;{{ worker.person_rut }}{% endif %}
+                </div>
+              </div>
+
+              <div class="wk-action">
+                {% if perms_ctx.can_view_qr %}
+                  <button type="button" class="icon-circle" onclick="openQRModal({{ worker.id }})" title="Ver QR" aria-label="Ver QR de {{ worker.display_name }}">
+                    <i class="ti ti-qrcode" aria-hidden="true"></i>
+                  </button>
+                {% endif %}
+                {% if perms_ctx.can_start_people and worker.is_active_assignment and not worker.has_open_session %}
+                  <a href="{% url 'work:assignment_preload' worker.id %}" class="btn-wk-assign">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Asignar
+                  </a>
+                {% endif %}
+                {% if perms_ctx.can_crud_people %}
+                  <a href="{% url 'resources:resource_edit' worker.id %}" class="icon-circle" title="Editar" aria-label="Editar {{ worker.display_name }}">
+                    <i class="ti ti-pencil" aria-hidden="true"></i>
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="picker-empty">Sin trabajadores en esta categoría.</div>
+        {% endif %}
+      </div>
     </div>
-  {% endif %}
+
+    {% if active_filter == 'active' %}
+      <div class="wk-footer" id="wk-footer">
+        <span class="wk-bulk-count" id="wk-bulk-count">0 seleccionados</span>
+        {% if perms_ctx.can_view_qr %}
+          <button type="button" class="btn-bulk-qr" id="btn-bulk-close" onclick="downloadQRs()">
+            <i class="ti ti-qrcode" aria-hidden="true"></i> Descargar QRs
+          </button>
+        {% endif %}
+        <button type="button" class="btn-bulk-cancel" onclick="clearSelection()">Cancelar</button>
+      </div>
+    {% endif %}
+  </div>
+
+  {% include 'partials/_home_nav.html' %}
 </div>
 
 <!-- Modal QR -->
-<div class="ac-overlay" id="qr-overlay" onclick="if(event.target===this)closeQRModal()">
-  <div class="ac-sheet" id="qr-sheet" style="max-width:420px;">
-    <div class="ac-sheet-handle"></div>
-    <div id="qr-loading" style="display:flex; align-items:center; justify-content:center; padding:40px; color:var(--ac-text-sub); font-size:13px; gap:8px;">
+<div class="modal-overlay" id="qr-overlay">
+  <div class="qr-card" id="qr-sheet">
+    <div class="qr-loading" id="qr-loading">
       <i class="ti ti-loader" aria-hidden="true"></i> Cargando...
     </div>
     <div id="qr-content" style="display:none;">
-      <div class="ac-sheet-header" style="text-align:center;">
-        <div class="ac-sheet-title" id="qr-worker-name"></div>
-        <div class="ac-sheet-sub" id="qr-worker-cargo"></div>
-        <div class="ac-sheet-sub" style="font-family:var(--font-mono);" id="qr-worker-rut"></div>
+      <div class="qr-worker-name" id="qr-worker-name"></div>
+      <div class="qr-worker-sub" id="qr-worker-cargo"></div>
+      <div class="qr-worker-sub" style="font-family:var(--font-mono);" id="qr-worker-rut"></div>
+      <div class="qr-code-box">
+        <div id="qr-code-display"></div>
+        <div class="qr-worker-uid" id="qr-worker-uid"></div>
       </div>
-      <div class="ac-sheet-body" style="align-items:center;">
-        <div style="background:var(--ac-white); border:1.5px solid var(--ac-border); border-radius:var(--radius-lg); padding:20px; display:flex; flex-direction:column; align-items:center; gap:12px; width:100%;">
-          <div id="qr-code-display"></div>
-          <div style="font-family:var(--font-mono); font-size:10px; color:var(--ac-text-hint);" id="qr-worker-uid"></div>
-        </div>
-      </div>
-      <div class="ac-sheet-footer" style="flex-direction:column;">
-        <button onclick="printWorkerQR()" class="ac-btn ac-btn-secondary ac-btn-full">
+      <div class="qr-actions">
+        <button type="button" onclick="printWorkerQR()">
           <i class="ti ti-printer" aria-hidden="true"></i> Imprimir / Guardar
         </button>
-        <button onclick="closeQRModal()" class="ac-btn ac-btn-secondary ac-btn-full" style="color:var(--ac-text-sub);">
-          Cerrar
-        </button>
+        <button type="button" class="qr-close" onclick="closeQRModal()">Cerrar</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Toast descarga -->
-<div class="ac-toast" id="dl-toast">
-  <i class="ti ti-loader" aria-hidden="true"></i>
+<div class="wk-toast" id="dl-toast">
   <span id="dl-toast-msg">Generando PDF...</span>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-const CSRF   = "{{ csrf_token }}";
-const FILTER = "{{ active_filter }}";
+const CSRF = "{{ csrf_token }}";
 
-// ── Filtros ───────────────────────────────────────────────────────────────
-function setFilter(filter) {
-  const url = new URL(window.location);
-  url.searchParams.set('filter', filter);
-  window.location = url.toString();
-}
-
-// ── Checkboxes ────────────────────────────────────────────────────────────
+// ── Checkboxes / selección masiva ──────────────────────────────────────────
 function onCheckChange(cb) {
-  cb.closest('.ac-list-item').classList.toggle('ac-list-item-selected', cb.checked);
+  cb.closest('.wk-row').classList.toggle('wk-selected', cb.checked);
   syncMasterCheck();
   updateBulkBar();
 }
@@ -216,7 +166,7 @@ function onCheckChange(cb) {
 function toggleAll(masterCb) {
   document.querySelectorAll('.row-check').forEach(cb => {
     cb.checked = masterCb.checked;
-    cb.closest('.ac-list-item').classList.toggle('ac-list-item-selected', masterCb.checked);
+    cb.closest('.wk-row').classList.toggle('wk-selected', masterCb.checked);
   });
   updateBulkBar();
 }
@@ -224,10 +174,10 @@ function toggleAll(masterCb) {
 function clearSelection() {
   document.querySelectorAll('.row-check').forEach(cb => {
     cb.checked = false;
-    cb.closest('.ac-list-item').classList.remove('ac-list-item-selected');
+    cb.closest('.wk-row').classList.remove('wk-selected');
   });
   const master = document.getElementById('check-all');
-  if (master) master.checked = false;
+  if (master) { master.checked = false; master.indeterminate = false; }
   updateBulkBar();
 }
 
@@ -242,15 +192,15 @@ function syncMasterCheck() {
 
 function updateBulkBar() {
   const checked = document.querySelectorAll('.row-check:checked');
-  const bulkBar = document.getElementById('bulk-bar');
-  const countEl = document.getElementById('bulk-count');
+  const bulkBar = document.getElementById('wk-footer');
+  const countEl = document.getElementById('wk-bulk-count');
   if (!bulkBar) return;
 
   if (checked.length > 0) {
-    bulkBar.classList.add('visible');
-    countEl.textContent = checked.length;
+    bulkBar.classList.add('is-visible');
+    countEl.textContent = checked.length + ' seleccionados';
   } else {
-    bulkBar.classList.remove('visible');
+    bulkBar.classList.remove('is-visible');
   }
 }
 
@@ -261,7 +211,7 @@ function downloadQRs() {
 
   const toast = document.getElementById('dl-toast');
   document.getElementById('dl-toast-msg').textContent = `Generando PDF con ${ids.length} QR${ids.length > 1 ? 's' : ''}...`;
-  toast.classList.add('visible');
+  toast.classList.add('is-shown');
 
   const form = document.createElement('form');
   form.method = 'POST';
@@ -280,14 +230,14 @@ function downloadQRs() {
   document.body.appendChild(form);
   form.submit();
   document.body.removeChild(form);
-  setTimeout(() => toast.classList.remove('visible'), 4000);
+  setTimeout(() => toast.classList.remove('is-shown'), 4000);
 }
 
 // ── Modal QR individual ───────────────────────────────────────────────────
 function openQRModal(resourceId) {
-  document.getElementById('qr-loading').style.display  = 'flex';
-  document.getElementById('qr-content').style.display  = 'none';
-  document.getElementById('qr-overlay').classList.add('visible');
+  document.getElementById('qr-loading').style.display = 'flex';
+  document.getElementById('qr-content').style.display = 'none';
+  document.getElementById('qr-overlay').classList.add('is-open');
   document.body.style.overflow = 'hidden';
 
   fetch(`/resources/qr/${resourceId}/`, { headers: { 'X-CSRFToken': CSRF } })
@@ -301,8 +251,8 @@ function openQRModal(resourceId) {
     const container = document.getElementById('qr-code-display');
     container.innerHTML = '';
     new QRCode(container, {
-      text: data.qr_url, width: 200, height: 200,
-      colorDark: '#131d47', colorLight: '#ffffff',
+      text: data.qr_url, width: 190, height: 190,
+      colorDark: '#14141f', colorLight: '#ffffff',
       correctLevel: QRCode.CorrectLevel.M,
     });
 
@@ -313,9 +263,13 @@ function openQRModal(resourceId) {
 }
 
 function closeQRModal() {
-  document.getElementById('qr-overlay').classList.remove('visible');
+  document.getElementById('qr-overlay').classList.remove('is-open');
   document.body.style.overflow = '';
 }
+
+document.getElementById('qr-overlay').addEventListener('click', (e) => {
+  if (e.target.id === 'qr-overlay') closeQRModal();
+});
 
 function printWorkerQR() {
   const name  = document.getElementById('qr-worker-name').textContent;
@@ -331,23 +285,20 @@ function printWorkerQR() {
     img{display:block;margin:0 auto 12px;}h2{font-size:18px;margin:0 0 4px;color:#131d47;}
     p{font-size:13px;color:#666;margin:2px 0;}
     .brand{font-size:10px;color:#0025ec;font-weight:bold;margin-top:12px;letter-spacing:.05em;}</style>
-    </head><body><div class="card"><img src="${dataUrl}" width="200" height="200">
+    </head><body><div class="card"><img src="${dataUrl}" width="190" height="190">
     <h2>${name}</h2>${cargo ? `<p>${cargo}</p>` : ''}${rut ? `<p>${rut}</p>` : ''}
     <p class="brand">NOVUS IMPERIUM</p></div>
     <script>window.onload=()=>window.print();<\/script></body></html>`);
   win.document.close();
 }
 
-// Swipe para cerrar modal
-let touchStartY = 0;
-document.getElementById('qr-sheet').addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
-document.getElementById('qr-sheet').addEventListener('touchend', e => { if (e.changedTouches[0].clientY - touchStartY > 80) closeQRModal(); }, { passive: true });
+// ── Búsqueda (cliente) ───────────────────────────────────────────────────
 function filterWorkers(query) {
   const q = query.toLowerCase().trim();
-  document.querySelectorAll('.ac-list-item').forEach(row => {
-    const name = row.querySelector('.ac-item-name')?.textContent.toLowerCase() || '';
-    const meta = row.querySelector('.ac-item-meta')?.textContent.toLowerCase() || '';
-    row.style.display = (!q || name.includes(q) || meta.includes(q)) ? '' : 'none';
+  document.querySelectorAll('.wk-row').forEach(row => {
+    const name = row.querySelector('.wk-name')?.textContent.toLowerCase() || '';
+    const role = row.querySelector('.wk-role')?.textContent.toLowerCase() || '';
+    row.classList.toggle('wk-hidden', !(!q || name.includes(q) || role.includes(q)));
   });
 }
 </script>
