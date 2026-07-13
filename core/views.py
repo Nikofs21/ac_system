@@ -399,6 +399,6 @@ def access_denied(request):
 
 @login_required
 def feature_disabled(request):
-    return render(request, 'feature_disabled.html', {
+    return render(request, 'feature_disable.html', {
         'page_title': 'Funcionalidad no disponible',
     })

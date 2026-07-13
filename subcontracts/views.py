@@ -242,10 +242,7 @@ def subcontract_form(request, subcontract_uid):
     ).exists() or request.user.actor_type == 'PROVIDER'
 
     if not has_access:
-        return render(request, 'subcontracts/subcontract_no_access.html', {
-            'subcontract': subcontract,
-            'site':        site,
-        })
+        return redirect('access_denied')
 
     # ── POST ──────────────────────────────────────────────────────────────
     if request.method == 'POST':

@@ -1,100 +1,83 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}Trabajadores activos{% endblock %}
-{% block nav_active %}active{% endblock %}
 
-{% block content %}
-<div class="ac-page-header">
-  <div>
-    <h1 class="ac-page-title">Trabajadores activos</h1>
-    <p class="ac-page-sub">Sesiones abiertas hoy — {{ site.name }}</p>
-  </div>
-  <div style="display:flex; gap:8px;">
-    <a href="{% url 'work:assignment_new' %}" class="ac-btn ac-btn-primary ac-btn-sm">
-      <i class="ti ti-plus" aria-hidden="true"></i> Nueva asignacion
-    </a>
-    {% if open_sessions %}
-      <form method="post" action="{% url 'work:mass_close' %}" onsubmit="return confirm('Cerrar todas las sesiones abiertas?')">
-        {% csrf_token %}
-        <button type="submit" class="ac-btn ac-btn-secondary ac-btn-sm">
-          <i class="ti ti-player-stop" aria-hidden="true"></i> Cierre masivo
-        </button>
-      </form>
-    {% endif %}
-  </div>
-</div>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/workers.css' %}">
+{% endblock %}
 
-<!-- STATS -->
-<div style="padding:16px 24px 0;">
-  <div class="ac-stats-grid-3" style="margin-bottom:0;">
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Activos ahora</div>
-      <div class="ac-stat-value ac-stat-value-blue">{{ active_count }}</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Sin asignar</div>
-      <div class="ac-stat-value {% if unassigned_count > 0 %}ac-stat-value-red{% else %}ac-stat-value-green{% endif %}">{{ unassigned_count }}</div>
-    </div>
-    <div class="ac-stat-card">
-      <div class="ac-stat-label">Cerrados hoy</div>
-      <div class="ac-stat-value ac-stat-value-green">{{ closed_today }}</div>
-    </div>
-  </div>
-</div>
+{% block auth_content %}
+<div class="wk-screen">
+  <div class="wk-view">
+    <div class="wk-scroll">
 
-<!-- TABLA DE SESIONES -->
-<div style="padding:16px 24px 24px;">
-  {% if open_sessions %}
-    <div class="ac-card">
-      <div style="overflow-x:auto;">
-        <table style="width:100%; border-collapse:collapse;">
-          <thead>
-            <tr style="background:var(--ac-surface); border-bottom:1px solid var(--ac-border);">
-              <th style="padding:10px 16px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--ac-text-sub); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Trabajador</th>
-              <th style="padding:10px 16px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--ac-text-sub); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Partida</th>
-              <th style="padding:10px 16px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--ac-text-sub); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Inicio</th>
-              <th style="padding:10px 16px; text-align:left; font-family:var(--font-mono); font-size:11px; color:var(--ac-text-sub); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Estado</th>
-              <th style="padding:10px 16px;"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for session in open_sessions %}
-              <tr style="border-bottom:1px solid var(--ac-border);" id="row-{{ session.id }}">
-                <td style="padding:11px 16px;">
-                  <div style="font-size:14px; font-weight:600;">{{ session.resource.display_name }}</div>
-                  <div style="font-size:11px; color:var(--ac-text-sub); font-family:var(--font-mono);">{{ session.resource.job_title.name|default:"" }}</div>
-                </td>
-                <td style="padding:11px 16px;">
-                  <div style="font-size:13px;">{{ session.task_name_snapshot }}</div>
-                  <div style="font-size:11px; color:var(--ac-text-sub);">{{ session.stage_name_snapshot }}</div>
-                </td>
-                <td style="padding:11px 16px; font-family:var(--font-mono); font-size:13px; color:var(--ac-text-sub);">
-                  {{ session.started_at|time:"H:i" }}
-                </td>
-                <td style="padding:11px 16px;">
-                  <span class="ac-badge ac-badge-green">Activo</span>
-                </td>
-                <td style="padding:11px 16px; text-align:right;">
-                  <form method="post" action="{% url 'work:close_session' session.id %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="ac-btn ac-btn-secondary ac-btn-sm" onclick="return confirm('Cerrar sesion de {{ session.resource.display_name }}?')">
-                      <i class="ti ti-player-stop" aria-hidden="true"></i> Cerrar
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="wk-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h2>Trabajadores activos</h2>
+          <div class="wk-sub">Sesiones abiertas hoy — {{ site.name }}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <a href="{% url 'work:assignment_new' %}" class="btn-wk-assign" style="padding:10px 16px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nueva asignación
+          </a>
+          {% if open_sessions %}
+            <form method="post" action="{% url 'work:mass_close' %}" onsubmit="return confirm('¿Cerrar todas las sesiones abiertas?')">
+              {% csrf_token %}
+              <button type="submit" class="icon-circle" style="width:auto;padding:0 16px;border-radius:999px;gap:6px;display:flex;align-items:center;font-family:var(--font-brand);font-size:13px;color:var(--ink-soft);" title="Cierre masivo">
+                <i class="ti ti-player-stop" aria-hidden="true"></i> Cierre masivo
+              </button>
+            </form>
+          {% endif %}
+        </div>
       </div>
-    </div>
-  {% else %}
-    <div class="ac-card">
-      <div class="ac-empty">
-        <i class="ti ti-users" aria-hidden="true"></i>
-        <div class="ac-empty-title">No hay sesiones abiertas</div>
-        <div class="ac-empty-sub">Usa "Nueva asignacion" para comenzar a registrar trabajo.</div>
+
+      <div style="padding:18px 20px 4px;">
+        <div class="stats" style="margin-bottom:8px;">
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ active_count }}</div><div class="label">Activos ahora</div></div>
+          {% if not own_only %}
+            <div class="stat-card"><span class="dot {% if unassigned_count > 0 %}red{% else %}green{% endif %}"></span><div class="num">{{ unassigned_count }}</div><div class="label">Sin asignar</div></div>
+          {% endif %}
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ closed_today }}</div><div class="label">Cerrados hoy</div></div>
+        </div>
       </div>
+
+      <div class="wk-list">
+        {% if open_sessions %}
+          {% for session in open_sessions %}
+            <div class="wk-row" id="row-{{ session.id }}">
+              <div class="wk-avatar has-session">{{ session.resource.display_name|slice:":1" }}</div>
+              <div class="wk-info">
+                <div class="wk-name-row">
+                  <span class="wk-name">{{ session.resource.display_name }}</span>
+                  <span class="wk-dot"></span>
+                </div>
+                <div class="wk-role">
+                  {{ session.task_name_snapshot }} · {{ session.stage_name_snapshot }} · desde {{ session.started_at|time:"H:i" }}
+                </div>
+              </div>
+              <div class="wk-action">
+                <form method="post" action="{% url 'work:close_session' session.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-close-job" onclick="return confirm('¿Cerrar sesión de {{ session.resource.display_name }}?')">
+                    Cerrar
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                  </button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="picker-empty">No hay sesiones abiertas. Usa "Nueva asignación" para comenzar a registrar trabajo.</div>
+        {% endif %}
+      </div>
+
     </div>
-  {% endif %}
+  </div>
+
+  {% include 'partials/_home_nav.html' %}
 </div>
 {% endblock %}

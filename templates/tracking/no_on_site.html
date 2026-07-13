@@ -1,261 +1,165 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}No en obra{% endblock %}
-{% block nav_noonsite %}active{% endblock %}
 
 {% block extra_css %}
-<style>
-  .av-free    { background: var(--ac-blue-soft);   color: var(--ac-blue); }
-  .av-session { background: var(--ac-success-bg);  color: var(--ac-success); }
-  .av-nos     { background: var(--ac-warn-bg);      color: var(--ac-warn); }
-
-  .badge-free    { background: var(--ac-surface);     color: var(--ac-text-sub); }
-  .badge-session { background: var(--ac-success-bg);   color: var(--ac-success-text); }
-  .badge-nos     { background: var(--ac-warn-bg);      color: var(--ac-warn-text); }
-
-  /* Alerta sesion abierta */
-  .session-alert {
-    background: var(--ac-warn-bg);
-    border: 1px solid var(--ac-warn-bdr);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    display: flex; gap: 10px;
-    font-size: 13px; color: var(--ac-warn-text); line-height: 1.5;
-  }
-  .session-alert i { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-
-  /* Vista de registro existente */
-  .nos-detail-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 0; border-bottom: 1px solid var(--ac-border); font-size: 13px;
-  }
-  .nos-detail-row:last-child { border-bottom: none; }
-  .nos-detail-label { color: var(--ac-text-sub); }
-  .nos-detail-value { font-weight: 600; }
-
-  .warn-action   { background: var(--ac-warn) !important; }
-  .danger-action { background: var(--ac-danger) !important; }
-
-  .stat-nos     { background: var(--ac-warn-bg);     color: var(--ac-warn-text); }
-  .stat-session { background: var(--ac-success-bg);  color: var(--ac-success-text); }
-</style>
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/workers.css' %}">
 {% endblock %}
 
-{% block content %}
+{% block auth_content %}
+<div class="wk-screen">
+  <div class="wk-view">
+    <div class="wk-scroll">
 
-<!-- PAGE HEADER -->
-<div class="ac-page-header">
-  <div>
-    <h1 class="ac-page-title">No en obra</h1>
-    <p class="ac-page-sub">{{ site.name }} &middot; {{ today|date:"l d \d\e F" }}</p>
-  </div>
-</div>
+      <div class="wk-header">
+        <h2>No en obra</h2>
+        <div class="wk-sub">{{ site.name }} · {{ today|date:"l d \d\e F" }}</div>
+      </div>
 
-<!-- STATS BAR -->
-<div class="ac-stats-bar">
-  <span class="ac-stat-pill ac-stat-pill-gray">
-    <i class="ti ti-users" aria-hidden="true"></i>
-    {{ total_count }} total
-  </span>
-  {% if nos_count > 0 %}
-  <span class="ac-stat-pill stat-nos">
-    <i class="ti ti-circle-minus" aria-hidden="true"></i>
-    {{ nos_count }} marcado{{ nos_count|pluralize }}
-  </span>
-  {% endif %}
-</div>
-
-<!-- SEARCH -->
-<div class="ac-search-bar">
-  <div class="ac-search-wrap">
-    <i class="ti ti-search ac-search-icon" aria-hidden="true"></i>
-    <input
-      type="text"
-      id="worker-search"
-      placeholder="Buscar trabajador..."
-      autocomplete="off"
-      oninput="filterWorkers(this.value)"
-    >
-  </div>
-</div>
-
-<!-- LISTA -->
-<div class="ac-list" style="margin:12px 16px 24px;">
-  {% if workers %}
-    <div id="worker-list">
-      {% for item in workers %}
-        <div
-          class="ac-list-item"
-          id="worker-row-{{ item.resource.id }}"
-          data-name="{{ item.resource.display_name|lower }}"
-          data-cargo="{{ item.resource.job_title.name|lower|default:'' }}"
-          onclick="openModal({{ item.resource.id }})"
-          role="button"
-          style="cursor:pointer;"
-          aria-label="Ver detalle de {{ item.resource.display_name }}"
-        >
-          <div class="ac-item-avatar av-{{ item.estado }}">
-            {{ item.resource.display_name|slice:":1" }}{{ item.resource.display_name.split|last|slice:":1" }}
-          </div>
-          <div class="ac-item-info">
-            <div class="ac-item-name">{{ item.resource.display_name }}</div>
-            <div class="ac-item-meta">
-              {{ item.resource.job_title.name|default:"Sin cargo" }}
-              {% if item.estado == 'session' %}
-                &nbsp;·&nbsp; sesion: {{ item.open_session.task_name_snapshot }}
-              {% elif item.estado == 'nos' %}
-                &nbsp;·&nbsp; {{ item.nos_event.get_reason_code_display }}
-              {% endif %}
-            </div>
-          </div>
-          <span class="ac-badge badge-{{ item.estado }}">
-            {% if item.estado == 'session' %}Con sesion
-            {% elif item.estado == 'nos' %}No en obra
-            {% else %}Sin sesion
-            {% endif %}
+      <div style="padding:14px 20px 6px;display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="pill-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          {{ total_count }} total
+        </span>
+        {% if nos_count > 0 %}
+          <span class="pill-stat warn" id="nos-counter-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span id="nos-counter-text">{{ nos_count }} marcado{{ nos_count|pluralize }}</span>
           </span>
-          <i class="ti ti-chevron-right" style="font-size:16px; color:var(--ac-text-hint);" aria-hidden="true"></i>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <div class="ac-empty">
-      <i class="ti ti-users" aria-hidden="true"></i>
-      <div class="ac-empty-title">Sin trabajadores asignados</div>
-      <div class="ac-empty-sub">No hay trabajadores activos en esta obra.</div>
-    </div>
-  {% endif %}
+        {% endif %}
+      </div>
 
-  <div id="no-results" style="display:none;" class="ac-empty">
-    <i class="ti ti-search" aria-hidden="true"></i>
-    <div class="ac-empty-title">Sin coincidencias</div>
+      <div class="wk-search">
+        <div class="wk-search-inner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="worker-search" placeholder="Buscar trabajador..." autocomplete="off" oninput="filterWorkers(this.value)">
+        </div>
+      </div>
+
+      <div class="wk-list" id="worker-list">
+        {% if workers %}
+          {% for item in workers %}
+            <div class="wk-row" id="worker-row-{{ item.resource.id }}"
+                 data-name="{{ item.resource.display_name|lower }}"
+                 data-cargo="{{ item.resource.job_title.name|lower|default:'' }}"
+                 onclick="openModal({{ item.resource.id }})" role="button" style="cursor:pointer;"
+                 aria-label="Ver detalle de {{ item.resource.display_name }}">
+              <div class="wk-avatar {% if item.estado == 'session' %}has-session{% endif %}" id="avatar-{{ item.resource.id }}">
+                {{ item.resource.display_name|slice:":1" }}
+              </div>
+              <div class="wk-info">
+                <div class="wk-name-row">
+                  <span class="wk-name">{{ item.resource.display_name }}</span>
+                  {% if item.estado == 'session' %}<span class="wk-dot"></span>{% endif %}
+                </div>
+                <div class="wk-role" id="meta-{{ item.resource.id }}">
+                  {{ item.resource.job_title.name|default:"Sin cargo" }}
+                  {% if item.estado == 'session' %} · sesión: {{ item.open_session.task_name_snapshot }}
+                  {% elif item.estado == 'nos' %} · {{ item.nos_event.get_reason_code_display }}
+                  {% endif %}
+                </div>
+              </div>
+              <span class="pill-stat {% if item.estado == 'nos' %}warn{% endif %}" id="badge-{{ item.resource.id }}" style="flex-shrink:0;">
+                {% if item.estado == 'session' %}Con sesión
+                {% elif item.estado == 'nos' %}No en obra
+                {% else %}Sin sesión{% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="picker-empty">No hay trabajadores activos en esta obra.</div>
+        {% endif %}
+      </div>
+
+      <div class="picker-empty" id="no-results" style="display:none;">Sin coincidencias.</div>
+
+    </div>
   </div>
+
+  {% include 'partials/_home_nav.html' %}
 </div>
 
-<!-- ═══════════════════════════════════════════ -->
-<!-- MODAL -->
-<!-- ═══════════════════════════════════════════ -->
-<div class="ac-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
-  <div class="ac-sheet" id="modal-sheet">
-    <div class="ac-sheet-handle"></div>
+<div class="modal-overlay" id="modal-overlay">
+  <div class="simple-card" id="modal-sheet">
 
-    <!-- ESTADO: cargando -->
-    <div id="modal-loading" style="padding:32px; text-align:center; color:var(--ac-text-sub);">
-      <i class="ti ti-loader" style="font-size:28px; display:block; margin-bottom:8px;" aria-hidden="true"></i>
-      Cargando...
+    <div id="modal-loading" style="padding:30px 10px;color:var(--muted);font-family:var(--font-brand);font-size:13px;">
+      <i class="ti ti-loader" aria-hidden="true"></i> Cargando...
     </div>
 
-    <!-- ESTADO: marcar (sin sesion abierta) -->
     <div id="modal-mark" style="display:none;">
-      <div class="ac-sheet-header">
-        <div class="ac-sheet-title">Marcar como No en obra</div>
-        <div class="ac-sheet-sub" id="mark-worker-name"></div>
+      <div class="simple-card-title">Marcar como No en obra</div>
+      <div class="simple-card-sub" id="mark-worker-name"></div>
+      <div class="field-simple">
+        <label for="mark-reason">Motivo</label>
+        <select id="mark-reason">
+          <option value="">Seleccionar...</option>
+          <option value="PERMISO">Permiso</option>
+          <option value="LICENCIA">Licencia médica</option>
+          <option value="AUSENTE">Ausente sin aviso</option>
+          <option value="VACACIONES">Vacaciones</option>
+          <option value="OTRO">Otro</option>
+        </select>
       </div>
-      <div class="ac-sheet-body">
-        <div class="ac-field">
-          <label class="ac-label" for="mark-reason">Motivo</label>
-          <select class="ac-select" id="mark-reason">
-            <option value="">Seleccionar...</option>
-            <option value="PERMISO">Permiso</option>
-            <option value="LICENCIA">Licencia medica</option>
-            <option value="AUSENTE">Ausente sin aviso</option>
-            <option value="VACACIONES">Vacaciones</option>
-            <option value="OTRO">Otro</option>
-          </select>
-        </div>
-        <div class="ac-field" style="margin-bottom:0;">
-          <label class="ac-label" for="mark-detail">Detalle (opcional)</label>
-          <input class="ac-input" type="text" id="mark-detail" placeholder="Ej: permiso medico, se fue a las 15:00..." maxlength="200">
-        </div>
+      <div class="field-simple" style="margin-bottom:6px;">
+        <label for="mark-detail">Detalle (opcional)</label>
+        <input type="text" id="mark-detail" placeholder="Ej: permiso médico, se fue a las 15:00..." maxlength="200">
       </div>
-      <div class="ac-sheet-footer">
-        <button class="ac-sheet-cancel" onclick="closeModal()">Cancelar</button>
-        <button class="ac-sheet-confirm" id="btn-confirm-mark" onclick="confirmMark()">
-          <i class="ti ti-circle-minus" aria-hidden="true"></i> Confirmar
-        </button>
+      <div class="simple-card-actions">
+        <button class="simple-btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="simple-btn-primary" id="btn-confirm-mark" onclick="confirmMark()">Confirmar</button>
       </div>
     </div>
 
-    <!-- ESTADO: marcar con sesion abierta -->
     <div id="modal-mark-session" style="display:none;">
-      <div class="ac-sheet-header">
-        <div class="ac-sheet-title">Marcar como No en obra</div>
-        <div class="ac-sheet-sub" id="mark-session-worker-name"></div>
+      <div class="simple-card-title">Marcar como No en obra</div>
+      <div class="simple-card-sub" id="mark-session-worker-name"></div>
+      <div class="alert-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+        <div>Tiene sesión abierta en <strong id="alert-session-info"></strong>. Al confirmar, esa sesión se cerrará automáticamente.</div>
       </div>
-      <div class="ac-sheet-body">
-        <div class="session-alert">
-          <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-          <div>
-            Tiene sesion abierta en <strong id="alert-session-info"></strong>.
-            Al confirmar, esa sesion se cerrara automaticamente.
-          </div>
-        </div>
-        <div class="ac-field">
-          <label class="ac-label" for="mark-session-reason">Motivo</label>
-          <select class="ac-select" id="mark-session-reason">
-            <option value="">Seleccionar...</option>
-            <option value="PERMISO">Permiso</option>
-            <option value="LICENCIA">Licencia medica</option>
-            <option value="AUSENTE">Ausente sin aviso</option>
-            <option value="VACACIONES">Vacaciones</option>
-            <option value="OTRO">Otro</option>
-          </select>
-        </div>
-        <div class="ac-field" style="margin-bottom:0;">
-          <label class="ac-label" for="mark-session-detail">Detalle (opcional)</label>
-          <input class="ac-input" type="text" id="mark-session-detail" placeholder="Ej: se fue a las 15:00..." maxlength="200">
-        </div>
+      <div class="field-simple">
+        <label for="mark-session-reason">Motivo</label>
+        <select id="mark-session-reason">
+          <option value="">Seleccionar...</option>
+          <option value="PERMISO">Permiso</option>
+          <option value="LICENCIA">Licencia médica</option>
+          <option value="AUSENTE">Ausente sin aviso</option>
+          <option value="VACACIONES">Vacaciones</option>
+          <option value="OTRO">Otro</option>
+        </select>
       </div>
-      <div class="ac-sheet-footer">
-        <button class="ac-sheet-cancel" onclick="closeModal()">Cancelar</button>
-        <button class="ac-sheet-confirm warn-action" id="btn-confirm-mark-session" onclick="confirmMark()">
-          <i class="ti ti-alert-triangle" aria-hidden="true"></i> Confirmar y cerrar sesion
-        </button>
+      <div class="field-simple" style="margin-bottom:6px;">
+        <label for="mark-session-detail">Detalle (opcional)</label>
+        <input type="text" id="mark-session-detail" placeholder="Ej: se fue a las 15:00..." maxlength="200">
+      </div>
+      <div class="simple-card-actions">
+        <button class="simple-btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="simple-btn-warn" id="btn-confirm-mark-session" onclick="confirmMark()">Confirmar y cerrar sesión</button>
       </div>
     </div>
 
-    <!-- ESTADO: ya marcado (ver / anular) -->
     <div id="modal-nos-detail" style="display:none;">
-      <div class="ac-sheet-header">
-        <div class="ac-sheet-title">No en obra registrado</div>
-        <div class="ac-sheet-sub" id="detail-worker-name"></div>
+      <div class="simple-card-title">No en obra registrado</div>
+      <div class="simple-card-sub" id="detail-worker-name"></div>
+      <div>
+        <div class="detail-row"><span>Motivo</span><span id="detail-reason"></span></div>
+        <div class="detail-row" id="detail-row-detail" style="display:none;"><span>Detalle</span><span id="detail-text" style="font-style:italic;font-weight:400;"></span></div>
+        <div class="detail-row"><span>Registrado por</span><span id="detail-marked-by"></span></div>
+        <div class="detail-row"><span>Hora</span><span id="detail-time" style="font-family:var(--font-mono);"></span></div>
       </div>
-      <div class="ac-sheet-body">
-        <div>
-          <div class="nos-detail-row">
-            <span class="nos-detail-label">Motivo</span>
-            <span class="nos-detail-value" id="detail-reason"></span>
-          </div>
-          <div class="nos-detail-row" id="detail-row-detail" style="display:none;">
-            <span class="nos-detail-label">Detalle</span>
-            <span class="nos-detail-value" id="detail-text" style="font-style:italic; font-weight:400;"></span>
-          </div>
-          <div class="nos-detail-row">
-            <span class="nos-detail-label">Registrado por</span>
-            <span class="nos-detail-value" id="detail-marked-by"></span>
-          </div>
-          <div class="nos-detail-row">
-            <span class="nos-detail-label">Hora</span>
-            <span class="nos-detail-value" id="detail-time" style="font-family:var(--font-mono);"></span>
-          </div>
-        </div>
-      </div>
-      <div class="ac-sheet-footer">
-        <button class="ac-sheet-cancel" onclick="closeModal()">Cerrar</button>
-        <button class="ac-sheet-confirm danger-action" onclick="confirmVoid()">
-          <i class="ti ti-trash" aria-hidden="true"></i> Anular registro
-        </button>
+      <div class="simple-card-actions">
+        <button class="simple-btn-cancel" onclick="closeModal()">Cerrar</button>
+        <button class="simple-btn-danger" onclick="confirmVoid()">Anular registro</button>
       </div>
     </div>
 
   </div>
 </div>
 
-<!-- TOAST -->
-<div class="ac-toast" id="nos-toast">
-  <i class="ti ti-check" aria-hidden="true"></i>
-  <span id="toast-msg"></span>
-</div>
-
+<div class="wk-toast" id="nos-toast"><span id="toast-msg"></span></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -267,15 +171,12 @@
 
   let currentResourceId = null;
   let currentNosEventId = null;
-  let currentState      = null; // 'mark' | 'mark-session' | 'nos-detail'
-
-  // ── FILTRO DE BUSQUEDA ──────────────────────────────────────
+  let currentState      = null;
 
   function filterWorkers(query) {
     const q = query.toLowerCase().trim();
-    const rows = document.querySelectorAll('.ac-list-item');
+    const rows = document.querySelectorAll('.wk-row');
     let visible = 0;
-
     rows.forEach(row => {
       const name  = row.dataset.name  || '';
       const cargo = row.dataset.cargo || '';
@@ -283,11 +184,8 @@
       row.style.display = match ? '' : 'none';
       if (match) visible++;
     });
-
     document.getElementById('no-results').style.display = (q && visible === 0) ? 'block' : 'none';
   }
-
-  // ── MODAL ───────────────────────────────────────────────────
 
   function openModal(resourceId) {
     currentResourceId = resourceId;
@@ -295,23 +193,20 @@
     currentState      = null;
 
     showState('loading');
-    document.getElementById('modal-overlay').classList.add('visible');
+    document.getElementById('modal-overlay').classList.add('is-open');
     document.body.style.overflow = 'hidden';
 
-    fetch(DETAIL_URL_BASE + resourceId + '/', {
-      headers: { 'X-CSRFToken': CSRF }
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) { closeModal(); showToast(data.error, 'error'); return; }
-      populateModal(data);
-    })
-    .catch(() => { closeModal(); showToast('Error de conexion.', 'error'); });
+    fetch(DETAIL_URL_BASE + resourceId + '/', { headers: { 'X-CSRFToken': CSRF } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { closeModal(); showToast(data.error, 'error'); return; }
+        populateModal(data);
+      })
+      .catch(() => { closeModal(); showToast('Error de conexión.', 'error'); });
   }
 
   function populateModal(data) {
     if (data.nos_event) {
-      // Ya tiene marca activa — mostrar detalle
       currentNosEventId = data.nos_event.id;
       currentState = 'nos-detail';
       document.getElementById('detail-worker-name').textContent = data.name + ' · ' + (data.cargo || 'Sin cargo');
@@ -329,18 +224,15 @@
       showState('nos-detail');
 
     } else if (data.open_session) {
-      // Tiene sesion abierta — mostrar alerta
       currentState = 'mark-session';
       document.getElementById('mark-session-worker-name').textContent = data.name + ' · ' + (data.cargo || 'Sin cargo');
       document.getElementById('alert-session-info').textContent =
-        data.open_session.task_name + ' · ' + data.open_session.stage_name +
-        ' (desde ' + data.open_session.started_at + ')';
+        data.open_session.task_name + ' · ' + data.open_session.stage_name + ' (desde ' + data.open_session.started_at + ')';
       document.getElementById('mark-session-reason').value = '';
       document.getElementById('mark-session-detail').value = '';
       showState('mark-session');
 
     } else {
-      // Sin marca ni sesion — formulario simple
       currentState = 'mark';
       document.getElementById('mark-worker-name').textContent = data.name + ' · ' + (data.cargo || 'Sin cargo');
       document.getElementById('mark-reason').value = '';
@@ -357,38 +249,28 @@
   }
 
   function closeModal() {
-    document.getElementById('modal-overlay').classList.remove('visible');
+    document.getElementById('modal-overlay').classList.remove('is-open');
     document.body.style.overflow = '';
     currentResourceId = null;
     currentNosEventId = null;
     currentState      = null;
   }
 
-  function handleOverlayClick(e) {
-    if (e.target === document.getElementById('modal-overlay')) closeModal();
-  }
-
-  // ── CONFIRMAR MARCA ─────────────────────────────────────────
+  document.getElementById('modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
 
   function confirmMark() {
     const isSession = (currentState === 'mark-session');
     const reason = document.getElementById(isSession ? 'mark-session-reason' : 'mark-reason').value;
     const detail = document.getElementById(isSession ? 'mark-session-detail' : 'mark-detail').value.trim();
 
-    if (!reason) {
-      showToast('Selecciona un motivo.', 'warn');
-      return;
-    }
+    if (!reason) { showToast('Selecciona un motivo.', 'warn'); return; }
 
     const btn = document.getElementById(isSession ? 'btn-confirm-mark-session' : 'btn-confirm-mark');
-    btn.disabled = true;
-    btn.style.opacity = '0.6';
+    btn.disabled = true; btn.style.opacity = '0.6';
 
-    const body = new URLSearchParams({
-      resource_id: currentResourceId,
-      reason_code: reason,
-      detail: detail,
-    });
+    const body = new URLSearchParams({ resource_id: currentResourceId, reason_code: reason, detail: detail });
 
     fetch(MARK_URL, {
       method: 'POST',
@@ -397,36 +279,22 @@
     })
     .then(r => r.json())
     .then(data => {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-
+      btn.disabled = false; btn.style.opacity = '1';
       if (data.status === 'ok') {
         closeModal();
         updateRowState(data.resource_id, 'nos', data.reason_display);
-        const msg = data.session_closed
-          ? 'Marcado como No en obra. Sesion cerrada.'
-          : 'Marcado como No en obra.';
+        const msg = data.session_closed ? 'Marcado como No en obra. Sesión cerrada.' : 'Marcado como No en obra.';
         showToast(msg, 'ok');
       } else {
         showToast(data.error || 'Error al registrar.', 'error');
       }
     })
-    .catch(() => {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      showToast('Error de conexion.', 'error');
-    });
+    .catch(() => { btn.disabled = false; btn.style.opacity = '1'; showToast('Error de conexión.', 'error'); });
   }
-
-  // ── ANULAR REGISTRO ─────────────────────────────────────────
 
   function confirmVoid() {
     if (!currentNosEventId) return;
-
-    const body = new URLSearchParams({
-      event_id: currentNosEventId,
-      voided_reason: 'Anulado por supervisor',
-    });
+    const body = new URLSearchParams({ event_id: currentNosEventId, voided_reason: 'Anulado por supervisor' });
 
     fetch(VOID_URL, {
       method: 'POST',
@@ -443,71 +311,49 @@
         showToast(data.error || 'Error al anular.', 'error');
       }
     })
-    .catch(() => showToast('Error de conexion.', 'error'));
+    .catch(() => showToast('Error de conexión.', 'error'));
   }
 
-  // ── ACTUALIZAR FILA SIN RECARGAR PAGINA ─────────────────────
-
   function updateRowState(resourceId, newState, reasonDisplay) {
-    const row = document.getElementById('worker-row-' + resourceId);
-    if (!row) return;
+    const avatar = document.getElementById('avatar-' + resourceId);
+    const badge  = document.getElementById('badge-' + resourceId);
+    const meta   = document.getElementById('meta-' + resourceId);
+    if (!avatar || !badge || !meta) return;
 
-    // Avatar
-    const avatar = row.querySelector('.ac-item-avatar');
-    avatar.className = 'ac-item-avatar av-' + newState;
+    avatar.className = 'wk-avatar' + (newState === 'session' ? ' has-session' : '');
+    badge.className  = 'pill-stat' + (newState === 'nos' ? ' warn' : '');
+    badge.textContent = newState === 'nos' ? 'No en obra' : newState === 'session' ? 'Con sesión' : 'Sin sesión';
 
-    // Badge
-    const badge = row.querySelector('.ac-badge');
-    badge.className = 'ac-badge badge-' + newState;
-    badge.textContent = newState === 'nos' ? 'No en obra' : newState === 'session' ? 'Con sesion' : 'Sin sesion';
+    const cargo = meta.textContent.split('·')[0].trim();
+    meta.textContent = (newState === 'nos' && reasonDisplay) ? cargo + ' · ' + reasonDisplay : cargo;
 
-    // Meta
-    const meta = row.querySelector('.ac-item-meta');
-    const cargo = meta.textContent.split('\u00b7')[0].trim();
-    if (newState === 'nos' && reasonDisplay) {
-      meta.textContent = cargo + ' \u00b7 ' + reasonDisplay;
-    } else {
-      meta.textContent = cargo;
-    }
-
-    // Actualizar contador
     updateNosCounter();
   }
 
   function updateNosCounter() {
-    const nosCount = document.querySelectorAll('.badge-nos').length;
-    const pill = document.querySelector('.stat-nos');
-    if (pill) {
-      if (nosCount > 0) {
+    const nosCount = document.querySelectorAll('#worker-list .pill-stat.warn').length;
+    const pill = document.getElementById('nos-counter-pill');
+    if (nosCount > 0) {
+      if (pill) {
+        document.getElementById('nos-counter-text').textContent = nosCount + ' marcado' + (nosCount !== 1 ? 's' : '');
         pill.style.display = '';
-        pill.querySelector('i').nextSibling.textContent = ' ' + nosCount + ' marcado' + (nosCount !== 1 ? 's' : '');
-      } else {
-        pill.style.display = 'none';
       }
+    } else if (pill) {
+      pill.style.display = 'none';
     }
   }
 
-  // ── TOAST ───────────────────────────────────────────────────
-
-  let toastTimer = null;
   function showToast(msg, type) {
     const toast = document.getElementById('nos-toast');
-    const icon  = toast.querySelector('i');
     document.getElementById('toast-msg').textContent = msg;
-    icon.className = 'ti ti-' + (type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x');
-    toast.classList.add('visible');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('visible'), 3000);
+    toast.classList.add('is-shown');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('is-shown'), 3000);
   }
 
-  // ── CERRAR MODAL CON SWIPE DOWN (mobile) ────────────────────
   let touchStartY = 0;
   const sheet = document.getElementById('modal-sheet');
-
-  sheet.addEventListener('touchstart', e => {
-    touchStartY = e.touches[0].clientY;
-  }, { passive: true });
-
+  sheet.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
   sheet.addEventListener('touchend', e => {
     const diff = e.changedTouches[0].clientY - touchStartY;
     if (diff > 80) closeModal();

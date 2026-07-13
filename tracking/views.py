@@ -95,6 +95,7 @@ def no_on_site(request):
         'today':       today,
         'page_title':  'No en obra',
         'perms_ctx':   get_user_context_permissions(request.user, site),
+        'full_screen': True,
     })
 
 

@@ -98,6 +98,7 @@ def moi_list(request):
         # siempre son VISIBLES en el listado para cualquiera con moi.view,
         # pero solo editables/dados de baja por novus_super.
         'protected_role_codes': ROLES_GRANTABLE_ONLY_BY_NOVUS,
+        'full_screen': True,
     })
 
 

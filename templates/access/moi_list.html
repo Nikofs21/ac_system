@@ -1,262 +1,197 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}Mano de obra indirecta{% endblock %}
-{% block nav_moi %}active{% endblock %}
 
-{% block content %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/workers.css' %}">
+{% endblock %}
 
-<div class="ac-page-header">
-  <div>
-    <h1 class="ac-page-title">Mano de obra indirecta</h1>
-    <p class="ac-page-sub">{{ site.name }}</p>
-  </div>
-  {% if perms_ctx.can_edit_moi %}
-    <a href="{% url 'access:moi_create' %}" class="ac-btn ac-btn-primary ac-btn-sm">
-      <i class="ti ti-plus" aria-hidden="true"></i> Agregar
-    </a>
-  {% endif %}
-</div>
+{% block auth_content %}
+<div class="wk-screen">
+  <div class="wk-view">
+    <div class="wk-scroll">
 
-<div class="ac-stats-bar">
-  <span class="ac-stat-pill ac-stat-pill-gray">
-    <i class="ti ti-id-badge" aria-hidden="true"></i>{{ total }} total
-  </span>
-  <span class="ac-stat-pill ac-stat-pill-blue">
-    <i class="ti ti-circle-check" aria-hidden="true"></i>{{ active_count }} activos
-  </span>
-</div>
+      <div class="wk-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h2>Mano de obra indirecta</h2>
+          <div class="wk-sub">{{ site.name }}</div>
+        </div>
+        {% if perms_ctx.can_edit_moi %}
+          <a href="{% url 'access:moi_create' %}" class="btn-wk-assign" style="padding:10px 16px;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar
+          </a>
+        {% endif %}
+      </div>
 
-<div class="ac-search-bar">
-  <div class="ac-search-wrap">
-    <i class="ti ti-search ac-search-icon" aria-hidden="true"></i>
-    <input
-      type="text"
-      id="moi-search"
-      placeholder="Buscar por nombre, correo o rol..."
-      autocomplete="off"
-      oninput="filterMoi()"
-    >
-  </div>
-</div>
+      <div style="padding:18px 20px 4px;">
+        <div class="stats" style="margin-bottom:8px;">
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ total }}</div><div class="label">Total registrados</div></div>
+          <div class="stat-card"><span class="dot green"></span><div class="num">{{ active_count }}</div><div class="label">Activos</div></div>
+        </div>
+      </div>
 
-<div class="ac-list" style="margin: 12px 16px 24px;">
-  {% if memberships %}
-    <div id="moi-list">
-      {% for m in memberships %}
-        <div
-          class="ac-list-item {% if not m.is_active %}ac-list-item-inactive{% endif %}"
-          id="mrow-{{ m.id }}"
-          data-name="{{ m.user.get_full_name|lower }}"
-          data-email="{{ m.user.email|lower }}"
-          data-role="{{ m.role.name|lower }}"
-        >
-          <div class="ac-item-avatar {% if not m.is_active %}ac-item-avatar-inactive{% endif %}">
-            {{ m.user.first_name|slice:":1" }}{{ m.user.last_name|slice:":1" }}
-          </div>
+      <div class="wk-search">
+        <div class="wk-search-inner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="moi-search" placeholder="Buscar por nombre, correo o rol..." autocomplete="off" oninput="filterMoi()">
+        </div>
+      </div>
 
-          <div class="ac-item-info">
-            <div class="ac-item-name">{{ m.user.get_full_name }}</div>
-            <div class="ac-item-meta">
-              {{ m.role.name }}
-              {% if m.user.email %}&nbsp;·&nbsp; {{ m.user.email }}{% endif %}
-              {% if m.user.rut %}&nbsp;·&nbsp; {{ m.user.rut }}{% endif %}
-              {% if not m.is_active %}&nbsp;·&nbsp; Inactivo{% endif %}
-            </div>
-          </div>
+      <div class="wk-list" id="moi-list">
+        {% if memberships %}
+          {% for m in memberships %}
+            <div class="wk-row {% if not m.is_active %}wk-inactive{% endif %}"
+                 id="mrow-{{ m.id }}"
+                 data-name="{{ m.user.get_full_name|lower }}"
+                 data-email="{{ m.user.email|lower }}"
+                 data-role="{{ m.role.name|lower }}">
 
-          <span class="ac-badge {% if m.is_active %}ac-badge-blue{% else %}ac-badge-gray{% endif %}">
-            {% if m.is_active %}Activo{% else %}Inactivo{% endif %}
-          </span>
-          {% if m.role.code in protected_role_codes and not perms_ctx.is_novus_super %}
-            <span class="ac-badge ac-badge-purple" title="Solo usuarios de Novus pueden editar este cargo">
-              <i class="ti ti-shield-lock" style="font-size:10px; margin-right:3px;" aria-hidden="true"></i>
-              Reservado
-            </span>
-          {% endif %}
+              <div class="wk-avatar {% if m.is_active %}has-session{% endif %}" id="avatar-{{ m.id }}">
+                {{ m.user.first_name|slice:":1" }}{{ m.user.last_name|slice:":1" }}
+              </div>
 
-          <div style="flex-shrink:0; display:flex; align-items:center; gap:6px;">
-            {% if perms_ctx.can_view_moi %}
-              <button class="ac-row-btn" onclick="openQRModal({{ m.id }})" title="Ver QR de acceso">
-                <i class="ti ti-qrcode" aria-hidden="true"></i>
-              </button>
-            {% endif %}
-            {% if perms_ctx.can_edit_moi %}
-              {% if m.role.code not in protected_role_codes or perms_ctx.is_novus_super %}
-                <a href="{% url 'access:moi_edit' m.id %}" class="ac-row-btn">
-                  <i class="ti ti-pencil" aria-hidden="true"></i>
-                </a>
-                {% if m.is_active and m.user != request.user %}
-                  <button class="ac-row-btn" onclick="openBajaModal({{ m.id }}, '{{ m.user.get_full_name|escapejs }}')" title="Dar de baja">
-                    <i class="ti ti-user-minus" aria-hidden="true"></i>
-                  </button>
-                {% elif not m.is_active %}
-                  <button class="ac-row-btn" onclick="reactivateMoi({{ m.id }}, '{{ m.user.get_full_name|escapejs }}')" title="Reactivar">
-                    <i class="ti ti-refresh" aria-hidden="true"></i> Reactivar
+              <div class="wk-info">
+                <div class="wk-name-row"><span class="wk-name">{{ m.user.get_full_name }}</span></div>
+                <div class="wk-role">
+                  {{ m.role.name }}
+                  {% if m.user.email %}&nbsp;·&nbsp;{{ m.user.email }}{% endif %}
+                  {% if m.user.rut %}&nbsp;·&nbsp;{{ m.user.rut }}{% endif %}
+                </div>
+              </div>
+
+              <div class="wk-action">
+                <span class="pill-stat {% if not m.is_active %}warn{% endif %}" id="badge-{{ m.id }}">
+                  {% if m.is_active %}Activo{% else %}Inactivo{% endif %}
+                </span>
+                {% if m.role.code in protected_role_codes and not perms_ctx.is_novus_super %}
+                  <span class="pill-stat warn" title="Solo usuarios de Novus pueden editar este cargo">
+                    <i class="ti ti-shield-lock" aria-hidden="true"></i> Reservado
+                  </span>
+                {% endif %}
+
+                {% if perms_ctx.can_view_moi %}
+                  <button type="button" class="icon-circle" onclick="openQRModal({{ m.id }})" title="Ver QR de acceso" aria-label="Ver QR de {{ m.user.get_full_name }}">
+                    <i class="ti ti-qrcode" aria-hidden="true"></i>
                   </button>
                 {% endif %}
-              {% endif %}
-            {% endif %}
-          </div>
-        </div>
-      {% endfor %}
-    </div>
 
-    <div id="no-results" class="ac-empty" style="display:none;">
-      <i class="ti ti-search" aria-hidden="true"></i>
-      <div class="ac-empty-title">Sin coincidencias</div>
-    </div>
+                {% if perms_ctx.can_edit_moi and m.role.code not in protected_role_codes or perms_ctx.is_novus_super %}
+                  <a href="{% url 'access:moi_edit' m.id %}" class="icon-circle" title="Editar" aria-label="Editar {{ m.user.get_full_name }}">
+                    <i class="ti ti-pencil" aria-hidden="true"></i>
+                  </a>
+                  {% if m.is_active and m.user != request.user %}
+                    <button type="button" class="icon-circle" onclick="openBajaModal({{ m.id }}, '{{ m.user.get_full_name|escapejs }}')" title="Dar de baja" aria-label="Dar de baja a {{ m.user.get_full_name }}">
+                      <i class="ti ti-user-minus" aria-hidden="true"></i>
+                    </button>
+                  {% elif not m.is_active %}
+                    <button type="button" class="btn-wk-assign" onclick="reactivateMoi({{ m.id }}, '{{ m.user.get_full_name|escapejs }}')" title="Reactivar">
+                      <i class="ti ti-refresh" aria-hidden="true"></i> Reactivar
+                    </button>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="picker-empty">No hay usuarios MOI en esta obra.</div>
+        {% endif %}
+      </div>
+      <div class="picker-empty" id="no-results" style="display:none;">Sin coincidencias.</div>
 
-  {% else %}
-    <div class="ac-empty">
-      <i class="ti ti-id-badge" aria-hidden="true"></i>
-      <div class="ac-empty-title">Sin usuarios registrados</div>
-      <div class="ac-empty-sub">No hay usuarios MOI en esta obra.</div>
     </div>
-  {% endif %}
+  </div>
+
+  {% include 'partials/_home_nav.html' %}
 </div>
 
-<!-- MODAL QR -->
-<div class="ac-overlay" id="qr-overlay" onclick="handleQROverlay(event)">
-  <div class="ac-sheet" id="qr-sheet" style="max-width:420px;">
-    <div class="ac-sheet-handle"></div>
-    <div id="qr-loading" style="display:flex; align-items:center; justify-content:center; padding:40px; color:var(--ac-text-sub); font-size:13px; gap:8px;">
-      <i class="ti ti-loader" aria-hidden="true"></i> Cargando...
-    </div>
+<!-- Modal QR -->
+<div class="modal-overlay" id="qr-overlay">
+  <div class="qr-card" id="qr-sheet">
+    <div class="qr-loading" id="qr-loading"><i class="ti ti-loader" aria-hidden="true"></i> Cargando...</div>
     <div id="qr-content" style="display:none;">
-      <div class="ac-sheet-header" style="text-align:center;">
-        <div class="ac-sheet-title" id="qr-user-name"></div>
-        <div class="ac-sheet-sub" id="qr-user-role"></div>
-        <div class="ac-sheet-sub" id="qr-user-email" style="font-family:var(--font-mono); font-size:11px;"></div>
-      </div>
-      <div class="ac-sheet-body" style="align-items:center;">
-        <div style="background:var(--ac-white); border:1.5px solid var(--ac-border); border-radius:var(--radius-lg); padding:20px; display:flex; flex-direction:column; align-items:center; gap:12px; width:100%;">
-          <div id="qr-code-display"></div>
-          <div style="display:flex; align-items:center; gap:6px; font-family:var(--font-brand); font-weight:800; font-size:11px; color:var(--ac-dark);">
-            <svg width="14" height="14" viewBox="0 0 36 36" fill="none" aria-hidden="true">
-              <rect x="4" y="4" width="28" height="4" rx="2" fill="#0025ec"/>
-              <rect x="6" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="11" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="16" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="21" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="26" y="10" width="3" height="18" rx="1.5" fill="#0025ec"/>
-              <rect x="2" y="28" width="32" height="4" rx="2" fill="#0025ec"/>
-            </svg>
-            NOVUS IMPERIUM
-          </div>
-          <div style="font-family:var(--font-mono); font-size:10px; color:var(--ac-text-hint); text-align:center;">
-            Acceso al sistema
-          </div>
-        </div>
-      </div>
-      <div class="ac-sheet-footer" style="flex-direction:column;">
-        <button onclick="printMoiQR()" class="ac-btn ac-btn-secondary ac-btn-full">
-          <i class="ti ti-printer" aria-hidden="true"></i> Imprimir / Guardar
-        </button>
-        <button onclick="closeQRModal()" class="ac-btn ac-btn-secondary ac-btn-full" style="color:var(--ac-text-sub);">
-          Cerrar
-        </button>
+      <div class="qr-worker-name" id="qr-user-name"></div>
+      <div class="qr-worker-sub" id="qr-user-role"></div>
+      <div class="qr-worker-sub" style="font-family:var(--font-mono);" id="qr-user-email"></div>
+      <div class="qr-code-box"><div id="qr-code-display"></div></div>
+      <div class="qr-actions">
+        <button type="button" onclick="printMoiQR()"><i class="ti ti-printer" aria-hidden="true"></i> Imprimir / Guardar</button>
+        <button type="button" class="qr-close" onclick="closeQRModal()">Cerrar</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- MODAL BAJA -->
-<div class="ac-overlay" id="baja-overlay" onclick="handleBajaOverlay(event)">
-  <div class="ac-sheet" style="max-width:480px;">
-    <div class="ac-sheet-header">
-      <div class="ac-sheet-title" style="color:var(--ac-danger);">Dar de baja</div>
-      <div class="ac-sheet-sub" id="baja-user-name"></div>
+<!-- Modal baja -->
+<div class="modal-overlay" id="baja-overlay">
+  <div class="simple-card">
+    <div class="simple-card-title" style="color:var(--ac-danger);">Dar de baja</div>
+    <div class="simple-card-sub" id="baja-user-name"></div>
+    <div class="alert-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+      <span>El usuario perderá acceso a esta obra. Sus datos y sesiones históricas se conservan.</span>
     </div>
-    <div class="ac-sheet-body">
-      <div class="ac-alert ac-alert-warn" style="font-size:12px;">
-        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-        <span>El usuario perderá acceso a esta obra. Sus datos y sesiones históricas se conservan.</span>
-      </div>
-    </div>
-    <div class="ac-sheet-footer">
-      <button class="ac-sheet-cancel" onclick="closeBajaModal()">Cancelar</button>
-      <button class="ac-sheet-confirm ac-sheet-confirm-danger" onclick="confirmBaja()">Confirmar baja</button>
+    <div class="simple-card-actions">
+      <button class="simple-btn-cancel" onclick="closeBajaModal()">Cancelar</button>
+      <button class="simple-btn-danger" onclick="confirmBaja()">Confirmar baja</button>
     </div>
   </div>
 </div>
 
-<div class="ac-toast" id="moi-toast">
-  <i class="ti ti-check" id="moi-toast-icon" aria-hidden="true"></i>
-  <span id="moi-toast-msg"></span>
-</div>
-
+<div class="wk-toast" id="moi-toast"><span id="moi-toast-msg"></span></div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-  const QR_URL_BASE = "{% url 'access:moi_qr' 0 %}".replace('0', '');
-  const BAJA_URL_BASE = "{% url 'access:moi_deactivate' 0 %}".replace('0', '');
-  const REACTIVAR_URL_BASE = "{% url 'access:moi_reactivate' 0 %}".replace('0', '');
   const CSRF = "{{ csrf_token }}";
-
   let currentMembershipId = null;
 
-  // ── FILTRO ────────────────────────────────────────────────────
+  // ── Filtro (nombre, correo o rol) ────────────────────────────────
   function filterMoi() {
-    const q    = document.getElementById('moi-search').value.toLowerCase().trim();
-    const rows = document.querySelectorAll('.ac-list-item');
+    const q = document.getElementById('moi-search').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('#moi-list .wk-row');
     let visible = 0;
-
     rows.forEach(row => {
-      const name  = row.dataset.name  || '';
-      const email = row.dataset.email || '';
-      const role  = row.dataset.role  || '';
-      const show  = !q || name.includes(q) || email.includes(q) || role.includes(q);
+      const show = !q || row.dataset.name.includes(q) || row.dataset.email.includes(q) || row.dataset.role.includes(q);
       row.style.display = show ? '' : 'none';
       if (show) visible++;
     });
-
-    document.getElementById('no-results').style.display =
-      (q && visible === 0) ? 'block' : 'none';
+    document.getElementById('no-results').style.display = (q && visible === 0) ? 'block' : 'none';
   }
 
-  // ── MODAL QR ─────────────────────────────────────────────────
+  // ── Modal QR ───────────────────────────────────────────────────
   function openQRModal(membershipId) {
     document.getElementById('qr-loading').style.display = 'flex';
     document.getElementById('qr-content').style.display = 'none';
-    document.getElementById('qr-overlay').classList.add('visible');
+    document.getElementById('qr-overlay').classList.add('is-open');
     document.body.style.overflow = 'hidden';
 
-    fetch(`/access/moi/${membershipId}/qr/`, {
-      headers: { 'X-CSRFToken': CSRF }
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) { closeQRModal(); return; }
+    fetch(`/access/moi/${membershipId}/qr/`, { headers: { 'X-CSRFToken': CSRF } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { closeQRModal(); return; }
+        document.getElementById('qr-user-name').textContent  = data.name;
+        document.getElementById('qr-user-role').textContent  = data.role;
+        document.getElementById('qr-user-email').textContent = data.email;
 
-      document.getElementById('qr-user-name').textContent  = data.name;
-      document.getElementById('qr-user-role').textContent  = data.role;
-      document.getElementById('qr-user-email').textContent = data.email;
+        const container = document.getElementById('qr-code-display');
+        container.innerHTML = '';
+        new QRCode(container, { text: data.qr_url, width: 190, height: 190, colorDark: '#14141f', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
 
-      const container = document.getElementById('qr-code-display');
-      container.innerHTML = '';
-      new QRCode(container, {
-        text:         data.qr_url,
-        width:        200, height: 200,
-        colorDark:    '#131d47',
-        colorLight:   '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M,
-      });
-
-      document.getElementById('qr-loading').style.display = 'none';
-      document.getElementById('qr-content').style.display = 'block';
-    })
-    .catch(() => closeQRModal());
+        document.getElementById('qr-loading').style.display = 'none';
+        document.getElementById('qr-content').style.display = 'block';
+      })
+      .catch(() => closeQRModal());
   }
-
   function closeQRModal() {
-    document.getElementById('qr-overlay').classList.remove('visible');
+    document.getElementById('qr-overlay').classList.remove('is-open');
     document.body.style.overflow = '';
   }
-
-  function handleQROverlay(e) {
-    if (e.target === document.getElementById('qr-overlay')) closeQRModal();
-  }
+  document.getElementById('qr-overlay').addEventListener('click', function(e){ if (e.target === this) closeQRModal(); });
 
   function printMoiQR() {
     const name  = document.getElementById('qr-user-name').textContent;
@@ -264,63 +199,43 @@
     const email = document.getElementById('qr-user-email').textContent;
     const canvas = document.querySelector('#qr-code-display canvas');
     if (!canvas) return;
-
     const dataUrl = canvas.toDataURL('image/png');
     const win = window.open('', '_blank');
-    win.document.write(`
-      <!DOCTYPE html><html><head>
-        <title>QR Acceso — ${name}</title>
-        <style>
-          body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
-          .card { display: inline-block; border: 2px solid #e0e0e0; border-radius: 12px; padding: 24px 32px; }
-          img  { display: block; margin: 0 auto 12px; }
-          h2   { font-size: 18px; margin: 0 0 4px; color: #131d47; }
-          p    { font-size: 13px; color: #666; margin: 2px 0; }
-          .brand { font-size: 10px; color: #0025ec; font-weight: bold; margin-top: 12px; letter-spacing: 0.05em; }
-        </style>
-      </head><body>
-        <div class="card">
-          <img src="${dataUrl}" width="200" height="200">
-          <h2>${name}</h2>
-          <p>${role}</p>
-          <p>${email}</p>
-          <p class="brand">NOVUS IMPERIUM — Acceso al sistema</p>
-        </div>
-        <script>window.onload = () => window.print();<\/script>
-      </body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><title>QR Acceso — ${name}</title>
+      <style>body{font-family:Arial,sans-serif;text-align:center;padding:40px;}
+      .card{display:inline-block;border:2px solid #e0e0e0;border-radius:12px;padding:24px 32px;}
+      img{display:block;margin:0 auto 12px;}h2{font-size:18px;margin:0 0 4px;color:#131d47;}
+      p{font-size:13px;color:#666;margin:2px 0;}
+      .brand{font-size:10px;color:#0025ec;font-weight:bold;margin-top:12px;letter-spacing:.05em;}</style>
+      </head><body><div class="card"><img src="${dataUrl}" width="190" height="190">
+      <h2>${name}</h2><p>${role}</p><p>${email}</p>
+      <p class="brand">NOVUS IMPERIUM — Acceso al sistema</p></div>
+      <script>window.onload=()=>window.print();<\/script></body></html>`);
     win.document.close();
   }
 
-  // Swipe para cerrar QR
   let touchStartY = 0;
-  document.getElementById('qr-sheet').addEventListener('touchstart', e => {
-    touchStartY = e.touches[0].clientY;
-  }, { passive: true });
+  document.getElementById('qr-sheet').addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
   document.getElementById('qr-sheet').addEventListener('touchend', e => {
     if (e.changedTouches[0].clientY - touchStartY > 80) closeQRModal();
   }, { passive: true });
 
-  // ── MODAL BAJA ────────────────────────────────────────────────
+  // ── Modal baja ─────────────────────────────────────────────────
   function openBajaModal(membershipId, name) {
     currentMembershipId = membershipId;
     document.getElementById('baja-user-name').textContent = name;
-    document.getElementById('baja-overlay').classList.add('visible');
+    document.getElementById('baja-overlay').classList.add('is-open');
     document.body.style.overflow = 'hidden';
   }
-
   function closeBajaModal() {
-    document.getElementById('baja-overlay').classList.remove('visible');
+    document.getElementById('baja-overlay').classList.remove('is-open');
     document.body.style.overflow = '';
     currentMembershipId = null;
   }
-
-  function handleBajaOverlay(e) {
-    if (e.target === document.getElementById('baja-overlay')) closeBajaModal();
-  }
+  document.getElementById('baja-overlay').addEventListener('click', function(e){ if (e.target === this) closeBajaModal(); });
 
   function confirmBaja() {
     if (!currentMembershipId) return;
-
     fetch(`/access/moi/${currentMembershipId}/baja/`, {
       method: 'POST',
       headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -331,50 +246,40 @@
         closeBajaModal();
         const row = document.getElementById('mrow-' + currentMembershipId);
         if (row) {
-          row.classList.add('ac-list-item-inactive');
-          const badge = row.querySelector('.ac-badge');
-          const avatar = row.querySelector('.ac-item-avatar');
-          if (badge)  { badge.className = 'ac-badge ac-badge-gray'; badge.textContent = 'Inactivo'; }
-          if (avatar) avatar.classList.add('ac-item-avatar-inactive');
+          const badge  = document.getElementById('badge-' + currentMembershipId);
+          const avatar = document.getElementById('avatar-' + currentMembershipId);
+          if (badge)  { badge.classList.add('warn'); badge.textContent = 'Inactivo'; }
+          if (avatar) avatar.classList.remove('has-session');
         }
-        showToast(data.message, 'ok');
+        showToast(data.message);
       } else {
         closeBajaModal();
-        showToast(data.error || 'Error al dar de baja.', 'error');
+        showToast(data.error || 'Error al dar de baja.');
       }
     })
-    .catch(() => { closeBajaModal(); showToast('Error de conexion.', 'error'); });
-  }
-
-  // ── TOAST ─────────────────────────────────────────────────────
-  let toastTimer = null;
-  function showToast(msg, type) {
-    const toast = document.getElementById('moi-toast');
-    document.getElementById('moi-toast-icon').className =
-      'ti ti-' + (type === 'ok' ? 'check' : type === 'warn' ? 'alert-triangle' : 'x');
-    document.getElementById('moi-toast-msg').textContent = msg;
-    toast.classList.add('visible');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('visible'), 3000);
+    .catch(() => { closeBajaModal(); showToast('Error de conexión.'); });
   }
 
   function reactivateMoi(membershipId, name) {
     if (!confirm(`¿Reactivar a ${name}?`)) return;
-
     fetch(`/access/moi/${membershipId}/reactivar/`, {
       method: 'POST',
       headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
     })
     .then(r => r.json())
     .then(data => {
-      if (data.status === 'ok') {
-        showToast(data.message, 'ok');
-        setTimeout(() => location.reload(), 1500);
-      } else {
-        showToast(data.error || 'Error al reactivar.', 'error');
-      }
+      if (data.status === 'ok') { showToast(data.message); setTimeout(() => location.reload(), 1200); }
+      else { showToast(data.error || 'Error al reactivar.'); }
     })
-    .catch(() => showToast('Error de conexion.', 'error'));
+    .catch(() => showToast('Error de conexión.'));
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('moi-toast');
+    document.getElementById('moi-toast-msg').textContent = msg;
+    toast.classList.add('is-shown');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('is-shown'), 3000);
   }
 </script>
 {% endblock %}

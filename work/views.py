@@ -531,6 +531,7 @@ def active_workers(request):
         'page_title':       'Trabajadores activos',
         'now':              timezone.now(),
         'perms_ctx':        perms_ctx,
+        'full_screen':      True,
     })
 
 
