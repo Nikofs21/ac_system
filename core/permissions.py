@@ -105,6 +105,10 @@ PERMISSION_CODES = {
         'name':   'Cierre masivo de sesiones propias',
         'module': 'OPERACION',
         'level':  'SENSITIVE',
+        # No se asigna por rol en ROLE_PERMISSIONS: se otorga automaticamente
+        # a quien tenga 'sessions.start_people' o 'sessions.start_machines'
+        # (ver get_user_permissions_for_site). Se mantiene como permiso propio
+        # solo para poder revocarlo puntualmente via SiteMembershipPermissionOverride.
     },
     'organigram.view': {
         'name':   'Ver organigrama',
@@ -178,7 +182,6 @@ ROLE_PERMISSIONS = {
         'no_en_obra.manage',
         'moi.view',
         'moi.edit',
-        'bulk_close.own_sessions',
         'organigram.view',
         'organigram.edit',
         'subcontracts.view_list',
@@ -202,7 +205,6 @@ ROLE_PERMISSIONS = {
         'resources.view',
         'resources.view_qr',
         'no_en_obra.manage',
-        'bulk_close.own_sessions',
     ],
 
     'bodeguero': [
@@ -210,7 +212,6 @@ ROLE_PERMISSIONS = {
         'resources.view',
         'resources.view_qr',
         'resources.crud_machines',
-        'bulk_close.own_sessions',
     ],
 
     'planificador': [
@@ -228,7 +229,6 @@ ROLE_PERMISSIONS = {
         'sessions_review.view',
         'sessions_review.edit_today',
         'no_en_obra.manage',
-        'bulk_close.own_sessions',
         'subcontracts.view_list',
         'subcontracts.operate',
         'dashboard.productivity',
@@ -247,7 +247,6 @@ ROLE_PERMISSIONS = {
         'weekly_progress.edit',
         'no_en_obra.manage',
         'moi.view',
-        'bulk_close.own_sessions',
         'subcontracts.view_list',
         'subcontracts.operate',
         'dashboard.productivity',
@@ -256,26 +255,33 @@ ROLE_PERMISSIONS = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JERARQUIA DE OTORGAMIENTO DE ROLES
+# ROLES EXCLUIDOS DEL FLUJO DE MOI
 #
-# Roles que SOLO pueden ser otorgados/asignados por usuarios novus_super
-# (ver is_novus_super()). Ningun otro rol -- ni siquiera admin_obra a otro
-# admin_obra -- puede crear o editar una membresia hacia estos roles.
+# 'admin_obra', 'gerencia' y 'aac' ya NO se otorgan desde la pantalla de MOI
+# (access:moi_create / moi_edit) para nadie, sin importar quien opere la
+# pantalla. Se gestionan exclusivamente desde la pantalla de prestador
+# 'provider:management_users' (ver companies/views_provider.py), porque:
+# - 'admin_obra' y 'gerencia' solo pueden ser dados de alta por un prestador
+#   (is_provider_actor) — antes esto dependia por error del flag interno
+#   is_novus_super, que es mas angosto que "ser prestador".
+# - 'gerencia' ademas necesita seleccionar sub-cargo (ManagementTitle) y
+#   puede abarcar varias obras de una empresa a la vez, algo que el flujo de
+#   MOI (pensado para una obra especifica) no maneja bien.
 #
-# Esto es independiente de los permisos operativos del rol (ROLE_PERMISSIONS);
-# un admin_obra puede tener moi.edit y administrar MOI normalmente, pero el
-# <select> de roles disponibles para asignar excluye estos codigos salvo que
-# quien esta operando la pantalla sea novus_super.
-#
-# Usar get_assignable_roles_queryset() en vistas que muestren un selector de
-# roles, en vez de filtrar manualmente — asi la regla queda en un solo lugar.
+# Usar get_assignable_roles_queryset() en pantallas de MOI — asi la regla
+# queda en un solo lugar.
 # ─────────────────────────────────────────────────────────────────────────────
 
-ROLES_GRANTABLE_ONLY_BY_NOVUS = [
+MOI_EXCLUDED_ROLE_CODES = [
     'admin_obra',
     'gerencia',
     'aac',
 ]
+
+# Alias retrocompatible: en versiones previas estos 3 roles se gateaban por
+# is_novus_super dentro de MOI. Ya no se usa para ese fin (ver arriba), pero
+# se deja el nombre disponible por si algo mas lo referencia.
+ROLES_GRANTABLE_ONLY_BY_NOVUS = list(MOI_EXCLUDED_ROLE_CODES)
 
 # Roles de prestador — nunca asignables desde pantallas de MOI/usuarios cliente,
 # independiente de quien este operando (ni siquiera novus_super los asigna ahi;
@@ -286,22 +292,36 @@ PROVIDER_ONLY_ROLE_CODES = [
 ]
 
 
+def is_provider_actor(user):
+    """
+    'Prestador', en el sentido amplio: cualquier usuario con actor_type
+    PROVIDER, o un novus_super (que siempre tiene acceso equivalente o mayor).
+
+    Esta es la definicion correcta de "prestador" para gatear pantallas como
+    'provider:management_users' — distinta y mas amplia que is_novus_super,
+    que es solo la marca de acceso total interno de Novus.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if is_novus_super(user):
+        return True
+    return getattr(user, 'actor_type', None) == 'PROVIDER'
+
+
 def get_assignable_roles_queryset(user):
     """
     Retorna el queryset de Roles que `user` puede asignar a otra persona
-    desde pantallas de gestion de usuarios (ej: MOI).
+    desde pantallas de gestion de usuarios de OBRA (MOI).
 
     Reglas:
     - Los roles de prestador (PROVIDER_ONLY_ROLE_CODES) nunca se incluyen aqui.
-    - Los roles en ROLES_GRANTABLE_ONLY_BY_NOVUS solo se incluyen si
-      is_novus_super(user) es True.
+    - Los roles en MOI_EXCLUDED_ROLE_CODES (admin_obra, gerencia, aac) nunca
+      se incluyen aqui — se gestionan por 'provider:management_users'.
     - El resto de roles activos GLOBAL_BASE se incluyen siempre.
     """
     from access.models import Role
 
-    excluded_codes = list(PROVIDER_ONLY_ROLE_CODES)
-    if not is_novus_super(user):
-        excluded_codes += ROLES_GRANTABLE_ONLY_BY_NOVUS
+    excluded_codes = list(PROVIDER_ONLY_ROLE_CODES) + list(MOI_EXCLUDED_ROLE_CODES)
 
     return Role.objects.filter(
         is_active=True,
@@ -314,12 +334,13 @@ def get_assignable_roles_queryset(user):
 def can_user_edit_membership(user, membership):
     """
     Determina si `user` puede editar/dar de baja una SiteMembership especifica
-    (pantallas de MOI). Esto es distinto de "puede asignar este rol" — aqui se
-    evalua sobre una membresia que YA existe.
+    desde la pantalla de MOI. Esto es distinto de "puede asignar este rol" —
+    aqui se evalua sobre una membresia que YA existe.
 
-    Regla: si el rol actual de la membresia esta en ROLES_GRANTABLE_ONLY_BY_NOVUS,
-    solo un novus_super puede editarla o darla de baja. Cualquier otro usuario
-    con moi.edit puede VER esa fila en el listado, pero no tocarla.
+    Regla: si el rol actual de la membresia esta en MOI_EXCLUDED_ROLE_CODES
+    (admin_obra, gerencia, aac), la membresia NO es editable desde MOI para
+    nadie — se edita desde 'provider:management_users'. novus_super puede
+    verla y tocarla igual, por flexibilidad administrativa.
 
     Los roles de prestador (PROVIDER_ONLY_ROLE_CODES) nunca deberian aparecer
     en SiteMembership de MOI en la practica, pero por defensiva se tratan
@@ -328,7 +349,7 @@ def can_user_edit_membership(user, membership):
     if is_novus_super(user):
         return True
 
-    protected_codes = set(ROLES_GRANTABLE_ONLY_BY_NOVUS) | set(PROVIDER_ONLY_ROLE_CODES)
+    protected_codes = set(MOI_EXCLUDED_ROLE_CODES) | set(PROVIDER_ONLY_ROLE_CODES)
     return membership.role.code not in protected_codes
 
 
@@ -425,6 +446,14 @@ def get_user_permissions_for_site(user, site):
 
     perms = set(granted)
 
+    # 'bulk_close.own_sessions' se ancla a una capacidad, no a un rol
+    # especifico: quien puede iniciar/terminar sesiones (personas y/o
+    # maquinas) puede tambien cerrarlas en lote. Evita que un rol nuevo, o
+    # uno al que se le agrega sessions.start_*, quede con inicio/termino de
+    # sesion pero sin cierre masivo por olvido de actualizar la matriz.
+    if 'sessions.start_people' in perms or 'sessions.start_machines' in perms:
+        perms.add('bulk_close.own_sessions')
+
     # Aplicar overrides de la membresia si existen
     try:
         from access.models import SiteMembershipPermissionOverride
@@ -485,6 +514,15 @@ def get_user_context_permissions(user, site):
     perms = get_user_permissions_for_site(user, site)
     _role = get_user_role_for_site(user, site)
 
+    management_title_name = ''
+    if _role and _role.code == 'gerencia' and site:
+        from companies.models import CompanyMembership
+        company_membership = CompanyMembership.objects.filter(
+            user=user, company=site.company,
+        ).select_related('management_title').first()
+        if company_membership and company_membership.management_title:
+            management_title_name = company_membership.management_title.name
+
     return {
         'can_start_people':      'sessions.start_people'      in perms,
         'can_start_machines':    'sessions.start_machines'    in perms,
@@ -510,6 +548,7 @@ def get_user_context_permissions(user, site):
         'is_novus_super':        is_novus_super(user),
         'role_code':             _role.code if _role else '',
         'role_name':             _role.name if _role else '',
+        'management_title_name': management_title_name,
     }
 
 

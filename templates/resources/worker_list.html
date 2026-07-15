@@ -14,9 +14,17 @@
   <div class="wk-view">
     <div class="wk-scroll">
 
-      <div class="wk-header">
-        <h2>Trabajadores</h2>
-        <div class="wk-sub">{{ site.name }}</div>
+      <div class="wk-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h2>Trabajadores</h2>
+          <div class="wk-sub">{{ site.name }}</div>
+        </div>
+        {% if perms_ctx.can_crud_people or perms_ctx.can_crud_machines %}
+          <a href="{% url 'resources:resource_create' %}" class="btn-wk-assign" style="padding:10px 16px;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Añadir
+          </a>
+        {% endif %}
       </div>
 
       <div class="wk-tabs">

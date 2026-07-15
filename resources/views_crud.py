@@ -14,6 +14,7 @@ from django.db.models import Q
 from .models import Resource, ResourceSiteAssignment, JobTitle, ResourceCategory
 from core.permissions import user_has_permission, get_user_context_permissions
 from core.utils import get_active_site
+from core.rut_utils import find_rut_conflict
 
 
 def require_active_site(view_func):
@@ -123,13 +124,12 @@ def _handle_resource_create(request, site, can_people, can_machines):
 
     if resource_type == 'PERSON' and person_rut:
         person_rut = _normalize_rut(person_rut)
-        # Verificar duplicado de RUT en la empresa
-        existing = Resource.objects.filter(
-            company=site.company,
-            person_rut=person_rut,
-        ).exclude(status='ARCHIVED').first()
-        if existing:
-            errors['person_rut'] = f'El RUT {person_rut} ya existe en el sistema.'
+        # RUT unico en TODO el sistema: no importa el cargo, ni si ya
+        # existe como usuario con acceso (gerencia/MOI) en vez de como
+        # trabajador/maquinaria, ni la empresa (cliente o prestador).
+        conflict = find_rut_conflict(person_rut)
+        if conflict:
+            errors['person_rut'] = conflict
 
     if resource_type == 'MACHINERY' and license_plate:
         existing = Resource.objects.filter(
@@ -259,12 +259,9 @@ def resource_edit(request, resource_id):
 
         if is_person and person_rut:
             person_rut = _normalize_rut(person_rut)
-            existing = Resource.objects.filter(
-                company=site.company,
-                person_rut=person_rut,
-            ).exclude(id=resource.id).exclude(status='ARCHIVED').first()
-            if existing:
-                errors['person_rut'] = f'El RUT {person_rut} ya existe en otro trabajador.'
+            conflict = find_rut_conflict(person_rut, exclude_resource_id=resource.id)
+            if conflict:
+                errors['person_rut'] = conflict
 
         if is_machinery and license_plate:
             existing = Resource.objects.filter(

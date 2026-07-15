@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .site-checks {
+    display: flex; flex-direction: column; gap: 6px;
+    max-height: 280px; overflow-y: auto;
+    border: 1.5px solid var(--ac-border);
+    border-radius: var(--radius);
+    padding: 10px;
+  }
+  .site-check-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 8px; border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .site-check-row:hover { background: var(--ac-surface); }
+  .site-check-row input { width: 17px; height: 17px; accent-color: var(--ac-blue); cursor: pointer; flex-shrink: 0; }
+  .site-check-name { font-size: 13px; font-weight: 500; color: var(--ac-text); }
+  .site-check-code { font-size: 11px; color: var(--ac-text-sub); font-family: var(--font-mono); margin-left: 6px; }
+
+  .select-all-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--ac-border);
+    font-size: 12px; color: var(--ac-text-sub);
+  }
+  .select-all-row input { accent-color: var(--ac-blue); cursor: pointer; }
+
+  .sites-empty { font-size: 13px; color: var(--ac-text-sub); text-align: center; padding: 20px; }
+
+  .cargo-row { display: flex; gap: 8px; align-items: flex-end; }
+  .cargo-row .ac-select { flex: 1; }
+  .btn-add-cargo {
+    height: 42px; width: 42px; flex-shrink: 0;
+    border: 1.5px solid var(--ac-border);
+    border-radius: var(--radius);
+    background: var(--ac-white);
+    cursor: pointer; font-size: 18px; color: var(--ac-blue);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s;
+  }
+  .btn-add-cargo:hover { background: var(--ac-blue-soft); border-color: var(--ac-blue); }
+
+  .mu-row {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; padding: 12px; border: 1px solid var(--ac-border);
+    border-radius: var(--radius); margin-bottom: 8px;
+  }
+  .mu-role-badge {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    background: var(--ac-blue-soft); color: var(--ac-blue); text-transform: uppercase;
+  }
+  .mu-sites { font-size: 12px; color: var(--ac-text-sub); margin-top: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ac-page-header">
+  <div>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">Alta y gestión de obras para Gerencia, Administrador de obra y AAC — exclusivo de prestador</p>
+  </div>
+  <a href="{% url 'provider:panel' %}" class="ac-btn ac-btn-secondary ac-btn-sm">
+    <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver al panel
+  </a>
+</div>
+
+<div style="max-width:640px; margin:0 auto; padding:20px 16px;">
+
+  {% if not company %}
+    <div class="ac-alert ac-alert-info" style="margin-bottom:16px;">
+      <i class="ti ti-info-circle" aria-hidden="true"></i>
+      <span style="font-size:12px;">Selecciona una empresa para ver y crear usuarios de Gerencia, Administrador de obra o AAC.</span>
+    </div>
+  {% endif %}
+
+  <div class="ac-field" style="max-width:340px;">
+    <label class="ac-label" for="company_filter">Empresa</label>
+    <select class="ac-select" id="company_filter" onchange="window.location.href='?company_id=' + this.value">
+      <option value="">Selecciona una empresa...</option>
+      {% for c in companies %}
+        <option value="{{ c.id }}" {% if company and company.id == c.id %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {% if company %}
+
+    <div class="ac-card" style="margin:16px 0;">
+      <div class="ac-card-header"><span class="ac-card-title">Usuarios actuales — {{ company.name }}</span></div>
+      <div class="ac-card-body">
+        {% if users %}
+          {% for u in users %}
+            <div class="mu-row">
+              <div>
+                <div style="font-weight:600; font-size:13px;">
+                  {{ u.user.get_full_name }}
+                  <span class="mu-role-badge">{{ u.role.name }}</span>
+                  {% if u.management_title %}<span class="mu-role-badge" style="background:var(--ac-surface); color:var(--ac-text-sub);">{{ u.management_title.name }}</span>{% endif %}
+                </div>
+                <div class="mu-sites">
+                  {{ u.user.email }} ·
+                  {{ u.active_count }} obra{{ u.active_count|pluralize }} activa{{ u.active_count|pluralize }}
+                  de {{ u.memberships|length }} total{{ u.memberships|length|pluralize }}
+                </div>
+              </div>
+              <a href="{% url 'provider:management_user_edit' u.user.id company.id %}" class="ac-btn ac-btn-secondary ac-btn-sm">
+                <i class="ti ti-edit" aria-hidden="true"></i> Editar obras
+              </a>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="sites-empty">Aún no hay usuarios de Gerencia, Administrador de obra o AAC en esta empresa.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <form method="post" id="mu-form">
+      {% csrf_token %}
+      <input type="hidden" name="company_id" value="{{ company.id }}">
+
+      <div class="ac-card" style="margin-bottom:16px;">
+        <div class="ac-card-header"><span class="ac-card-title">Rol y obras</span></div>
+        <div class="ac-card-body">
+
+          <div class="ac-field">
+            <label class="ac-label" for="role_code">Rol</label>
+            <select class="ac-select {% if errors.role_code %}error{% endif %}" name="role_code" id="role_code" onchange="onRoleChange()" required>
+              <option value="">Selecciona un rol...</option>
+              <option value="admin_obra" {% if post_data.role_code == 'admin_obra' %}selected{% endif %}>Administrador de obra</option>
+              <option value="gerencia" {% if post_data.role_code == 'gerencia' %}selected{% endif %}>Gerencia</option>
+              <option value="aac" {% if post_data.role_code == 'aac' %}selected{% endif %}>AAC</option>
+            </select>
+            {% if errors.role_code %}<div class="ac-field-error">{{ errors.role_code }}</div>{% endif %}
+            <div class="ac-field-hint" id="role-hint"></div>
+          </div>
+
+          <div class="ac-field" id="management-title-field" style="display:none;">
+            <label class="ac-label" for="management_title_id">Sub-cargo de Gerencia</label>
+            <div class="cargo-row">
+              <select class="ac-select" name="management_title_id" id="management_title_id">
+                <option value="">Sin sub-cargo específico</option>
+              </select>
+              <button type="button" class="btn-add-cargo" onclick="openCargoModal()" title="Agregar nuevo sub-cargo">
+                <i class="ti ti-plus" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label">Obras</label>
+            <div id="sites-container">
+              <div class="sites-empty">Primero selecciona un rol.</div>
+            </div>
+            {% if errors.site_ids %}<div class="ac-field-error">{{ errors.site_ids }}</div>{% endif %}
+          </div>
+
+        </div>
+      </div>
+
+      <div class="ac-card" style="margin-bottom:20px;">
+        <div class="ac-card-header"><span class="ac-card-title">Datos del usuario</span></div>
+        <div class="ac-card-body">
+
+          <div class="ac-field">
+            <label class="ac-label" for="first_name">Nombre</label>
+            <input class="ac-input {% if errors.first_name %}error{% endif %}"
+                   type="text" name="first_name" id="first_name"
+                   value="{% if post_data %}{{ post_data.first_name }}{% endif %}"
+                   placeholder="Ej: María" autocomplete="off" required>
+            {% if errors.first_name %}<div class="ac-field-error">{{ errors.first_name }}</div>{% endif %}
+          </div>
+
+          <div class="ac-field">
+            <label class="ac-label" for="last_name">Apellido</label>
+            <input class="ac-input {% if errors.last_name %}error{% endif %}"
+                   type="text" name="last_name" id="last_name"
+                   value="{% if post_data %}{{ post_data.last_name }}{% endif %}"
+                   placeholder="Ej: González Pérez" autocomplete="off" required>
+            {% if errors.last_name %}<div class="ac-field-error">{{ errors.last_name }}</div>{% endif %}
+          </div>
+
+          <div class="ac-field">
+            <label class="ac-label" for="email">Correo electrónico</label>
+            <input class="ac-input {% if errors.email %}error{% endif %}"
+                   type="email" name="email" id="email"
+                   value="{% if post_data %}{{ post_data.email }}{% endif %}"
+                   placeholder="usuario@constructora.cl" autocomplete="off" required>
+            {% if errors.email %}<div class="ac-field-error">{{ errors.email }}</div>{% endif %}
+            <div class="ac-field-hint">Si el correo ya existe en el sistema, se vinculará el usuario existente.</div>
+          </div>
+
+          <div class="ac-field">
+            <label class="ac-label" for="rut">RUT (opcional)</label>
+            <input class="ac-input {% if errors.rut %}error{% endif %}" type="text" name="rut" id="rut"
+                   value="{% if post_data %}{{ post_data.rut }}{% endif %}"
+                   placeholder="12345678-9" autocomplete="off">
+            {% if errors.rut %}<div class="ac-field-error">{{ errors.rut }}</div>{% endif %}
+          </div>
+
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label" for="notes">Notas (opcional)</label>
+            <input class="ac-input" type="text" name="notes" id="notes"
+                   value="{% if post_data %}{{ post_data.notes }}{% endif %}"
+                   placeholder="Ej: gerente de proyecto, solo obras de la zona sur"
+                   maxlength="300" autocomplete="off">
+          </div>
+
+        </div>
+      </div>
+
+      <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
+        <i class="ti ti-user-plus" aria-hidden="true"></i>
+        Crear usuario
+      </button>
+    </form>
+
+    <!-- MODAL NUEVO SUB-CARGO -->
+    <div class="ac-overlay" id="cargo-overlay" onclick="if(event.target===this)closeCargoModal()">
+      <div class="ac-sheet" style="max-width:480px;">
+        <div class="ac-sheet-header">
+          <div class="ac-sheet-title">Nuevo sub-cargo de Gerencia</div>
+          <div class="ac-sheet-sub">Quedará disponible para {{ company.name }}</div>
+        </div>
+        <div class="ac-sheet-body">
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label" for="new-cargo-name">Nombre del cargo</label>
+            <input class="ac-input" type="text" id="new-cargo-name"
+                   placeholder="Ej: Gerente de proyecto" maxlength="120" autocomplete="off">
+            <div id="cargo-error" class="ac-field-error" style="display:none;"></div>
+          </div>
+        </div>
+        <div class="ac-sheet-footer">
+          <button class="ac-sheet-cancel" onclick="closeCargoModal()">Cancelar</button>
+          <button class="ac-sheet-confirm" onclick="confirmNewCargo()">
+            <i class="ti ti-plus" aria-hidden="true"></i> Agregar
+          </button>
+        </div>
+      </div>
+    </div>
+
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const CSRF = "{{ csrf_token }}";
+  {% if company %}
+  const CARGO_URL = "{% url 'provider:management_title_create' %}";
+  const COMPANY_ID = {{ company.id }};
+
+  const allSites = [
+    {% for s in all_sites %}
+      { id: {{ s.id }}, name: "{{ s.name|escapejs }}", code: "{{ s.code|escapejs }}" },
+    {% endfor %}
+  ];
+
+  const titleOptions = [
+    {% for mt in management_titles %}
+      { id: {{ mt.id }}, name: "{{ mt.name|escapejs }}" },
+    {% endfor %}
+  ];
+
+  const preselectedSiteIds = new Set([
+    {% for sid in selected_site_ids %}"{{ sid }}",{% endfor %}
+  ]);
+
+  const roleHints = {
+    admin_obra: 'Solo puede tener UNA obra asignada.',
+    gerencia:   'Puede abarcar varias obras de esta empresa.',
+    aac:        'Puede abarcar varias obras de esta empresa.',
+  };
+
+  function onRoleChange() {
+    const role = document.getElementById('role_code').value;
+    document.getElementById('role-hint').textContent = roleHints[role] || '';
+
+    const mgmtField = document.getElementById('management-title-field');
+    mgmtField.style.display = (role === 'gerencia') ? 'block' : 'none';
+
+    renderSites(role);
+  }
+
+  function renderSites(role) {
+    const container = document.getElementById('sites-container');
+    if (!role || allSites.length === 0) {
+      container.innerHTML = '<div class="sites-empty">Esta empresa no tiene obras registradas.</div>';
+      return;
+    }
+
+    const single = role === 'admin_obra';
+    let html = '';
+    if (!single) {
+      html += `
+        <div class="select-all-row">
+          <input type="checkbox" id="select-all-sites" onchange="toggleAllSites(this)">
+          <label for="select-all-sites" style="cursor:pointer;">Seleccionar todas (${allSites.length})</label>
+        </div>`;
+    }
+    html += '<div class="site-checks">';
+    allSites.forEach(s => {
+      const checked = preselectedSiteIds.has(String(s.id)) ? 'checked' : '';
+      const type = single ? 'radio' : 'checkbox';
+      html += `
+        <label class="site-check-row">
+          <input type="${type}" name="site_ids" value="${s.id}" class="site-check-item" ${checked}>
+          <span class="site-check-name">${s.name}</span>
+          <span class="site-check-code">${s.code}</span>
+        </label>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    if (!single) {
+      syncSelectAll();
+      document.querySelectorAll('.site-check-item').forEach(cb => cb.addEventListener('change', syncSelectAll));
+    }
+  }
+
+  function toggleAllSites(masterCb) {
+    document.querySelectorAll('.site-check-item').forEach(cb => { cb.checked = masterCb.checked; });
+  }
+
+  function syncSelectAll() {
+    const all     = document.querySelectorAll('.site-check-item');
+    const checked = document.querySelectorAll('.site-check-item:checked');
+    const master  = document.getElementById('select-all-sites');
+    if (!master || all.length === 0) return;
+    master.checked       = checked.length === all.length;
+    master.indeterminate = checked.length > 0 && checked.length < all.length;
+  }
+
+  function populateTitleSelect() {
+    const select = document.getElementById('management_title_id');
+    select.innerHTML = '<option value="">Sin sub-cargo específico</option>';
+    titleOptions.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      select.appendChild(opt);
+    });
+  }
+  populateTitleSelect();
+
+  function openCargoModal() {
+    document.getElementById('new-cargo-name').value = '';
+    document.getElementById('cargo-error').style.display = 'none';
+    document.getElementById('cargo-overlay').classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('new-cargo-name').focus(), 200);
+  }
+  function closeCargoModal() {
+    document.getElementById('cargo-overlay').classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+  function confirmNewCargo() {
+    const name = document.getElementById('new-cargo-name').value.trim();
+    const errEl = document.getElementById('cargo-error');
+    if (!name) {
+      errEl.textContent = 'El nombre es obligatorio.';
+      errEl.style.display = 'block';
+      return;
+    }
+    fetch(CARGO_URL, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ name, company_id: COMPANY_ID }).toString(),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 'ok') {
+          const select = document.getElementById('management_title_id');
+          const opt = document.createElement('option');
+          opt.value = data.id;
+          opt.textContent = data.name;
+          opt.selected = true;
+          select.appendChild(opt);
+          closeCargoModal();
+        } else {
+          errEl.textContent = data.error || 'Error al crear el cargo.';
+          errEl.style.display = 'block';
+        }
+      })
+      .catch(() => {
+        errEl.textContent = 'Error de conexión.';
+        errEl.style.display = 'block';
+      });
+  }
+  document.getElementById('new-cargo-name')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); confirmNewCargo(); }
+  });
+
+  {% if post_data and post_data.role_code %}
+    document.getElementById('role_code').value = "{{ post_data.role_code }}";
+    onRoleChange();
+    {% if post_data.management_title_id %}
+      document.getElementById('management_title_id').value = "{{ post_data.management_title_id }}";
+    {% endif %}
+  {% endif %}
+  {% endif %}
+</script>
+{% endblock %}

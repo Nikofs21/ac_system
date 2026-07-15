@@ -14,6 +14,9 @@ def active_site(request):
         'active_company_membership': None,
         'perms_ctx': {},
         'features': {},
+        'user_site_count': SiteMembership.objects.filter(
+            user=request.user, is_active=True, site__status='ACTIVE',
+        ).count(),
     }
 
     try:

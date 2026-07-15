@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .site-checks {
+    display: flex; flex-direction: column; gap: 6px;
+    border: 1.5px solid var(--ac-border);
+    border-radius: var(--radius);
+    padding: 10px;
+  }
+  .site-check-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 8px; border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .site-check-row:hover { background: var(--ac-surface); }
+  .site-check-row input { width: 17px; height: 17px; accent-color: var(--ac-blue); cursor: pointer; flex-shrink: 0; }
+  .site-check-name { font-size: 13px; font-weight: 500; color: var(--ac-text); }
+  .site-check-code { font-size: 11px; color: var(--ac-text-sub); font-family: var(--font-mono); margin-left: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ac-page-header">
+  <div>
+    <h1 class="ac-page-title">{{ page_title }}</h1>
+    <p class="ac-page-sub">{{ role.name }} — {{ company.name }}</p>
+  </div>
+  <a href="{% url 'provider:management_users' %}?company_id={{ company.id }}" class="ac-btn ac-btn-secondary ac-btn-sm">
+    <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver
+  </a>
+</div>
+
+<div style="max-width:560px; margin:0 auto; padding:20px 16px;">
+
+  {% if role.code == 'admin_obra' %}
+    <div class="ac-alert ac-alert-info" style="margin-bottom:16px;">
+      <i class="ti ti-info-circle" aria-hidden="true"></i>
+      <span style="font-size:12px;">Administrador de obra solo puede tener una obra activa a la vez.</span>
+    </div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% if role.code == 'gerencia' %}
+      <div class="ac-card" style="margin-bottom:16px;">
+        <div class="ac-card-header"><span class="ac-card-title">Sub-cargo</span></div>
+        <div class="ac-card-body">
+          <div class="ac-field" style="margin-bottom:0;">
+            <label class="ac-label" for="management_title_id">Sub-cargo de Gerencia</label>
+            <select class="ac-select" name="management_title_id" id="management_title_id">
+              <option value="">Sin sub-cargo específico</option>
+              {% for mt in management_titles %}
+                <option value="{{ mt.id }}" {% if current_management_title_id == mt.id %}selected{% endif %}>{{ mt.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="ac-card" style="margin-bottom:20px;">
+      <div class="ac-card-header"><span class="ac-card-title">Obras</span></div>
+      <div class="ac-card-body">
+        <div class="site-checks">
+          {% for site in all_sites %}
+            <label class="site-check-row">
+              <input
+                type="{% if role.code == 'admin_obra' %}radio{% else %}checkbox{% endif %}"
+                name="site_ids"
+                value="{{ site.id }}"
+                {% if site.id in current_site_ids %}checked{% endif %}
+              >
+              <span class="site-check-name">{{ site.name }}</span>
+              <span class="site-check-code">{{ site.code }}</span>
+            </label>
+          {% empty %}
+            <div style="font-size:13px; color:var(--ac-text-sub); text-align:center; padding:12px;">
+              Esta empresa no tiene obras registradas.
+            </div>
+          {% endfor %}
+        </div>
+        <div class="ac-field-hint" style="margin-top:8px;">
+          Desmarcar una obra la desactiva (no se elimina el historial). Volver a marcarla la reactiva.
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
+      <i class="ti ti-device-floppy" aria-hidden="true"></i>
+      Guardar cambios
+    </button>
+  </form>
+</div>
+{% endblock %}

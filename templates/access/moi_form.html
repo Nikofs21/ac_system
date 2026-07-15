@@ -87,7 +87,7 @@
     <div class="ac-field">
       <label class="ac-label" for="rut">RUT</label>
       <input
-        class="ac-input"
+        class="ac-input {% if errors.rut %}error{% endif %}"
         type="text"
         name="rut"
         id="rut"
@@ -95,6 +95,9 @@
         placeholder="12345678-9"
         autocomplete="off"
       >
+      {% if errors.rut %}
+        <div class="ac-field-error">{{ errors.rut }}</div>
+      {% endif %}
       <div class="ac-field-hint">Sin puntos, con guión. Opcional.</div>
     </div>
 

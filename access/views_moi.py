@@ -24,6 +24,7 @@ from core.permissions import (
     ROLES_GRANTABLE_ONLY_BY_NOVUS,
     PROVIDER_ONLY_ROLE_CODES,
 )
+from core.rut_utils import find_rut_conflict
 
 User = get_user_model()
 
@@ -167,6 +168,19 @@ def _handle_moi_create(request, site, roles):
             if already and already.is_active:
                 errors['email'] = f'{email} ya tiene acceso activo a esta obra.'
 
+    # RUT unico en TODO el sistema: no importa el cargo (jornal, gerencia,
+    # etc.), ni si ya existe como trabajador/maquinaria (resources.Resource)
+    # en vez de como usuario con acceso. Si el email ya coincidio con un
+    # usuario existente, se excluye a ese mismo usuario del chequeo (no es
+    # un conflicto que alguien tenga su propio RUT ya guardado).
+    if rut:
+        conflict = find_rut_conflict(
+            rut,
+            exclude_user_id=existing_user.id if existing_user else None,
+        )
+        if conflict:
+            errors['rut'] = conflict
+
     # Validacion de seguridad en servidor: el role_id enviado DEBE estar
     # dentro del queryset de roles asignables por este usuario. Esto cubre
     # el caso de que alguien mande un role_id de admin_obra/gerencia/aac
@@ -302,6 +316,9 @@ def moi_edit(request, membership_id):
 
         if rut:
             rut = _normalize_rut(rut)
+            conflict = find_rut_conflict(rut, exclude_user_id=user.id)
+            if conflict:
+                errors['rut'] = conflict
 
         role = None
         if role_id and not errors.get('role_id'):

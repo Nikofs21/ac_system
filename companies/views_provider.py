@@ -12,13 +12,16 @@ from django.db import transaction
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
+from django.utils import timezone
+from django.urls import reverse
 
 from .models import (
     Company, CompanyConfig, CompanyMembership,
     Site, SiteConfig, SiteMembership,
 )
-from access.models import Role, Permission, RolePermission, SiteMembershipPermissionOverride
-from core.permissions import is_novus_super
+from access.models import Role, Permission, RolePermission, SiteMembershipPermissionOverride, ManagementTitle
+from core.permissions import is_novus_super, is_provider_actor, MOI_EXCLUDED_ROLE_CODES
+from core.rut_utils import find_rut_conflict
 
 User = get_user_model()
 
@@ -589,63 +592,102 @@ def _handle_role_permissions_save(request, role, all_permissions):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GERENCIA — alta de usuario con acceso a multiples obras de una empresa
-# Solo Novus puede otorgar el rol gerencia (ver core.permissions.
-# ROLES_GRANTABLE_ONLY_BY_NOVUS). Pantalla separada del flujo de MOI porque
-# Gerencia no vive "dentro" de una obra activa — puede abarcar varias obras
-# de una misma empresa de una sola vez.
+# GERENCIA / ADMINISTRADOR DE OBRA / AAC — pantalla exclusiva de prestador
+#
+# Estos 3 roles (ver core.permissions.MOI_EXCLUDED_ROLE_CODES) ya no se
+# otorgan desde MOI para nadie. Se gestionan aqui porque:
+# - Solo un prestador (is_provider_actor: actor_type=PROVIDER o novus_super)
+#   puede darlos de alta.
+# - 'admin_obra' solo puede tener UNA obra activa a la vez.
+# - 'gerencia' puede abarcar varias obras de la misma empresa y tiene un
+#   sub-cargo propio de la empresa (ManagementTitle: Gerente de proyecto,
+#   Gerente de operaciones, etc.). 'admin_obra' y 'aac' no usan sub-cargo.
+# - Activar/desactivar y editar las obras de un usuario se resuelve en un
+#   solo formulario de "checkboxes de obra" (management_user_edit), en vez
+#   de un boton de toggle por fila.
 # ─────────────────────────────────────────────────────────────────────────────
 
-@require_provider
-def gerencia_create(request):
-    """
-    Crea un usuario nuevo con rol Gerencia y le otorga SiteMembership en
-    una o mas obras seleccionadas de una empresa.
-
-    Accesible para cualquier usuario PROVIDER (no solo novus_super) — los
-    prestadores normales son quienes habitualmente crean las empresas/obras
-    que asesoran, y deben poder dar de alta a Gerencia sin depender de un
-    novus_super. El alcance de empresas se limita a las que el usuario
-    actual ya administra (mismo criterio que provider_panel), salvo que sea
-    novus_super, que ve todas.
-
-    Si el usuario (por email) ya tiene membresia activa en alguna de las
-    obras seleccionadas, esa obra especifica se omite y se informa al
-    final — no bloquea la creacion para el resto de las obras.
-    """
+def _management_scope_companies(request):
     if is_novus_super(request.user):
-        companies = Company.objects.exclude(status='ARCHIVED').order_by('name')
-    else:
-        companies = Company.objects.filter(
-            memberships__user=request.user,
-            memberships__is_active=True,
-        ).exclude(status='ARCHIVED').order_by('name')
+        return Company.objects.exclude(status='ARCHIVED').order_by('name')
+    return Company.objects.filter(
+        memberships__user=request.user,
+        memberships__is_active=True,
+    ).exclude(status='ARCHIVED').order_by('name')
+
+
+@require_provider
+def management_users_panel(request):
+    """
+    Lista + alta de usuarios con rol admin_obra / gerencia / aac, filtrados
+    por empresa. El formulario de alta vive en la misma pantalla (igual que
+    el viejo gerencia_create).
+    """
+    companies = _management_scope_companies(request)
 
     if request.method == 'POST':
-        return _handle_gerencia_create(request, companies)
+        return _handle_management_user_create(request, companies)
 
-    return render(request, 'companies/gerencia_create.html', {
-        'companies':  companies,
-        'page_title': 'Nuevo usuario de Gerencia',
+    company_id = request.GET.get('company_id', '')
+    company = companies.filter(id=company_id).first() if company_id else companies.first()
+
+    management_titles = ManagementTitle.for_company(company) if company else ManagementTitle.objects.none()
+    all_sites = Site.objects.filter(company=company).exclude(status='ARCHIVED').order_by('name') if company else Site.objects.none()
+
+    memberships = SiteMembership.objects.filter(
+        site__company=company,
+        role__code__in=MOI_EXCLUDED_ROLE_CODES,
+    ).select_related('user', 'site', 'role').order_by('user__first_name', 'user__last_name', 'site__name') if company else SiteMembership.objects.none()
+
+    users_map = {}
+    for m in memberships:
+        key = m.user_id
+        if key not in users_map:
+            company_membership = CompanyMembership.objects.filter(user=m.user, company=company).first()
+            users_map[key] = {
+                'user':              m.user,
+                'role':              m.role,
+                'management_title':  company_membership.management_title if company_membership else None,
+                'memberships':       [],
+                'active_count':      0,
+            }
+        users_map[key]['memberships'].append(m)
+        if m.is_active:
+            users_map[key]['active_count'] += 1
+
+    return render(request, 'companies/management_users.html', {
+        'companies':         companies,
+        'company':           company,
+        'all_sites':         all_sites,
+        'management_titles': management_titles,
+        'users':             list(users_map.values()),
+        'page_title':        'Gerencia y Administración de obra',
     })
 
 
-def _handle_gerencia_create(request, companies):
+def _handle_management_user_create(request, companies):
+    from access.views_moi import _normalize_rut  # reutiliza el normalizador existente
     from access.models import UserPreference
 
-    company_id = request.POST.get('company_id', '')
-    site_ids    = request.POST.getlist('site_ids')
-    first_name  = request.POST.get('first_name', '').strip()
-    last_name   = request.POST.get('last_name', '').strip()
-    email       = request.POST.get('email', '').strip().lower()
-    rut         = request.POST.get('rut', '').strip()
-    notes       = request.POST.get('notes', '').strip()
+    role_code            = request.POST.get('role_code', '')
+    company_id           = request.POST.get('company_id', '')
+    site_ids              = request.POST.getlist('site_ids')
+    first_name            = request.POST.get('first_name', '').strip()
+    last_name             = request.POST.get('last_name', '').strip()
+    email                  = request.POST.get('email', '').strip().lower()
+    rut                    = request.POST.get('rut', '').strip()
+    management_title_id   = request.POST.get('management_title_id', '')
+    notes                  = request.POST.get('notes', '').strip()
 
     errors = {}
+    if role_code not in MOI_EXCLUDED_ROLE_CODES:
+        errors['role_code'] = 'Rol invalido.'
     if not company_id:
         errors['company_id'] = 'Selecciona una empresa.'
     if not site_ids:
         errors['site_ids'] = 'Selecciona al menos una obra.'
+    if role_code == 'admin_obra' and len(site_ids) > 1:
+        errors['site_ids'] = 'Administrador de obra solo puede tener una obra asignada.'
     if not first_name:
         errors['first_name'] = 'El nombre es obligatorio.'
     if not last_name:
@@ -661,23 +703,37 @@ def _handle_gerencia_create(request, companies):
     if site_ids and company and sites.count() != len(set(site_ids)):
         errors['site_ids'] = 'Una o mas obras seleccionadas no pertenecen a esta empresa.'
 
+    management_title = None
+    if role_code == 'gerencia' and management_title_id and company:
+        management_title = ManagementTitle.objects.filter(id=management_title_id, company=company).first()
+
     if rut:
-        from access.views_moi import _normalize_rut  # reutiliza el normalizador existente
         rut = _normalize_rut(rut)
+        existing_user_by_email = User.objects.filter(email=email).first() if email else None
+        conflict = find_rut_conflict(
+            rut,
+            exclude_user_id=existing_user_by_email.id if existing_user_by_email else None,
+        )
+        if conflict:
+            errors['rut'] = conflict
 
     if errors:
-        return render(request, 'companies/gerencia_create.html', {
+        return render(request, 'companies/management_users.html', {
             'companies':          companies,
+            'company':            company,
+            'all_sites':          Site.objects.filter(company=company).exclude(status='ARCHIVED').order_by('name') if company else Site.objects.none(),
+            'management_titles':  ManagementTitle.for_company(company) if company else ManagementTitle.objects.none(),
+            'users':              [],
             'errors':             errors,
             'post_data':          request.POST,
             'selected_site_ids':  site_ids,
-            'page_title':         'Nuevo usuario de Gerencia',
+            'page_title':         'Gerencia y Administración de obra',
         })
 
-    gerencia_role = Role.objects.filter(code='gerencia', is_active=True).first()
-    if not gerencia_role:
-        messages.error(request, 'El rol "gerencia" no esta configurado en el sistema. Corre seed_roles primero.')
-        return redirect('provider:gerencia_create')
+    role = Role.objects.filter(code=role_code, is_active=True).first()
+    if not role:
+        messages.error(request, f'El rol "{role_code}" no esta configurado en el sistema. Corre seed_roles primero.')
+        return redirect(f'{reverse("provider:management_users")}?company_id={company.id}')
 
     omitted_sites = []
 
@@ -706,11 +762,14 @@ def _handle_gerencia_create(request, companies):
                 is_active=True,
             )
 
-        CompanyMembership.objects.get_or_create(
+        company_membership, _created = CompanyMembership.objects.get_or_create(
             user=user,
             company=company,
             defaults={'membership_type': 'CLIENT_COMPANY', 'is_active': True}
         )
+        if role_code == 'gerencia':
+            company_membership.management_title = management_title
+            company_membership.save(update_fields=['management_title'])
 
         for site in sites:
             already = SiteMembership.objects.filter(user=user, site=site).first()
@@ -719,8 +778,7 @@ def _handle_gerencia_create(request, companies):
                 continue
 
             if already:
-                # Existe pero inactiva -> reactivar con rol gerencia
-                already.role        = gerencia_role
+                already.role        = role
                 already.is_active   = True
                 already.ended_at    = None
                 already.notes       = notes or None
@@ -730,7 +788,7 @@ def _handle_gerencia_create(request, companies):
                 SiteMembership.objects.create(
                     user=user,
                     site=site,
-                    role=gerencia_role,
+                    role=role,
                     is_active=True,
                     can_operate=True,
                     notes=notes or None,
@@ -746,7 +804,7 @@ def _handle_gerencia_create(request, companies):
     if granted_count > 0:
         messages.success(
             request,
-            f'{user.get_full_name()} agregado como Gerencia en {granted_count} obra(s) de {company.name}.'
+            f'{user.get_full_name()} agregado como {role.name} en {granted_count} obra(s) de {company.name}.'
         )
     if omitted_sites:
         messages.warning(
@@ -754,5 +812,103 @@ def _handle_gerencia_create(request, companies):
             f'Se omitieron estas obras porque el usuario ya tenia acceso activo: {", ".join(omitted_sites)}.'
         )
 
-    return redirect(f'/prestador/?company={company.id}&tab=usuarios')
+    return redirect(f'{reverse("provider:management_users")}?company_id={company.id}')
 
+
+@require_provider
+@require_POST
+def management_title_create(request):
+    """Crea (o reactiva) un sub-cargo de gerencia para una empresa, sin recargar la pagina."""
+    company_id = request.POST.get('company_id', '')
+    name = request.POST.get('name', '').strip()
+
+    if not name:
+        return JsonResponse({'error': 'El nombre del cargo es obligatorio.'}, status=400)
+    if len(name) > 120:
+        return JsonResponse({'error': 'El nombre no puede superar 120 caracteres.'}, status=400)
+
+    companies = _management_scope_companies(request)
+    company = companies.filter(id=company_id).first()
+    if not company:
+        return JsonResponse({'error': 'Empresa invalida o sin acceso.'}, status=403)
+
+    existing = ManagementTitle.objects.filter(company=company, name__iexact=name).first()
+    if existing:
+        if not existing.is_active:
+            existing.is_active = True
+            existing.save(update_fields=['is_active'])
+        return JsonResponse({'status': 'ok', 'id': existing.id, 'name': existing.name})
+
+    title = ManagementTitle.objects.create(company=company, name=name, is_active=True)
+    return JsonResponse({'status': 'ok', 'id': title.id, 'name': title.name})
+
+
+@require_provider
+def management_user_edit(request, user_id, company_id):
+    """
+    Activa/desactiva y edita las obras de un usuario admin_obra/gerencia/aac
+    dentro de una empresa: un solo formulario de checkboxes de obra. Marcar
+    una obra que no tenia membresia la crea; desmarcar una obra activa la
+    desactiva (no la elimina — se puede volver a marcar despues).
+    """
+    companies = _management_scope_companies(request)
+    company = get_object_or_404(companies, id=company_id)
+    target_user = get_object_or_404(User, id=user_id)
+
+    memberships = SiteMembership.objects.filter(
+        user=target_user, site__company=company, role__code__in=MOI_EXCLUDED_ROLE_CODES,
+    ).select_related('site', 'role')
+    if not memberships.exists():
+        messages.error(request, 'No se encontro membresia de gerencia/admin obra/aac para este usuario en esta empresa.')
+        return redirect(f'{reverse("provider:management_users")}?company_id={company.id}')
+
+    role = memberships.first().role
+    all_sites = Site.objects.filter(company=company).exclude(status='ARCHIVED').order_by('name')
+    current_site_ids = set(memberships.filter(is_active=True).values_list('site_id', flat=True))
+
+    company_membership = CompanyMembership.objects.filter(user=target_user, company=company).first()
+    management_titles = ManagementTitle.for_company(company) if role.code == 'gerencia' else ManagementTitle.objects.none()
+
+    if request.method == 'POST':
+        new_site_ids = set(int(x) for x in request.POST.getlist('site_ids') if x)
+
+        if role.code == 'admin_obra' and len(new_site_ids) > 1:
+            messages.error(request, 'Administrador de obra solo puede tener una obra asignada.')
+            return redirect(request.path)
+
+        with transaction.atomic():
+            existing_site_ids = set(memberships.values_list('site_id', flat=True))
+
+            for m in memberships:
+                should_be_active = m.site_id in new_site_ids
+                if m.is_active != should_be_active:
+                    m.is_active = should_be_active
+                    m.ended_at  = timezone.localdate() if not should_be_active else None
+                    m.save()
+
+            for site_id in new_site_ids - existing_site_ids:
+                site = all_sites.filter(id=site_id).first()
+                if site:
+                    SiteMembership.objects.create(
+                        user=target_user, site=site, role=role,
+                        is_active=True, can_operate=True, granted_by=request.user,
+                    )
+
+            if role.code == 'gerencia' and company_membership:
+                mt_id = request.POST.get('management_title_id', '')
+                company_membership.management_title = management_titles.filter(id=mt_id).first() if mt_id else None
+                company_membership.save(update_fields=['management_title'])
+
+        messages.success(request, f'Obras de {target_user.get_full_name()} actualizadas.')
+        return redirect(f'{reverse("provider:management_users")}?company_id={company.id}')
+
+    return render(request, 'companies/management_user_edit.html', {
+        'company':                     company,
+        'target_user':                 target_user,
+        'role':                        role,
+        'all_sites':                   all_sites,
+        'current_site_ids':            current_site_ids,
+        'management_titles':           management_titles,
+        'current_management_title_id': company_membership.management_title_id if company_membership else None,
+        'page_title':                  f'Editar obras — {target_user.get_full_name()}',
+    })

@@ -263,3 +263,41 @@ class SiteMembershipPermissionOverride(models.Model):
     def __str__(self):
         action = 'AGREGA' if self.granted else 'QUITA'
         return f'{action} {self.permission.code} → {self.site_membership}'
+
+
+class ManagementTitle(models.Model):
+    """
+    Sub-cargo de Gerencia (Gerente de proyecto, Gerente de operaciones,
+    Gerente general, etc.). Scope por empresa, igual que resources.JobTitle
+    para trabajadores — cada empresa arma su propia lista y puede agregar
+    cargos nuevos desde la pantalla de gestion de Gerencia/Admin obra.
+
+    Solo aplica al rol 'gerencia'. 'admin_obra' y 'aac' no usan sub-cargo.
+    """
+    company = models.ForeignKey(
+        'companies.Company',
+        on_delete=models.CASCADE,
+        related_name='management_titles',
+    )
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'access_management_title'
+        verbose_name = 'Cargo de gerencia'
+        verbose_name_plural = 'Cargos de gerencia'
+        ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['company', 'name'],
+                name='unique_management_title_per_company',
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.name} — {self.company.name}'
+
+    @classmethod
+    def for_company(cls, company):
+        return cls.objects.filter(company=company, is_active=True).order_by('name')

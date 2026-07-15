@@ -17,10 +17,9 @@
         <path fill="currentColor" d="M77.04,74.83h339.2c18.27,0,33.08-14.81,33.08-33.08H43.96c0,18.27,14.81,33.08,33.08,33.08h0Z"/>
         <path fill="currentColor" d="M401.58,89.76v-.06H97.8v.08c-36.74.32-66.56,30.31-66.56,67.13s30.12,67.15,67.15,67.15c2.49,0,4.96-.16,7.4-.42h10.44v14.51h.24v79.73l29.7,10.82v-90.54h28.1v100.77l29.7,10.82v-111.58h28.1v121.81l17.32,6.31,12.38-3.93v-124.18h28.1v115.22l29.7-9.45v-105.77h28.1v96.83l29.7-9.45v-100.41c0-.51-.06-.99-.16-1.46h16.93c2.43.28,4.9.42,7.4.42,37.02,0,67.15-30.12,67.15-67.15s-30.12-67.15-67.15-67.15l.06-.02ZM208.59,147l30.35,45.95h-30.35v-45.95ZM344.99,192.94h-34.56v-72.55h34.88c-6.84,10.52-10.84,23.06-10.84,36.52s3.88,25.63,10.54,36.05l-.02-.02ZM289.25,192.94h-24.14v-72.55h24.14v72.55ZM243.97,120.39v47.14l-30.99-47.14h30.99ZM187.43,120.39v72.55h-32.43c6.66-10.42,10.54-22.78,10.54-36.05s-3.99-26-10.84-36.52h32.73v.02ZM98.39,190.39c-18.47,0-33.48-15.03-33.48-33.48s15.03-33.48,33.48-33.48,33.48,15.03,33.48,33.48-15.03,33.48-33.48,33.48ZM401.58,190.39c-18.47,0-33.48-15.03-33.48-33.48s15.03-33.48,33.48-33.48,33.48,15.03,33.48,33.48-15.03,33.48-33.48,33.48Z"/>
       </svg>
-      <a href="{% url 'select_site' %}" class="site-switcher" aria-label="Cambiar de obra">
-        <span class="site-switcher-current">{{ site.name }}</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-      </a>
+      <button type="button" class="mobile-profile-trigger" id="mobile-profile-trigger" aria-label="Perfil y obra" onclick="openProfileModal()">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </button>
     </div>
 
     <div class="home-body">

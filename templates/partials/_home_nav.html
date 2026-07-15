@@ -105,15 +105,81 @@
     <span>Más</span>
   </button>
 
-  <a href="{% url 'logout' %}" class="sidebar-profile" id="sidebar-profile-trigger">
+  <button type="button" class="sidebar-profile" id="sidebar-profile-trigger" aria-haspopup="true" aria-expanded="false">
     <span class="sidebar-profile-avatar"></span>
     <div class="sidebar-profile-text">
       <div class="sidebar-profile-name">{{ request.user.get_full_name|default:request.user.email }}</div>
-      <div class="sidebar-profile-role">{{ perms_ctx.role_name|default:"" }}</div>
+      <div class="sidebar-profile-role">
+        {% if perms_ctx.management_title_name %}
+          {{ perms_ctx.role_name }} · {{ perms_ctx.management_title_name }}
+        {% else %}
+          {{ perms_ctx.role_name|default:"" }}
+        {% endif %}
+      </div>
     </div>
-  </a>
+  </button>
 </nav>
 <div class="nav-more-backdrop" id="nav-more-backdrop"></div>
+
+<!-- RECUADRO DE PERFIL: cambiar de obra / cerrar sesión.
+     Se abre desde #sidebar-profile-trigger (barra lateral, escritorio) y
+     desde #mobile-profile-trigger (top bar, mobile — ver dashboard.html). -->
+<div class="ac-overlay" id="profile-modal-overlay" onclick="if(event.target===this)closeProfileModal()">
+  <div class="ac-sheet" style="max-width:360px;">
+    <div class="ac-sheet-header">
+      <div class="ac-sheet-title">{{ request.user.get_full_name|default:request.user.email }}</div>
+      <div class="ac-sheet-sub">
+        {% if perms_ctx.management_title_name %}
+          {{ perms_ctx.role_name }} · {{ perms_ctx.management_title_name }}
+        {% else %}
+          {{ perms_ctx.role_name|default:"" }}
+        {% endif %}
+      </div>
+    </div>
+    <div class="ac-sheet-body" style="display:flex; flex-direction:column; gap:8px;">
+      {% if user_site_count > 1 %}
+        <a href="{% url 'select_site' %}" class="ac-btn ac-btn-secondary ac-btn-full">
+          <i class="ti ti-building" aria-hidden="true"></i>
+          Cambiar de obra
+        </a>
+      {% endif %}
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="ac-btn ac-btn-secondary ac-btn-full" style="color:var(--ac-danger); border-color:var(--ac-danger);">
+          <i class="ti ti-logout" aria-hidden="true"></i>
+          Cerrar sesión
+        </button>
+      </form>
+    </div>
+    <div class="ac-sheet-footer">
+      <button class="ac-sheet-cancel" onclick="closeProfileModal()" style="width:100%;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  window.openProfileModal = function(){
+    var overlay = document.getElementById('profile-modal-overlay');
+    overlay.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    var trigger = document.getElementById('sidebar-profile-trigger');
+    if (trigger) trigger.setAttribute('aria-expanded', 'true');
+  };
+  window.closeProfileModal = function(){
+    var overlay = document.getElementById('profile-modal-overlay');
+    overlay.classList.remove('visible');
+    document.body.style.overflow = '';
+    var trigger = document.getElementById('sidebar-profile-trigger');
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  };
+  var trigger = document.getElementById('sidebar-profile-trigger');
+  if (trigger) trigger.addEventListener('click', openProfileModal);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeProfileModal();
+  });
+})();
+</script>
 
 <script>
 (function(){

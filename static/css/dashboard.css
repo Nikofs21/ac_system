@@ -42,19 +42,16 @@
 }
 .badge-dot.show{ display: block; }
 
-/* ---------- Selector de obra (chip) — reusa la logica de select_site.html,
-   solo un acceso rapido para cambiar de obra sin pasar por el sidebar.
-   Pensado para reusarse en el top bar de otras pantallas mas adelante. ---------- */
-.site-switcher{
-  display: flex; align-items: center; gap: 6px; background: #f3f5f7; border: none;
-  border-radius: 999px; padding: 8px 12px 8px 14px; text-decoration: none; max-width: 190px;
+/* ---------- Botón de perfil (mobile top bar) — mismo alto que el logo,
+   abre el recuadro de "cambiar de obra / cerrar sesión" (ver _home_nav.html) ---------- */
+.mobile-profile-trigger{
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: var(--login-blue); color: #fff; border: none; cursor: pointer;
+  font-family: var(--font-brand); font-weight: 600; font-size: 11px; letter-spacing: 0.02em;
+  padding: 0;
 }
-.site-switcher:hover{ background: #ececef; }
-.site-switcher-current{
-  font-family: var(--font-brand); font-size: 12.5px; font-weight: 500; color: #1a1a1a;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.site-switcher svg{ width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; }
+.mobile-profile-trigger:active{ opacity: 0.85; }
 
 /* ---------- Body ---------- */
 .home-body{ padding: 4px 20px 100px; overflow-y: auto; flex: 1; }
@@ -280,6 +277,8 @@
   .sidebar-profile{
     display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 12px 8px 2px;
     border-top: 1px solid #ececef; cursor: pointer; border-radius: 10px; text-decoration: none;
+    background: none; border-left: none; border-right: none; border-bottom: none;
+    width: 100%; text-align: left; font: inherit;
   }
   .sidebar-profile:hover{ background: #f0f1f5; }
   .sidebar-profile-avatar{ width: 34px; height: 34px; border-radius: 50%; background: var(--login-blue); flex-shrink: 0; display: block; }

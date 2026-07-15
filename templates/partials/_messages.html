@@ -1,5 +1,5 @@
 {% if messages %}
-  <div class="ac-messages">
+  <div class="ac-messages" id="ac-messages">
     {% for message in messages %}
       <div class="ac-msg ac-msg-{{ message.tags }}">
         {% if message.tags == 'success' %}
@@ -11,8 +11,18 @@
         {% else %}
           <i class="ti ti-info-circle" aria-hidden="true"></i>
         {% endif %}
-        {{ message }}
+        <span>{{ message }}</span>
+        <button type="button" class="ac-msg-close" aria-label="Cerrar" onclick="this.parentElement.remove()">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
       </div>
     {% endfor %}
   </div>
+  <script>
+    document.querySelectorAll('#ac-messages .ac-msg').forEach(function(el){
+      el.addEventListener('animationend', function(e){
+        if (e.animationName === 'ac-msg-out') el.remove();
+      });
+    });
+  </script>
 {% endif %}

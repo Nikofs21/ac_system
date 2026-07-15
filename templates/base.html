@@ -18,13 +18,16 @@
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
+{% if user.is_authenticated %}
+  {% include "partials/_messages.html" %}
+{% endif %}
+
 {% if user.is_authenticated and not full_screen %}
 
   {% include "partials/_topbar.html" %}
   {% include "partials/_sidebar.html" %}
 
   <main class="ac-content">
-    {% include "partials/_messages.html" %}
     {% block content %}{% endblock %}
   </main>
 

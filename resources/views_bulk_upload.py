@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from companies.models import Site
 from resources.models import Resource, ResourceCategory, JobTitle, ResourceSiteAssignment
+from core.rut_utils import find_rut_conflict
 
 
 def require_provider(view_func):
@@ -199,6 +200,10 @@ def _handle_workers_upload(request, site):
                     resource = existing
                     updated += 1
                 else:
+                    conflict = find_rut_conflict(rut)
+                    if conflict:
+                        errors.append(f'Fila {linea}: {conflict}')
+                        continue
                     resource = Resource.objects.create(
                         company=site.company,
                         resource_category=category,

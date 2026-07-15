@@ -282,6 +282,13 @@ class CompanyMembership(models.Model):
     started_at = models.DateField(null=True, blank=True)
     ended_at = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
+    management_title = models.ForeignKey(
+        'access.ManagementTitle',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='company_memberships',
+        help_text='Sub-cargo de gerencia (solo aplica si el usuario tiene rol gerencia en alguna obra de esta empresa).',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'work.middleware.AssignmentFlowGuardMiddleware',
 ]
 
 ROOT_URLCONF = 'ac_system.urls'

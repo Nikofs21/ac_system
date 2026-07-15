@@ -737,17 +737,45 @@ body {
 .ac-alert-bar-title { font-size: 13px; font-weight: 700; }
 .ac-alert-bar-sub   { font-size: 12px; margin-top: 2px; line-height: 1.4; }
 
-/* Messages Django */
-.ac-messages { padding: 0 24px; margin-top: 12px; }
+/* Messages Django — toasts fijos, no ocupan espacio del layout */
+.ac-messages {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
 
 .ac-msg {
   padding: 10px 14px;
   border-radius: var(--radius);
-  margin-bottom: 8px;
   font-size: 13px;
   display: flex;
   align-items: center;
   gap: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(-8px);
+  animation: ac-msg-in 0.2s ease forwards, ac-msg-out 0.35s ease forwards 4s;
+}
+
+@keyframes ac-msg-in  { to   { opacity: 1; transform: translateY(0); } }
+@keyframes ac-msg-out { to   { opacity: 0; transform: translateY(-8px); } from { opacity: 1; } }
+
+.ac-msg-close {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  color: inherit; opacity: 0.6; font-size: 15px; line-height: 1; flex-shrink: 0;
+  padding: 2px;
+}
+.ac-msg-close:hover { opacity: 1; }
+
+@media (max-width: 600px) {
+  .ac-messages { top: auto; bottom: 16px; right: 16px; left: 16px; width: auto; }
 }
 
 .ac-msg-success { background: var(--ac-success-bg); color: var(--ac-success-text); }
