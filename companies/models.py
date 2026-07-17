@@ -162,10 +162,16 @@ class SiteWorkdayConfig(models.Model):
         related_name='workday_configs'
     )
     weekday = models.IntegerField(choices=Weekday.choices)
-    work_start_time = models.TimeField()
+    work_start_time = models.TimeField(
+        null=True, blank=True,
+        help_text='Vacio solo si is_active=False (dia marcado explicitamente '
+                  'como no laborable).'
+    )
     work_end_time = models.TimeField(
+        null=True, blank=True,
         help_text='Hora oficial de fin de jornada. Define las HH pagadas del dia '
-                  'y se escribe como ended_at en los cierres automaticos.'
+                  'y se escribe como ended_at en los cierres automaticos. '
+                  'Vacio solo si is_active=False.'
     )
     lunch_start_time = models.TimeField(null=True, blank=True)
     lunch_end_time = models.TimeField(null=True, blank=True)
@@ -197,6 +203,11 @@ class SiteWorkdayConfig(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+        if self.is_active and (not self.work_start_time or not self.work_end_time):
+            raise ValidationError(
+                'Si el dia esta marcado como laborable (is_active), '
+                'work_start_time y work_end_time son obligatorios.'
+            )
         if self.effective_to and self.effective_from and self.effective_to < self.effective_from:
             raise ValidationError(
                 'La fecha de termino de vigencia no puede ser anterior a la de inicio.'

@@ -152,6 +152,8 @@ class Resource(models.Model):
             self.resource_uid = str(uuid.uuid4()).replace('-', '')
         if not self.normalized_name:
             self.normalized_name = self.display_name.lower().strip()
+        if self.person_rut:
+            self.person_rut = self.normalize_rut(self.person_rut)
         super().save(*args, **kwargs)
 
     def __str__(self):

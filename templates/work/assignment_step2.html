@@ -61,17 +61,6 @@
                    style="width:100%;font-family:var(--font-brand);font-size:14px;color:var(--ink);border:1.4px solid #e3e4ea;border-radius:12px;padding:14px 16px;outline:none;">
           </div>
 
-          <button type="button" class="uid-toggle-btn" id="uid-toggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
-            Ingresar UID directamente
-          </button>
-          <div class="uid-section" id="uid-section">
-            <div class="newp-manual-row">
-              <input type="text" id="manual-uid" placeholder="Pega el UID del trabajador">
-              <button type="button" onclick="processUID()">Agregar</button>
-            </div>
-          </div>
-
           <div id="scan-feedback"></div>
         </div>
 
@@ -352,39 +341,6 @@ function updateFocus(rows) {
   rows.forEach((r, i) => r.classList.toggle('is-focused', i === focusedIndex));
   if (rows[focusedIndex]) rows[focusedIndex].scrollIntoView({ block: 'nearest' });
 }
-
-// ── UID manual ────────────────────────────────────────────────────────────
-const uidToggle  = document.getElementById('uid-toggle');
-const uidSection = document.getElementById('uid-section');
-uidToggle.addEventListener('click', () => {
-  uidToggle.classList.toggle('open');
-  uidSection.classList.toggle('is-open');
-});
-
-function processUID() {
-  const input = document.getElementById('manual-uid');
-  const uid = input.value.trim();
-  if (!uid) return;
-  fetch(SCAN_URL, {
-    method: 'POST',
-    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'uid=' + encodeURIComponent(uid),
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.status === 'ok') {
-      addWorkerChip(data.worker, data.warning || null);
-      showFeedback(data.worker.name + ' agregado al grupo.', data.warning ? 'warn' : 'ok');
-      input.value = '';
-    } else {
-      showFeedback(data.message || 'UID no encontrado.', 'error');
-    }
-  })
-  .catch(() => showFeedback('Error de conexión.', 'error'));
-}
-document.getElementById('manual-uid').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') { e.preventDefault(); processUID(); }
-});
 
 // ── Chips del grupo ──────────────────────────────────────────────────────
 function getInitials(name) {

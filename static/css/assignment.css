@@ -75,7 +75,10 @@
 .assign-risk-note.high{ background: #fef6e0; color: #a9700a; }
 .assign-risk-note svg{ width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
 
-.assign-footer{ padding-top: 8px; }
+.assign-footer{
+  padding-top: 12px; margin-top: auto;
+  position: sticky; bottom: 72px; background: var(--ac-white);
+}
 .assign-footer .btn-primary{
   width: 100%; font-family: var(--font-brand); font-weight: 400; font-size: 15px; color: var(--ac-white);
   background: var(--login-blue); border: none; border-radius: 999px; padding: 16px; cursor: pointer;
@@ -85,8 +88,11 @@
 .assign-footer .btn-primary[disabled]{ opacity: .45; pointer-events: none; }
 .assign-footer .btn-secondary{
   width: 100%; margin-top: 10px; font-family: var(--font-brand); font-weight: 400; font-size: 14px; color: var(--ink-soft);
-  background: none; border: none; padding: 12px; cursor: pointer; text-align: center; text-decoration: none; display: block;
+  background: var(--ac-white); border: 1.4px solid #e3e4ea; border-radius: 999px; padding: 14px; cursor: pointer;
+  text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center;
+  transition: background .12s ease;
 }
+.assign-footer .btn-secondary:hover{ background: #FAFAFB; }
 
 /* ---------- Paso 2: cámara + búsqueda + grupo ---------- */
 .newp-step2-grid{ display: flex; flex-direction: column; gap: 22px; }
@@ -150,15 +156,6 @@
 .dd-row .dd-cargo{ font-size: 11.5px; color: var(--muted); }
 .dropdown-empty, .dropdown-loading{ padding: 14px 12px; font-family: var(--font-brand); font-size: 12.5px; color: var(--muted); text-align: center; }
 
-.uid-toggle-btn{
-  display: flex; align-items: center; gap: 5px; background: none; border: none; font-family: var(--font-brand);
-  font-size: 12px; color: var(--muted); cursor: pointer; padding: 10px 0 0; margin: 0 auto;
-}
-.uid-toggle-btn svg{ width: 11px; height: 11px; transition: transform .2s ease; }
-.uid-toggle-btn.open svg{ transform: rotate(90deg); }
-.uid-section{ display: none; margin-top: 10px; }
-.uid-section.is-open{ display: block; }
-
 .newp-group-header{
   display: flex; align-items: center; gap: 8px; font-family: var(--font-brand); font-weight: 400;
   font-size: 13.5px; color: var(--ink-soft); margin: 22px 0 10px;
@@ -167,7 +164,7 @@
   min-width: 19px; height: 19px; padding: 0 6px; border-radius: 999px; background: var(--login-blue); color: var(--ac-white);
   font-family: var(--font-brand); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center;
 }
-.newp-group-list{ display: flex; flex-direction: column; gap: 8px; }
+.newp-group-list{ display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; padding-right: 2px; }
 .newp-group-row{ display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #f9fafb; border-radius: 10px; }
 .newp-group-row.warn{ background: #fef6e0; }
 .newp-group-avatar{
@@ -187,7 +184,12 @@
 .newp-group-remove svg{ width: 13px; height: 13px; }
 .newp-group-empty{ text-align: center; font-family: var(--font-brand); font-size: 13px; color: var(--muted); padding: 20px 10px; }
 
-#scan-feedback{ font-family: var(--font-brand); font-size: 12.5px; padding: 9px 12px; border-radius: 10px; margin-top: 10px; display: none; }
+#scan-feedback{
+  position: fixed; left: 16px; right: 16px; bottom: 90px; z-index: 50;
+  font-family: var(--font-brand); font-size: 12.5px; padding: 11px 14px; border-radius: 10px;
+  display: none; box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  max-width: 400px; margin: 0 auto;
+}
 #scan-feedback.feedback-ok{ display: block; background: #f0fdf4; color: #065f46; }
 #scan-feedback.feedback-warn{ display: block; background: #fef6e0; color: #a9700a; }
 #scan-feedback.feedback-error{ display: block; background: var(--ac-danger-bg); color: var(--ac-danger-text); }
@@ -253,6 +255,7 @@
   /* .assign-screen y .assign-view (desktop): definidos en dashboard.css */
   .assign-page{ width: 100%; max-width: 1280px; margin: 0 auto; padding: 40px 44px 40px; }
   .assign-title{ font-size: 26px; }
+  .assign-footer{ bottom: 0; }
 
   .newp-step2-grid{ display: grid; grid-template-columns: 7fr 3fr; gap: 32px; align-items: start; }
   .newp-group-list{ max-height: 420px; overflow-y: auto; padding-right: 4px; }

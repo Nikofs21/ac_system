@@ -8,8 +8,12 @@ class SiteAlertConfig(models.Model):
     class AlertType(models.TextChoices):
         HIGH_RISK_START = 'HIGH_RISK_START', 'Inicio alto riesgo'
         ACTIVE_WITHOUT_SESSION = 'ACTIVE_WITHOUT_SESSION', 'Activo sin sesion'
-        POST_LUNCH_UNASSIGNED = 'POST_LUNCH_UNASSIGNED', 'Sin asignar post colacion'
-        OPEN_AFTER_SHIFT = 'OPEN_AFTER_SHIFT', 'Sesion abierta fuera de jornada'
+        # POST_LUNCH_UNASSIGNED y OPEN_AFTER_SHIFT se sacaron de aca — eran
+        # tipos declarados sin ninguna implementacion real detras (ni tarea,
+        # ni pantalla). POST_LUNCH_UNASSIGNED quedo cubierto por
+        # SiteUnassignedAlertSchedule (multiples horarios configurables).
+        # Si OPEN_AFTER_SHIFT se necesita a futuro, agregarlo de vuelta
+        # junto con su implementacion, no antes.
 
     site = models.ForeignKey(
         'companies.Site',

@@ -193,3 +193,27 @@ def auto_close_sessions_task():
         'snapshots_triggered': snapshots_triggered,
     }
 
+
+
+@shared_task(name='work.expire_stale_review_flags')
+def expire_stale_review_flags_task():
+    """
+    Limpia needs_review de sesiones marcadas hace mas de 7 dias sin que
+    nadie las haya revisado — evita que la bandeja se acumule con
+    pendientes viejos que ya nadie va a recordar el contexto. NO borra la
+    sesion ni ningun dato historico, solo apaga la bandera de "revisar".
+
+    Disparada por Celery Beat una vez al dia (ver settings.CELERY_BEAT_SCHEDULE).
+    """
+    from datetime import timedelta
+    from work.models import WorkSession
+
+    limite = timezone.now() - timedelta(days=7)
+
+    actualizadas = WorkSession.objects.filter(
+        needs_review=True,
+        ended_at__lt=limite,
+    ).update(needs_review=False)
+
+    logger.info(f'expire_stale_review_flags: {actualizadas} sesion(es) expiradas de la bandeja.')
+    return {'expired': actualizadas}

@@ -39,17 +39,18 @@ def _build_workday_rows(site=None, post_data=None):
     Con post_data (reintento tras error de validacion): relee lo que el
     usuario habia tipeado, para no hacerlo repetir todo.
     Sin post_data pero con site (pantalla de edicion): prellena con la
-    jornada vigente hoy de cada dia, si existe. Una obra creada antes de
-    este formulario (o cuyo dia nunca se configuro) simplemente aparece
-    con mode=None — fuerza a decidir de nuevo, no asume nada en su nombre.
+    fila mas reciente de cada dia, sea laborable o no — is_active=False
+    ahora SI se guarda explicitamente para "no laborable" (ver
+    _save_workdays), asi que mode='' ya solo significa "nunca se
+    decidio". Una obra creada antes de este cambio todavia puede tener
+    dias en blanco — ahi si mode='' es correcto, fuerza a decidir.
     """
     rows = []
     existing_by_weekday = {}
     if site is not None and post_data is None:
-        hoy = timezone.localdate()
         for weekday in range(7):
             existing_by_weekday[weekday] = SiteWorkdayConfig.objects.filter(
-                site=site, weekday=weekday, is_active=True,
+                site=site, weekday=weekday,
             ).order_by('-effective_from').first()
 
     for weekday, label in SiteWorkdayConfig.Weekday.choices:
@@ -68,12 +69,18 @@ def _build_workday_rows(site=None, post_data=None):
             })
         else:
             cfg = existing_by_weekday.get(weekday)
+            if cfg and cfg.is_active:
+                mode = 'LABORABLE'
+            elif cfg and not cfg.is_active:
+                mode = 'NO_LABORABLE'
+            else:
+                mode = ''
             rows.append({
                 'weekday':          weekday,
                 'label':            label,
-                'mode':             'LABORABLE' if cfg else '',
-                'work_start_time':  cfg.work_start_time.strftime('%H:%M') if cfg else '',
-                'work_end_time':    cfg.work_end_time.strftime('%H:%M') if cfg else '',
+                'mode':             mode,
+                'work_start_time':  cfg.work_start_time.strftime('%H:%M') if cfg and cfg.work_start_time else '',
+                'work_end_time':    cfg.work_end_time.strftime('%H:%M') if cfg and cfg.work_end_time else '',
                 'lunch_start_time': cfg.lunch_start_time.strftime('%H:%M') if cfg and cfg.lunch_start_time else '',
                 'lunch_end_time':   cfg.lunch_end_time.strftime('%H:%M') if cfg and cfg.lunch_end_time else '',
                 'deduct_lunch':     cfg.deduct_lunch_from_icc if cfg else True,
@@ -167,6 +174,10 @@ def _save_workdays(site, parsed_workdays):
     nueva — este formulario es "la config actual", no un historial de
     excepciones por fecha (eso, si hace falta a futuro, es una pantalla
     aparte para ajustes puntuales, no esta).
+
+    NO_LABORABLE tambien crea una fila (is_active=False, sin horas) en vez
+    de no crear nada — asi queda distinguible de "nadie configuro este
+    dia todavia", que es justo la ambiguedad que tenia el diseño anterior.
     """
     effective_from = site.start_date or timezone.localdate()
 
@@ -176,6 +187,14 @@ def _save_workdays(site, parsed_workdays):
         ).delete()
 
         if row['mode'] == 'NO_LABORABLE':
+            SiteWorkdayConfig.objects.create(
+                site=site,
+                weekday=row['weekday'],
+                work_start_time=None,
+                work_end_time=None,
+                is_active=False,
+                effective_from=effective_from,
+            )
             continue
 
         SiteWorkdayConfig.objects.create(
@@ -273,17 +292,20 @@ def provider_panel(request):
         sites = list(
             Site.objects.filter(company=selected_company)
             .exclude(status='ARCHIVED')
-            .prefetch_related('unassigned_alert_schedules', 'alert_configs')
+            .prefetch_related('unassigned_alert_schedules', 'alert_configs', 'workday_configs')
             .order_by('name')
         )
 
-        # Indicadores "sin configurar" — solo lo que se puede detectar sin
-        # ambigüedad (existe la fila o no existe). El horario semanal
-        # queda fuera a propósito: SiteWorkdayConfig no distingue "día
-        # marcado explícitamente como no laborable" de "día nunca tocado",
-        # así que no hay forma confiable de avisar sin falsos positivos.
+        # Indicadores "sin configurar". El horario semanal ya se puede
+        # detectar de forma confiable porque "no laborable" ahora guarda
+        # una fila explicita (is_active=False) — un weekday sin NINGUNA
+        # fila es genuinamente "nunca se decidio", no una obra que
+        # descansa ese dia.
         for site in sites:
             gaps = []
+            configured_weekdays = {wc.weekday for wc in site.workday_configs.all()}
+            if len(configured_weekdays) < 7:
+                gaps.append('Horario semanal')
             if not site.unassigned_alert_schedules.all():
                 gaps.append('Activos sin partida')
             if not any(ac.alert_type == 'HIGH_RISK_START' for ac in site.alert_configs.all()):
@@ -496,14 +518,17 @@ def site_edit(request, site_id):
     if request.method == 'POST':
         return _handle_site_save(request, site.company, site)
 
+    workday_configured = site.workday_configs.values('weekday').distinct().count() >= 7
+
     return render(request, 'companies/site_form.html', {
-        'mode':         'edit',
-        'company':      site.company,
-        'site':         site,
-        'config':       config,
-        'page_title':   f'Editar — {site.name}',
-        'site_flags':   _site_module_flags(config),
-        'workday_rows': _build_workday_rows(site=site),
+        'mode':                'edit',
+        'company':             site.company,
+        'site':                site,
+        'config':              config,
+        'page_title':          f'Editar — {site.name}',
+        'site_flags':          _site_module_flags(config),
+        'workday_rows':        _build_workday_rows(site=site),
+        'workday_configured':  workday_configured,
     })
 
 
@@ -1332,24 +1357,99 @@ def session_review_queue(request, company_id):
     })
 
 
-def _apply_session_review_adjust(session, new_time_str, reason, user):
+def _apply_session_review_adjust(session, new_time_str, reason, user, register_overtime=False):
     """
     Aplica el ajuste a UNA sesión — lo comparten la vista individual y la
     masiva para no duplicar el cálculo de hora/timezone. Devuelve None si
-    salió bien, o un string de error si la hora venía mal formada.
+    salió bien, o un string de error si algo vino mal.
+
+    register_overtime=True: DIVIDE la sesión en dos, en vez de solo mover
+    su ended_at:
+      - La sesión ORIGINAL queda como el tramo normal: ended_at se recorta
+        a la hora oficial (work_end_time), is_overtime se mantiene False.
+      - Se crea una sesión NUEVA como tramo de hora extra: started_at =
+        hora oficial, ended_at = hora real de cierre, TOPADA al máximo
+        legal (settings.OVERTIME_MAX_MINUTES, 2 horas). is_overtime=True,
+        parent_session apunta a la original, closure_origin='OVERTIME_SPLIT'.
+      - Si la hora real de cierre superaba el tope legal, el tiempo que
+        sobra por encima de las 2 horas NO queda registrado en ninguna
+        sesión — es la parte que excede lo permitido por ley, no algo que
+        se pueda "guardar en otro lado". El motivo ingresado queda de
+        todas formas en el log para trazabilidad de qué paso realmente.
     """
-    from work.models import WorkSessionChangeLog
-    from datetime import datetime as dt
+    from work.models import WorkSession, WorkSessionChangeLog
+    from companies.models import SiteWorkdayConfig
+    from datetime import datetime as dt, timedelta
+    from django.conf import settings
     import pytz
 
     before = {
         'ended_at':         session.ended_at.isoformat() if session.ended_at else None,
         'duration_minutes': session.duration_minutes,
+        'is_overtime':      session.is_overtime,
     }
 
-    if new_time_str:
+    site_tz = pytz.timezone(session.site.timezone or 'America/Santiago')
+
+    if register_overtime:
+        if not session.ended_at:
+            return 'Esta sesión no tiene hora de cierre — no se puede dividir.'
+
+        local_date = timezone.localtime(session.ended_at, site_tz).date()
+        workday = SiteWorkdayConfig.vigente_para(session.site, local_date)
+        if not workday or not workday.work_end_time:
+            return 'No hay horario oficial configurado para ese día — no se puede calcular la hora extra.'
+
+        max_minutes = getattr(settings, 'OVERTIME_MAX_MINUTES', 120)
+        official_dt = site_tz.localize(dt.combine(local_date, workday.work_end_time)).astimezone(pytz.utc)
+        tope_dt = official_dt + timedelta(minutes=max_minutes)
+
+        if session.ended_at <= official_dt:
+            return ('Esta sesión se cerró antes o justo a la hora oficial — '
+                    'no corresponde registrar hora extra.')
+
+        overtime_ended_at = min(session.ended_at, tope_dt)
+
+        # ── Recortar la sesión original al tramo normal ──────────────────
+        original_ended_at = session.ended_at
+        session.ended_at = official_dt
+        if session.started_at:
+            session.duration_minutes = int((session.ended_at - session.started_at).total_seconds() / 60)
+
+        # ── Crear el tramo de hora extra, encadenado a la original ───────
+        WorkSession.objects.create(
+            company=session.company,
+            site=session.site,
+            resource=session.resource,
+            resource_assignment=session.resource_assignment,
+            stage=session.stage,
+            task=session.task,
+            stage_name_snapshot=session.stage_name_snapshot,
+            task_code_snapshot=session.task_code_snapshot,
+            task_name_snapshot=session.task_name_snapshot,
+            risk_level_snapshot=session.risk_level_snapshot,
+            started_at=official_dt,
+            ended_at=overtime_ended_at,
+            duration_minutes=int((overtime_ended_at - official_dt).total_seconds() / 60),
+            status='CLOSED',
+            started_by=session.started_by,
+            ended_by=session.ended_by,
+            responsible_supervisor=session.responsible_supervisor,
+            operated_by_role_code=session.operated_by_role_code,
+            is_overtime=True,
+            parent_session=session,
+            closure_origin='OVERTIME_SPLIT',
+            needs_review=False,
+            notes=(
+                f'Hora extra dividida desde sesion #{session.id}. '
+                f'Cierre real habia sido {original_ended_at.isoformat()}.'
+                + (' Se topo al maximo legal (2 hrs).' if original_ended_at > tope_dt else '')
+            ),
+        )
+        change_type = 'OVERTIME_SPLIT'
+
+    elif new_time_str:
         try:
-            site_tz = pytz.timezone(session.site.timezone or 'America/Santiago')
             local_date = timezone.localtime(session.ended_at, site_tz).date() if session.ended_at else timezone.localdate()
             new_time = dt.strptime(new_time_str, '%H:%M').time()
             new_ended_at_local = site_tz.localize(dt.combine(local_date, new_time))
@@ -1358,6 +1458,9 @@ def _apply_session_review_adjust(session, new_time_str, reason, user):
                 session.duration_minutes = int((session.ended_at - session.started_at).total_seconds() / 60)
         except ValueError:
             return 'Hora inválida.'
+        change_type = 'PROVIDER_ADJUST'
+    else:
+        change_type = 'PROVIDER_ADJUST'
 
     session.needs_review = False
     session.save()
@@ -1365,11 +1468,12 @@ def _apply_session_review_adjust(session, new_time_str, reason, user):
     WorkSessionChangeLog.objects.create(
         session=session,
         changed_by=user,
-        change_type='PROVIDER_ADJUST',
+        change_type=change_type,
         before_json=before,
         after_json={
             'ended_at':         session.ended_at.isoformat() if session.ended_at else None,
             'duration_minutes': session.duration_minutes,
+            'is_overtime':      session.is_overtime,
         },
         reason=reason,
     )
@@ -1391,11 +1495,16 @@ def session_review_adjust(request, session_id):
         messages.error(request, 'El motivo es obligatorio para ajustar un cierre.')
         return redirect('provider:session_review_queue', company_id=session.site.company.id)
 
+    is_overtime = request.POST.get('action') == 'overtime'
+
     error = _apply_session_review_adjust(
-        session, request.POST.get('new_ended_at', '').strip(), reason, request.user
+        session, request.POST.get('new_ended_at', '').strip(), reason, request.user,
+        register_overtime=is_overtime,
     )
     if error:
         messages.error(request, error)
+    elif is_overtime:
+        messages.success(request, f'Hora extra registrada para {session.resource.display_name}.')
     else:
         messages.success(request, f'Cierre de {session.resource.display_name} revisado.')
 
@@ -1406,15 +1515,17 @@ def session_review_adjust(request, session_id):
 @require_POST
 def session_review_bulk_adjust(request):
     """
-    Ajusta VARIAS sesiones a la vez, con el mismo horario y motivo — para
-    resolver de un golpe un grupo de cierre masivo agrupado por partida
-    (botón "Usar mismo horario para todos" en la bandeja).
+    Ajusta VARIAS sesiones a la vez, con el mismo horario/acción y motivo —
+    para resolver de un golpe un grupo de cierre masivo agrupado por
+    partida (botones "Usar mismo horario para todos" / "Registrar horas
+    extras para todos" en la bandeja).
     """
     from work.models import WorkSession
 
     session_ids = request.POST.getlist('session_ids')
     reason      = request.POST.get('reason', '').strip()
     new_time    = request.POST.get('new_ended_at', '').strip()
+    is_overtime = request.POST.get('action') == 'overtime'
 
     if not session_ids:
         messages.error(request, 'No se seleccionó ninguna sesión.')
@@ -1435,9 +1546,12 @@ def session_review_bulk_adjust(request):
 
     resolved = 0
     for session in sessions:
-        error = _apply_session_review_adjust(session, new_time, reason, request.user)
+        error = _apply_session_review_adjust(
+            session, new_time, reason, request.user, register_overtime=is_overtime,
+        )
         if not error:
             resolved += 1
 
-    messages.success(request, f'{resolved} sesion{"es" if resolved != 1 else ""} revisada{"s" if resolved != 1 else ""}.')
+    accion_txt = 'con hora extra registrada' if is_overtime else 'revisada'
+    messages.success(request, f'{resolved} sesion{"es" if resolved != 1 else ""} {accion_txt}{"s" if resolved != 1 and not is_overtime else ""}.')
     return redirect('provider:session_review_queue', company_id=company.id)

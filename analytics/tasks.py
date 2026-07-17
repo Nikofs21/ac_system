@@ -1,176 +1,60 @@
 # -*- coding: utf-8 -*-
 """
-Tasks de Celery del modulo notifications.
+Tasks de Celery para el modulo analytics.
+Generacion del snapshot diario del Informe Diario de productividad.
 """
 import logging
-from datetime import time as dtime
 
 from celery import shared_task
-from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
-from django.utils import timezone
-from django.utils.html import escape
 
 logger = logging.getLogger(__name__)
 
 
-def _build_unassigned_email_html(site, schedule, trabajadores):
+@shared_task(name='analytics.generate_daily_snapshot')
+def generate_daily_snapshot_task(site_id, date_str):
     """
-    Arma el cuerpo HTML de la alerta "activos sin partida" — mismo formato
-    visual que la funcion de App Script que reemplaza (tabla con
-    Trabajador/RUT/Cargo, mismos colores y bordes). trabajadores es una
-    lista de dicts {'nombre', 'rut', 'cargo'}.
+    Genera (o regenera) el DailyProductivitySnapshot de una obra para una
+    fecha especifica.
+
+    Se dispara automaticamente desde work.auto_close_sessions apenas se
+    cierra el dia de una obra (ver work/tasks.py). Tambien se puede llamar
+    a mano desde el shell o un management command para generar snapshots
+    de dias historicos que quedaron sin generar (por ejemplo, al activar
+    este modulo por primera vez en una obra que ya tenia dias trabajados).
+
+    No hay proteccion de inmutabilidad a este nivel — quien dispare esta
+    tarea para un dia que ya tiene snapshot lo va a sobrescribir
+    (update_or_create). La regla de "los dias pasados no se recalculan" se
+    aplica en el punto de disparo (work/tasks.py no la llama si ya existe),
+    no aca, para que siga sirviendo como herramienta de recuperacion manual.
     """
-    filas = []
-    for w in trabajadores:
-        filas.append(
-            '<tr>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["nombre"])}</td>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["rut"])}</td>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["cargo"])}</td>'
-            '</tr>'
-        )
+    from datetime import date as date_cls
 
-    return (
-        '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">'
-        f'<p>Revisión de las {schedule.send_time.strftime("%H:%M")} hrs — {escape(site.name)}.</p>'
-        '<p>Los siguientes trabajadores se encuentran activos pero no poseen una partida abierta:</p>'
-        '<table style="border-collapse:collapse;width:100%;max-width:900px;">'
-        '<tr style="background:#f2f2f2;">'
-        '<th style="border:1px solid #ddd;padding:8px;">Trabajador</th>'
-        '<th style="border:1px solid #ddd;padding:8px;">RUT</th>'
-        '<th style="border:1px solid #ddd;padding:8px;">Cargo</th>'
-        '</tr>'
-        + ''.join(filas) +
-        '</table>'
-        '</div>'
-    )
-
-
-def _build_unassigned_email_text(site, schedule, trabajadores):
-    """Version texto plano, para clientes de correo que no rendericen HTML."""
-    lineas = [f'- {w["nombre"]} (RUT: {w["rut"] or "s/i"}, Cargo: {w["cargo"] or "s/i"})' for w in trabajadores]
-    return (
-        f'Revision de las {schedule.send_time.strftime("%H:%M")} hrs — {site.name}\n\n'
-        f'Los siguientes trabajadores estan activos en la obra pero no tienen '
-        f'una partida asignada en este momento:\n\n'
-        + '\n'.join(lineas)
-    )
-
-
-@shared_task(name='notifications.check_unassigned_workers')
-def check_unassigned_workers_task(hour, minute):
-    """
-    Disparada por Celery Beat a una hora exacta (ver notifications/services.py
-    ::ensure_unassigned_check_periodic_task), una vez por cada horario unico
-    que exista entre todas las obras. Revisa, para cada obra con un
-    SiteUnassignedAlertSchedule configurado a esta hora, si hay trabajadores
-    activos sin sesion abierta ahora mismo.
-
-    Regla de negocio: si no hay nadie sin partida, no se manda correo — "si
-    no se avisa nada, es porque todo esta bien".
-
-    La consulta de "quien esta activo sin sesion" replica intencionalmente
-    la misma logica de work.views.active_workers (unassigned_count): asignado
-    activo a la obra, sin sesion OPEN, y sin marca de "No en obra" hoy.
-    """
     from companies.models import Site
-    from resources.models import Resource, ResourceSiteAssignment
-    from work.models import WorkSession
-    from tracking.models import NoOnSiteEvent
-    from notifications.models import SiteUnassignedAlertSchedule, AlertLog
+    from analytics.calculator import calculate_daily_data
+    from analytics.models import DailyProductivitySnapshot
 
-    target_time = dtime(hour, minute)
-    schedules = SiteUnassignedAlertSchedule.objects.filter(
-        send_time=target_time, is_enabled=True,
-    ).select_related('site')
+    try:
+        site = Site.objects.get(id=site_id)
+    except Site.DoesNotExist:
+        logger.error(f'generate_daily_snapshot: obra {site_id} no existe.')
+        return {'error': 'site_not_found', 'site_id': site_id}
 
-    sent    = 0
-    skipped = 0
+    fecha = date_cls.fromisoformat(date_str)
+    data  = calculate_daily_data(site, fecha)
 
-    for schedule in schedules:
-        site = schedule.site
-
-        if site.status != 'ACTIVE':
-            continue
-
-        today = timezone.localdate()
-
-        assigned_ids = set(ResourceSiteAssignment.objects.filter(
-            site=site, status='ACTIVE',
-        ).values_list('resource_id', flat=True))
-
-        with_session_ids = set(WorkSession.objects.filter(
-            site=site, status='OPEN',
-        ).values_list('resource_id', flat=True))
-
-        no_on_site_ids = set(NoOnSiteEvent.objects.filter(
-            site=site, event_date=today, status='ACTIVE',
-        ).values_list('resource_id', flat=True))
-
-        unassigned_ids = assigned_ids - with_session_ids - no_on_site_ids
-
-        if not unassigned_ids:
-            skipped += 1
-            continue
-
-        trabajadores = [
-            {
-                'nombre': r.display_name,
-                'rut':    r.person_rut or '',
-                'cargo':  r.job_title.name if r.job_title else '',
-            }
-            for r in Resource.objects.filter(id__in=unassigned_ids)
-                .select_related('job_title')
-                .order_by('display_name')
-        ]
-
-        asunto = f'{site.name}: {len(trabajadores)} trabajador(es) activo(s) sin partida asignada'
-        cuerpo_texto = _build_unassigned_email_text(site, schedule, trabajadores)
-        cuerpo_html  = _build_unassigned_email_html(site, schedule, trabajadores)
-
-        recipients_json = {'to': schedule.to_emails, 'cc': schedule.cc_emails}
-
-        try:
-            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@novusimperium.cl')
-            email = EmailMultiAlternatives(
-                subject=asunto,
-                body=cuerpo_texto,
-                from_email=from_email,
-                to=schedule.to_emails,
-                cc=schedule.cc_emails or None,
-            )
-            email.attach_alternative(cuerpo_html, 'text/html')
-            email.send(fail_silently=False)
-
-            AlertLog.objects.create(
-                site=site,
-                alert_type='ACTIVE_WITHOUT_SESSION',
-                status='SENT',
-                recipients_json=recipients_json,
-                payload_json={
-                    'trabajadores': [w['nombre'] for w in trabajadores],
-                    'hora':         schedule.send_time.strftime('%H:%M'),
-                },
-            )
-            sent += 1
-        except Exception as e:
-            logger.error(
-                f'Error enviando alerta "activos sin partida" ({site.name}, '
-                f'{schedule.send_time}): {e}',
-                exc_info=True,
-            )
-            AlertLog.objects.create(
-                site=site,
-                alert_type='ACTIVE_WITHOUT_SESSION',
-                status='FAILED',
-                recipients_json=recipients_json,
-                error_detail=str(e),
-            )
+    snapshot, created = DailyProductivitySnapshot.objects.update_or_create(
+        site=site, date=fecha, defaults=data
+    )
 
     logger.info(
-        f'check_unassigned_workers[{hour:02d}:{minute:02d}]: '
-        f'{sent} correo(s) enviado(s), {skipped} obra(s) sin novedad.'
+        f'generate_daily_snapshot: {"creado" if created else "actualizado"} '
+        f'{site.name} — {fecha} (trab={data["trab"]}, hh={data["hh"]}, icc={data["icc"]})'
     )
-    return {'sent': sent, 'skipped': skipped}
-
+    return {
+        'site_id': site_id,
+        'date':    date_str,
+        'created': created,
+        'trab':    data['trab'],
+        'hh':      float(data['hh']),
+    }

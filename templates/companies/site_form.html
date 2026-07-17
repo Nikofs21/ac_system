@@ -12,6 +12,18 @@
 {% if mode == 'edit' %}
   {% with unassigned_ok=site.unassigned_alert_schedules.exists %}
   {% with high_risk_ok=site.alert_configs.all %}
+  {% if not workday_configured %}
+    <div style="max-width:560px; margin:12px auto 0;">
+      <div class="ac-alert ac-alert-danger">
+        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+        <span style="font-size:12.5px;">
+          Esta obra tiene días del horario semanal sin decidir — sin esto, el cierre
+          automático de sesiones no funciona correctamente para esos días. Complétalo
+          más abajo.
+        </span>
+      </div>
+    </div>
+  {% endif %}
   {% if not unassigned_ok or not high_risk_ok %}
     <div style="max-width:560px; margin:12px auto 0;">
       <div class="ac-alert ac-alert-warn">

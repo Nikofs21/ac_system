@@ -13,48 +13,82 @@ from django.utils.html import escape
 
 logger = logging.getLogger(__name__)
 
+SIN_SUPERVISOR_LABEL = 'Sin supervisor asignado'
+
+
+def _agrupar_por_supervisor(trabajadores):
+    """
+    Agrupa una lista de dicts (que ya traen 'supervisor') en un dict
+    ordenado {nombre_supervisor: [trabajadores]}. Los sin supervisor
+    quedan al final, bajo SIN_SUPERVISOR_LABEL — no se descartan ni se
+    mezclan con los demas, para que se note que falta ese dato.
+    """
+    grupos = {}
+    for w in trabajadores:
+        key = w['supervisor'] or SIN_SUPERVISOR_LABEL
+        grupos.setdefault(key, []).append(w)
+
+    ordenados = {k: v for k, v in sorted(grupos.items()) if k != SIN_SUPERVISOR_LABEL}
+    if SIN_SUPERVISOR_LABEL in grupos:
+        ordenados[SIN_SUPERVISOR_LABEL] = grupos[SIN_SUPERVISOR_LABEL]
+    return ordenados
+
 
 def _build_unassigned_email_html(site, schedule, trabajadores):
     """
     Arma el cuerpo HTML de la alerta "activos sin partida" — mismo formato
     visual que la funcion de App Script que reemplaza (tabla con
-    Trabajador/RUT/Cargo, mismos colores y bordes). trabajadores es una
-    lista de dicts {'nombre', 'rut', 'cargo'}.
+    Trabajador/RUT/Cargo), agrupado por supervisor para lectura mas comoda.
+    trabajadores es una lista de dicts {'nombre', 'rut', 'cargo', 'supervisor'}.
     """
-    filas = []
-    for w in trabajadores:
-        filas.append(
-            '<tr>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["nombre"])}</td>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["rut"])}</td>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["cargo"])}</td>'
+    grupos = _agrupar_por_supervisor(trabajadores)
+    bloques = []
+
+    for supervisor, lista in grupos.items():
+        filas = []
+        for w in lista:
+            filas.append(
+                '<tr>'
+                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["nombre"])}</td>'
+                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["rut"])}</td>'
+                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["cargo"])}</td>'
+                '</tr>'
+            )
+        bloques.append(
+            f'<p style="margin:16px 0 6px;font-weight:bold;">{escape(supervisor)} '
+            f'<span style="font-weight:normal;color:#666;">({len(lista)})</span></p>'
+            '<table style="border-collapse:collapse;width:100%;max-width:900px;">'
+            '<tr style="background:#f2f2f2;">'
+            '<th style="border:1px solid #ddd;padding:8px;">Trabajador</th>'
+            '<th style="border:1px solid #ddd;padding:8px;">RUT</th>'
+            '<th style="border:1px solid #ddd;padding:8px;">Cargo</th>'
             '</tr>'
+            + ''.join(filas) +
+            '</table>'
         )
 
     return (
         '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">'
         f'<p>Revisión de las {schedule.send_time.strftime("%H:%M")} hrs — {escape(site.name)}.</p>'
         '<p>Los siguientes trabajadores se encuentran activos pero no poseen una partida abierta:</p>'
-        '<table style="border-collapse:collapse;width:100%;max-width:900px;">'
-        '<tr style="background:#f2f2f2;">'
-        '<th style="border:1px solid #ddd;padding:8px;">Trabajador</th>'
-        '<th style="border:1px solid #ddd;padding:8px;">RUT</th>'
-        '<th style="border:1px solid #ddd;padding:8px;">Cargo</th>'
-        '</tr>'
-        + ''.join(filas) +
-        '</table>'
+        + ''.join(bloques) +
         '</div>'
     )
 
 
 def _build_unassigned_email_text(site, schedule, trabajadores):
-    """Version texto plano, para clientes de correo que no rendericen HTML."""
-    lineas = [f'- {w["nombre"]} (RUT: {w["rut"] or "s/i"}, Cargo: {w["cargo"] or "s/i"})' for w in trabajadores]
+    """Version texto plano, agrupada por supervisor igual que la HTML."""
+    grupos = _agrupar_por_supervisor(trabajadores)
+    bloques = []
+    for supervisor, lista in grupos.items():
+        lineas = [f'  - {w["nombre"]} (RUT: {w["rut"] or "s/i"}, Cargo: {w["cargo"] or "s/i"})' for w in lista]
+        bloques.append(f'{supervisor} ({len(lista)}):\n' + '\n'.join(lineas))
+
     return (
         f'Revision de las {schedule.send_time.strftime("%H:%M")} hrs — {site.name}\n\n'
         f'Los siguientes trabajadores estan activos en la obra pero no tienen '
         f'una partida asignada en este momento:\n\n'
-        + '\n'.join(lineas)
+        + '\n\n'.join(bloques)
     )
 
 
@@ -73,6 +107,12 @@ def check_unassigned_workers_task(hour, minute):
     La consulta de "quien esta activo sin sesion" replica intencionalmente
     la misma logica de work.views.active_workers (unassigned_count): asignado
     activo a la obra, sin sesion OPEN, y sin marca de "No en obra" hoy.
+
+    El "supervisor" de cada trabajador se toma de
+    ResourceSiteAssignment.assigned_by — es el campo mas cercano a "quien
+    es responsable de este trabajador en la obra" que existe hoy en el
+    modelo. No es un campo llamado "supervisor" en si (no existe uno), asi
+    que si en algun momento se agrega uno mas preciso, cambiar aqui.
     """
     from companies.models import Site
     from resources.models import Resource, ResourceSiteAssignment
@@ -96,9 +136,11 @@ def check_unassigned_workers_task(hour, minute):
 
         today = timezone.localdate()
 
-        assigned_ids = set(ResourceSiteAssignment.objects.filter(
+        assignments = ResourceSiteAssignment.objects.filter(
             site=site, status='ACTIVE',
-        ).values_list('resource_id', flat=True))
+        ).select_related('assigned_by')
+        assignment_by_resource = {a.resource_id: a for a in assignments}
+        assigned_ids = set(assignment_by_resource.keys())
 
         with_session_ids = set(WorkSession.objects.filter(
             site=site, status='OPEN',
@@ -114,16 +156,16 @@ def check_unassigned_workers_task(hour, minute):
             skipped += 1
             continue
 
-        trabajadores = [
-            {
-                'nombre': r.display_name,
-                'rut':    r.person_rut or '',
-                'cargo':  r.job_title.name if r.job_title else '',
-            }
-            for r in Resource.objects.filter(id__in=unassigned_ids)
-                .select_related('job_title')
-                .order_by('display_name')
-        ]
+        trabajadores = []
+        for r in Resource.objects.filter(id__in=unassigned_ids).select_related('job_title').order_by('display_name'):
+            asignacion = assignment_by_resource.get(r.id)
+            supervisor = asignacion.assigned_by.get_full_name() if asignacion and asignacion.assigned_by else ''
+            trabajadores.append({
+                'nombre':     r.display_name,
+                'rut':        r.person_rut or '',
+                'cargo':      r.job_title.name if r.job_title else '',
+                'supervisor': supervisor,
+            })
 
         asunto = f'{site.name}: {len(trabajadores)} trabajador(es) activo(s) sin partida asignada'
         cuerpo_texto = _build_unassigned_email_text(site, schedule, trabajadores)
@@ -175,47 +217,62 @@ def check_unassigned_workers_task(hour, minute):
     return {'sent': sent, 'skipped': skipped}
 
 
-
 def _build_high_risk_email_html(site, trabajadores):
     """
     Mismo lenguaje visual que la tabla de "activos sin partida", agregando
-    la columna Partida (para saber en cual tarea de riesgo esta cada uno).
+    la columna Partida, agrupado por supervisor (WorkSession.responsible_supervisor,
+    que es un campo directo y confiable — no una aproximacion como en el
+    caso de "activos sin partida").
     """
-    filas = []
-    for w in trabajadores:
-        filas.append(
-            '<tr>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["nombre"])}</td>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["rut"])}</td>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["cargo"])}</td>'
-            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["partida"])}</td>'
+    grupos = _agrupar_por_supervisor(trabajadores)
+    bloques = []
+
+    for supervisor, lista in grupos.items():
+        filas = []
+        for w in lista:
+            filas.append(
+                '<tr>'
+                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["nombre"])}</td>'
+                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["rut"])}</td>'
+                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["cargo"])}</td>'
+                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["partida"])}</td>'
+                '</tr>'
+            )
+        bloques.append(
+            f'<p style="margin:16px 0 6px;font-weight:bold;">{escape(supervisor)} '
+            f'<span style="font-weight:normal;color:#666;">({len(lista)})</span></p>'
+            '<table style="border-collapse:collapse;width:100%;max-width:900px;">'
+            '<tr style="background:#f2f2f2;">'
+            '<th style="border:1px solid #ddd;padding:8px;">Trabajador</th>'
+            '<th style="border:1px solid #ddd;padding:8px;">RUT</th>'
+            '<th style="border:1px solid #ddd;padding:8px;">Cargo</th>'
+            '<th style="border:1px solid #ddd;padding:8px;">Partida</th>'
             '</tr>'
+            + ''.join(filas) +
+            '</table>'
         )
 
     return (
         '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">'
         f'<p>Trabajadores actualmente en partidas de <strong>alto riesgo</strong> — {escape(site.name)}.</p>'
-        '<table style="border-collapse:collapse;width:100%;max-width:900px;">'
-        '<tr style="background:#f2f2f2;">'
-        '<th style="border:1px solid #ddd;padding:8px;">Trabajador</th>'
-        '<th style="border:1px solid #ddd;padding:8px;">RUT</th>'
-        '<th style="border:1px solid #ddd;padding:8px;">Cargo</th>'
-        '<th style="border:1px solid #ddd;padding:8px;">Partida</th>'
-        '</tr>'
-        + ''.join(filas) +
-        '</table>'
+        + ''.join(bloques) +
         '</div>'
     )
 
 
 def _build_high_risk_email_text(site, trabajadores):
-    lineas = [
-        f'- {w["nombre"]} (RUT: {w["rut"] or "s/i"}, Cargo: {w["cargo"] or "s/i"}) — {w["partida"]}'
-        for w in trabajadores
-    ]
+    grupos = _agrupar_por_supervisor(trabajadores)
+    bloques = []
+    for supervisor, lista in grupos.items():
+        lineas = [
+            f'  - {w["nombre"]} (RUT: {w["rut"] or "s/i"}, Cargo: {w["cargo"] or "s/i"}) — {w["partida"]}'
+            for w in lista
+        ]
+        bloques.append(f'{supervisor} ({len(lista)}):\n' + '\n'.join(lineas))
+
     return (
         f'Trabajadores actualmente en partidas de alto riesgo — {site.name}\n\n'
-        + '\n'.join(lineas)
+        + '\n\n'.join(bloques)
     )
 
 
@@ -256,14 +313,15 @@ def send_high_risk_accumulator_task(site_id):
 
     open_risk_sessions = WorkSession.objects.filter(
         site=site, status='OPEN', risk_level_snapshot='HIGH_RISK',
-    ).select_related('resource', 'resource__job_title', 'task')
+    ).select_related('resource', 'resource__job_title', 'task', 'responsible_supervisor')
 
     trabajadores = [
         {
-            'nombre':  s.resource.display_name,
-            'rut':     s.resource.person_rut or '',
-            'cargo':   s.resource.job_title.name if s.resource.job_title else '',
-            'partida': s.task_name_snapshot,
+            'nombre':     s.resource.display_name,
+            'rut':        s.resource.person_rut or '',
+            'cargo':      s.resource.job_title.name if s.resource.job_title else '',
+            'partida':    s.task_name_snapshot,
+            'supervisor': s.responsible_supervisor.get_full_name() if s.responsible_supervisor else '',
         }
         for s in open_risk_sessions.order_by('resource__display_name')
     ]

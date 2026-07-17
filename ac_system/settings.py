@@ -168,10 +168,25 @@ AUTO_CLOSE_SESSIONS_MINUTE = 0
 # work/session_review_utils.py::mark_needs_review_if_late.
 REVIEW_CLOSE_THRESHOLD_MINUTES = 45
 
+# Tope legal de hora extra diaria en Chile (2 horas). Usado por la accion
+# "Registrar horas extras" de la bandeja de revision de cierres — ver
+# companies/views_provider.py::_apply_session_review_adjust.
+OVERTIME_MAX_MINUTES = 120
+
 CELERY_BEAT_SCHEDULE = {
     'auto-close-sessions': {
         'task': 'work.auto_close_sessions',
         'schedule': crontab(hour=AUTO_CLOSE_SESSIONS_HOUR, minute=AUTO_CLOSE_SESSIONS_MINUTE),
+    },
+    'expire-stale-review-flags': {
+        'task': 'work.expire_stale_review_flags',
+        # 30 min despues del cierre nocturno, para no competir por los
+        # mismos registros al mismo tiempo. Calculado con modulo para no
+        # romperse si AUTO_CLOSE_SESSIONS_MINUTE cambia a un valor > 29.
+        'schedule': crontab(
+            hour=(AUTO_CLOSE_SESSIONS_HOUR + (AUTO_CLOSE_SESSIONS_MINUTE + 30) // 60) % 24,
+            minute=(AUTO_CLOSE_SESSIONS_MINUTE + 30) % 60,
+        ),
     },
 }
 
