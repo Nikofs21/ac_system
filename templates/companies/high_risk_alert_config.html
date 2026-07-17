@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="ac-page-header">
+  <div>
+    <h1 class="ac-page-title">Alto riesgo — correo acumulado</h1>
+    <p class="ac-page-sub">{{ site.name }}</p>
+  </div>
+  <a href="{% url 'provider:site_edit' site.id %}" class="ac-btn ac-btn-secondary ac-btn-sm">
+    <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver a la obra
+  </a>
+</div>
+
+<div style="max-width:560px; margin:0 auto; padding:20px 16px;">
+
+  <div class="ac-alert ac-alert-info" style="margin-bottom:16px;">
+    <i class="ti ti-info-circle" aria-hidden="true"></i>
+    <span style="font-size:12px;">
+      La confirmación en pantalla (checkbox de EPP) al iniciar una partida de alto riesgo
+      <strong>siempre está activa</strong> y no se puede desactivar acá. Esto es un correo
+      adicional y opcional: un resumen de quién está trabajando en partidas de riesgo,
+      agrupado cada {{ batch_minutes }} minutos para no mandar un correo por cada trabajador.
+    </span>
+  </div>
+
+  <div class="ac-card">
+    <div class="ac-card-header"><span class="ac-card-title">Configuración</span></div>
+    <div class="ac-card-body">
+      <form method="post">
+        {% csrf_token %}
+
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ac-text); margin-bottom:16px;">
+          <input type="checkbox" name="is_enabled" {% if config.is_enabled %}checked{% endif %}
+                 style="accent-color:var(--ac-blue); width:16px; height:16px;">
+          Enviar correo acumulado de alto riesgo
+        </label>
+
+        <div class="ac-field">
+          <label class="ac-label">Destinatarios (TO)</label>
+          <textarea class="ac-input" name="to_emails" rows="2"
+                    placeholder="uno@novusimperium.cl, otro@novusimperium.cl">{% if config %}{{ config.to_emails|join:", " }}{% endif %}</textarea>
+          <div class="ac-field-hint">Separados por coma, punto y coma o salto de línea.</div>
+        </div>
+
+        <div class="ac-field" style="margin-bottom:0;">
+          <label class="ac-label">Destinatarios en copia (CC, opcional)</label>
+          <textarea class="ac-input" name="cc_emails" rows="2"
+                    placeholder="jefe.terreno@constructora.cl">{% if config %}{{ config.cc_emails|join:", " }}{% endif %}</textarea>
+        </div>
+
+        <div style="margin-top:20px;">
+          <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
+            <i class="ti ti-check" aria-hidden="true"></i> Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

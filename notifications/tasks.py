@@ -174,3 +174,141 @@ def check_unassigned_workers_task(hour, minute):
     )
     return {'sent': sent, 'skipped': skipped}
 
+
+
+def _build_high_risk_email_html(site, trabajadores):
+    """
+    Mismo lenguaje visual que la tabla de "activos sin partida", agregando
+    la columna Partida (para saber en cual tarea de riesgo esta cada uno).
+    """
+    filas = []
+    for w in trabajadores:
+        filas.append(
+            '<tr>'
+            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["nombre"])}</td>'
+            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["rut"])}</td>'
+            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["cargo"])}</td>'
+            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["partida"])}</td>'
+            '</tr>'
+        )
+
+    return (
+        '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">'
+        f'<p>Trabajadores actualmente en partidas de <strong>alto riesgo</strong> — {escape(site.name)}.</p>'
+        '<table style="border-collapse:collapse;width:100%;max-width:900px;">'
+        '<tr style="background:#f2f2f2;">'
+        '<th style="border:1px solid #ddd;padding:8px;">Trabajador</th>'
+        '<th style="border:1px solid #ddd;padding:8px;">RUT</th>'
+        '<th style="border:1px solid #ddd;padding:8px;">Cargo</th>'
+        '<th style="border:1px solid #ddd;padding:8px;">Partida</th>'
+        '</tr>'
+        + ''.join(filas) +
+        '</table>'
+        '</div>'
+    )
+
+
+def _build_high_risk_email_text(site, trabajadores):
+    lineas = [
+        f'- {w["nombre"]} (RUT: {w["rut"] or "s/i"}, Cargo: {w["cargo"] or "s/i"}) — {w["partida"]}'
+        for w in trabajadores
+    ]
+    return (
+        f'Trabajadores actualmente en partidas de alto riesgo — {site.name}\n\n'
+        + '\n'.join(lineas)
+    )
+
+
+@shared_task(name='notifications.send_high_risk_accumulator')
+def send_high_risk_accumulator_task(site_id):
+    """
+    Dispara con countdown (no crontab) desde
+    notifications.services.schedule_high_risk_accumulator, unos minutos
+    despues de la primera sesion de alto riesgo que la gatillo (debounce
+    para no mandar un correo por cada trabajador si varios entran casi al
+    mismo tiempo).
+
+    Al momento de disparar, consulta TODAS las sesiones de alto riesgo
+    abiertas en ese instante — no solo la que la gatillo — para que el
+    correo sea un acumulado real, no un correo por evento.
+    """
+    from companies.models import Site
+    from work.models import WorkSession
+    from notifications.models import SiteAlertConfig, AlertLog
+
+    try:
+        site = Site.objects.get(id=site_id)
+    except Site.DoesNotExist:
+        return {'sent': 0}
+
+    try:
+        config = SiteAlertConfig.objects.get(site=site, alert_type='HIGH_RISK_START')
+    except SiteAlertConfig.DoesNotExist:
+        return {'sent': 0}
+
+    # Cierra la ventana de debounce — el proximo inicio de riesgo agenda un
+    # envio nuevo en vez de sumarse a este, que ya esta por salir.
+    config.pending_send_at = None
+    config.save(update_fields=['pending_send_at'])
+
+    if not config.is_enabled or not config.to_emails:
+        return {'sent': 0}
+
+    open_risk_sessions = WorkSession.objects.filter(
+        site=site, status='OPEN', risk_level_snapshot='HIGH_RISK',
+    ).select_related('resource', 'resource__job_title', 'task')
+
+    trabajadores = [
+        {
+            'nombre':  s.resource.display_name,
+            'rut':     s.resource.person_rut or '',
+            'cargo':   s.resource.job_title.name if s.resource.job_title else '',
+            'partida': s.task_name_snapshot,
+        }
+        for s in open_risk_sessions.order_by('resource__display_name')
+    ]
+
+    recipients_json = {'to': config.to_emails, 'cc': config.cc_emails}
+
+    if not trabajadores:
+        # Se agendo el envio pero para cuando disparo ya no quedaba nadie
+        # en riesgo (sesiones cerradas en el intertanto) — no es un error,
+        # se registra como omitido para trazabilidad.
+        AlertLog.objects.create(
+            site=site, alert_type='HIGH_RISK_START', status='SKIPPED',
+            recipients_json=recipients_json,
+        )
+        return {'sent': 0}
+
+    asunto = f'{site.name}: {len(trabajadores)} trabajador(es) en partidas de alto riesgo'
+    cuerpo_texto = _build_high_risk_email_text(site, trabajadores)
+    cuerpo_html  = _build_high_risk_email_html(site, trabajadores)
+
+    try:
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@novusimperium.cl')
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=cuerpo_texto,
+            from_email=from_email,
+            to=config.to_emails,
+            cc=config.cc_emails or None,
+        )
+        email.attach_alternative(cuerpo_html, 'text/html')
+        email.send(fail_silently=False)
+
+        AlertLog.objects.create(
+            site=site, alert_type='HIGH_RISK_START', status='SENT',
+            recipients_json=recipients_json,
+            payload_json={'trabajadores': [w['nombre'] for w in trabajadores]},
+        )
+        return {'sent': 1}
+    except Exception as e:
+        logger.error(
+            f'Error enviando alerta acumulada de alto riesgo ({site.name}): {e}',
+            exc_info=True,
+        )
+        AlertLog.objects.create(
+            site=site, alert_type='HIGH_RISK_START', status='FAILED',
+            recipients_json=recipients_json, error_detail=str(e),
+        )
+        return {'sent': 0}

@@ -13,6 +13,7 @@ from access.models import UserPreference
 from resources.models import Resource, ResourceSiteAssignment
 from tracking.models import NoOnSiteEvent
 from .models import Stage, TaskCatalog, StageTask, WorkSession
+from work.session_review_utils import mark_needs_review_if_late
 from core.permissions import (
     user_has_permission,
     site_feature_enabled,
@@ -414,6 +415,7 @@ def assignment_confirm(request):
                     open_session.ended_by         = request.user
                     open_session.closure_origin   = 'MANUAL'
                     open_session.duration_minutes = duration
+                    mark_needs_review_if_late(open_session, now)
                     open_session.save()
                     sessions_replaced += 1
 
@@ -439,6 +441,15 @@ def assignment_confirm(request):
                     operated_by_role_code=role_code,
                 )
                 sessions_created += 1
+
+        if sessions_created and task_catalog.risk_level == 'HIGH_RISK':
+            # Correo acumulado opcional — no confundir con la confirmacion
+            # en pantalla (checkbox EPP), que ya paso y es obligatoria
+            # siempre. Esto es un aviso adicional, con su propio debounce
+            # para no mandar un correo por cada trabajador si varios entran
+            # casi al mismo tiempo a la misma partida de riesgo.
+            from notifications.services import schedule_high_risk_accumulator
+            schedule_high_risk_accumulator(site)
 
         _clear_assignment_session(request)
 
@@ -556,6 +567,7 @@ def close_session(request, session_id):
     session.ended_by         = request.user
     session.closure_origin   = 'MANUAL'
     session.duration_minutes = duration
+    mark_needs_review_if_late(session, now)
     session.save()
 
     if request.htmx:
@@ -594,6 +606,7 @@ def mass_close(request):
             session.ended_by         = request.user
             session.closure_origin   = 'MASS_CLOSE'
             session.duration_minutes = duration
+            mark_needs_review_if_late(session, now)
             session.save()
             count += 1
 
@@ -635,6 +648,7 @@ def close_by_task(request, task_id):
             session.ended_by         = request.user
             session.closure_origin   = 'TASK_CLOSE'
             session.duration_minutes = duration
+            mark_needs_review_if_late(session, now)
             session.save()
             count += 1
 

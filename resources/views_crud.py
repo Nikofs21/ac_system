@@ -100,6 +100,7 @@ def resource_create(request):
         'can_machines':   can_machines,
         'page_title':     'Agregar trabajador',
         'perms_ctx':      get_user_context_permissions(request.user, site),
+        'full_screen':    True,
     })
 
 
@@ -162,6 +163,7 @@ def _handle_resource_create(request, site, can_people, can_machines):
             'post_data':      request.POST,
             'page_title':     'Agregar trabajador',
             'perms_ctx':      get_user_context_permissions(request.user, site),
+            'full_screen':    True,
         })
 
     # Obtener categoría
@@ -305,6 +307,7 @@ def resource_edit(request, resource_id):
             'post_data':     request.POST,
             'page_title':    f'Editar — {resource.display_name}',
             'perms_ctx':     get_user_context_permissions(request.user, site),
+            'full_screen':    True,
         })
 
     return render(request, 'resources/resource_form.html', {
@@ -317,6 +320,7 @@ def resource_edit(request, resource_id):
         'can_machines':  can_machines,
         'page_title':    f'Editar — {resource.display_name}',
         'perms_ctx':     get_user_context_permissions(request.user, site),
+        'full_screen':    True,
     })
 
 

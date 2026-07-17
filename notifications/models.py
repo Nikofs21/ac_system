@@ -21,6 +21,11 @@ class SiteAlertConfig(models.Model):
     to_emails = models.JSONField(default=list)
     cc_emails = models.JSONField(default=list, blank=True)
     send_window_json = models.JSONField(null=True, blank=True)
+    pending_send_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Uso interno (debounce de HIGH_RISK_START): si tiene fecha futura, '
+                  'ya hay un envio acumulado agendado y no hay que agendar otro.'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -66,3 +71,50 @@ class AlertLog(models.Model):
 
     def __str__(self):
         return f'{self.site.name} - {self.alert_type} ({self.status})'
+
+
+class SiteUnassignedAlertSchedule(models.Model):
+    """
+    Horario de revision "activos sin partida asignada" por obra. A
+    diferencia de SiteAlertConfig (un registro por tipo de alerta), una
+    obra puede tener VARIOS horarios distintos acá, cada uno con sus
+    propios destinatarios (ej: 09:00 avisa a un supervisor, 15:30 avisa
+    al jefe de terreno).
+
+    Regla de negocio (definida junto al cliente): si a la hora de revision
+    no hay ningun trabajador activo sin sesion, no se manda nada — "si no
+    se avisa nada, es porque todo esta bien". El envio real corre en
+    notifications.tasks.check_unassigned_workers_task, disparado por un
+    PeriodicTask de Celery Beat sincronizado a esta hora exacta (ver
+    notifications/services.py::ensure_unassigned_check_periodic_task).
+
+    Opcional para el cliente: no bloquea la creacion/activacion de la obra.
+    """
+    site = models.ForeignKey(
+        'companies.Site',
+        on_delete=models.CASCADE,
+        related_name='unassigned_alert_schedules'
+    )
+    send_time = models.TimeField(
+        help_text='Hora local de la obra en que se revisa si hay activos sin partida.'
+    )
+    to_emails = models.JSONField(default=list, help_text='Lista de correos TO.')
+    cc_emails = models.JSONField(default=list, blank=True, help_text='Lista de correos CC (opcional).')
+    is_enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'notifications_site_unassigned_alert_schedule'
+        verbose_name = 'Horario de alerta — activos sin partida'
+        verbose_name_plural = 'Horarios de alerta — activos sin partida'
+        ordering = ['site', 'send_time']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['site', 'send_time'],
+                name='unique_unassigned_schedule_per_site_time'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.site.name} — {self.send_time.strftime("%H:%M")}'

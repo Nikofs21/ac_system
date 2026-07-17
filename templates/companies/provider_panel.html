@@ -188,6 +188,12 @@
         </div>
       </div>
       <div style="display:flex; gap:6px;">
+        {% if pending_review_count %}
+          <a href="{% url 'provider:session_review_queue' selected_company.id %}" class="btn-sm btn-sm-danger">
+            <i class="ti ti-clock-exclamation" style="font-size:13px;" aria-hidden="true"></i>
+            {{ pending_review_count }} cierre{{ pending_review_count|pluralize }} por revisar
+          </a>
+        {% endif %}
         <a href="{% url 'provider:company_edit' selected_company.id %}" class="btn-sm">
           <i class="ti ti-pencil" style="font-size:13px;" aria-hidden="true"></i> Editar
         </a>
@@ -234,6 +240,13 @@
             <div class="site-name-text">{{ site.name }}</div>
             <div class="site-code-text">{{ site.code }}{% if site.address %}&nbsp;·&nbsp;{{ site.address|truncatechars:40 }}{% endif %}</div>
           </div>
+          {% if site.config_gaps %}
+            <span class="ac-badge" style="background:#fdf3e0; color:#a56b00; font-size:10px; white-space:nowrap;"
+                  title="Sin configurar: {{ site.config_gaps|join:', ' }}">
+              <i class="ti ti-alert-triangle" style="font-size:11px;" aria-hidden="true"></i>
+              {{ site.config_gaps|length }} pendiente{{ site.config_gaps|length|pluralize }}
+            </span>
+          {% endif %}
           <span class="status-badge status-{{ site.status }}">{{ site.get_status_display }}</span>
           <a href="{% url 'provider:site_edit' site.id %}" class="btn-sm" style="margin-left:6px;">
             <i class="ti ti-pencil" style="font-size:12px;" aria-hidden="true"></i>

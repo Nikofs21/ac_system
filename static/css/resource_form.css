@@ -1,0 +1,102 @@
+/* ============================================================
+   RESOURCE_FORM.CSS — Alta / edición de trabajador o maquinaria
+   Sin mockup Onio propio (no existía en el prototipo de 3 pantallas).
+   Se arma reutilizando el lenguaje visual ya migrado:
+   - Header eyebrow + título: igual criterio que .assign-header
+     (Nueva Partida paso 1).
+   - Inputs pill: mismo patron que .ac-field-pill del login
+     (auth.css), pero con label arriba porque acá sí hacen falta.
+   - Modales (cargo, baja, eliminar cargo): reusan .modal-overlay /
+     .simple-card / .field-simple ya definidos para "No en obra"
+     (dashboard.css + workers.css) — no se crea un modal nuevo.
+
+   .rf-screen/.rf-view: agregados al shell compartido en dashboard.css
+   (mismo criterio que .home-screen/.wk-screen/.assign-screen — ver
+   comentario ahí de por qué el shell vive en un solo lugar).
+
+   Mismo criterio de breakpoint que el resto: base = telefono/tablet
+   vertical, @media(min-width:900px) = escritorio con sidebar.
+   ============================================================ */
+
+.rf-page{ flex: 1; overflow-y: auto; padding: 20px 20px 100px; min-height: 0; }
+
+.rf-header{ margin-bottom: 22px; }
+.rf-eyebrow{ font-family: var(--font-brand); font-weight: 400; font-size: 12.5px; color: var(--muted); margin-bottom: 2px; }
+.rf-title{ font-family: var(--font-brand); font-weight: 400; font-size: 21px; color: var(--ink); letter-spacing: -0.01em; }
+
+/* ---------- Selector de tipo (segmentado, 2 botones) ---------- */
+.rf-type-selector{ display: flex; gap: 8px; margin-bottom: 18px; }
+.rf-type-btn{
+  flex: 1; height: 56px; border: 1.4px solid #e3e4ea; border-radius: var(--radius-lg);
+  background: var(--ac-white); cursor: pointer; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px; transition: border-color .15s, background .15s;
+  font-family: var(--font-brand);
+}
+.rf-type-btn i{ font-size: 19px; color: var(--muted); }
+.rf-type-btn span{ font-size: 12px; font-weight: 500; color: var(--ink-soft); }
+.rf-type-btn.selected{ border-color: var(--login-blue); background: var(--ac-blue-soft); }
+.rf-type-btn.selected i, .rf-type-btn.selected span{ color: var(--login-blue); }
+
+.rf-section{ display: none; }
+.rf-section.visible{ display: block; }
+
+/* ---------- Campo pill (mismo patron que .ac-field-pill de auth.css,
+   con label arriba) ---------- */
+.rf-field{ margin-bottom: 16px; }
+.rf-field label{ display: block; font-family: var(--font-brand); font-weight: 400; font-size: 13.5px; color: #1a1a1a; margin-bottom: 7px; }
+.rf-field input, .rf-field select{
+  width: 100%; font-family: var(--font-brand); font-weight: 400; font-size: 14.5px;
+  color: var(--login-input-text); background: var(--ac-white);
+  border: 1.4px solid #e3e4ea; border-radius: var(--radius-pill);
+  padding: 15px 20px; outline: none; transition: border-color .15s ease;
+  appearance: none; box-sizing: border-box;
+}
+.rf-field select{
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8c98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 18px center; background-size: 16px; padding-right: 46px;
+}
+.rf-field input::placeholder{ color: #9c9ea9; }
+.rf-field input:focus, .rf-field select:focus{ border-color: var(--login-blue); }
+.rf-field input.error, .rf-field select.error{ border-color: var(--ac-danger); }
+.rf-field-hint{ font-family: var(--font-brand); font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+.rf-field-error{ font-family: var(--font-brand); font-size: 12px; color: var(--ac-danger); margin-top: 6px; }
+
+.rf-cargo-row{ display: flex; gap: 8px; align-items: center; }
+.rf-cargo-row .rf-field{ flex: 1; margin-bottom: 0; }
+.rf-btn-icon{
+  height: 46px; width: 46px; flex-shrink: 0; border: 1.4px solid #e3e4ea; border-radius: var(--radius-pill);
+  background: var(--ac-white); cursor: pointer; font-size: 16px; color: var(--login-blue);
+  display: flex; align-items: center; justify-content: center; transition: background .12s;
+}
+.rf-btn-icon:hover{ background: var(--ac-blue-soft); border-color: var(--login-blue); }
+.rf-btn-icon.danger{ color: var(--ac-danger); }
+.rf-btn-icon.danger:hover{ background: var(--ac-danger-bg); border-color: var(--ac-danger); }
+
+/* ---------- Botones de pie (reusa el estilo pill del login, mas
+   una variante danger propia de esta pantalla) ---------- */
+.rf-footer{ padding-top: 8px; display: flex; flex-direction: column; gap: 10px; }
+.rf-btn-pill-danger{
+  width: 100%; font-family: var(--font-brand); font-weight: 400; font-size: 15px;
+  color: var(--ac-danger); background: var(--ac-danger-bg); border: 1.4px solid var(--ac-danger-bdr);
+  border-radius: var(--radius-pill); padding: 14.5px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+  transition: background .15s ease;
+}
+.rf-btn-pill-danger:hover{ background: #fde2e1; }
+
+/* =========================================================
+   TABLET / DESKTOP
+   ========================================================= */
+@media (min-width: 600px){
+  .rf-page{ max-width: 560px; margin: 0 auto; padding-top: 32px; }
+}
+
+@media (min-width: 600px){
+  .rf-btn-icon{ height: 54px; width: 54px; font-size: 17px; }
+}
+
+@media (min-width: 900px){
+  /* .rf-screen y .rf-view (desktop): definidos en dashboard.css */
+  .rf-page{ width: 100%; max-width: 640px; margin: 0 auto; padding: 40px 44px 40px; }
+  .rf-title{ font-size: 26px; }
+}

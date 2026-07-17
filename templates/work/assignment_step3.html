@@ -100,6 +100,7 @@
 
       <form method="post" id="confirm-form">
         {% csrf_token %}
+        <input type="hidden" name="start" value="1">
         <div class="assign-footer">
           <button
             type="{% if has_high_risk %}button{% else %}submit{% endif %}"

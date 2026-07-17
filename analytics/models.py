@@ -146,7 +146,8 @@ class DailyProductivitySnapshot(models.Model):
     Snapshot diario de productividad por obra, para el Informe Diario (MOD).
 
     Una fila por obra+dia. Se genera por Celery justo despues del cierre
-    automatico de sesiones (SiteWorkdayConfig.auto_close_time) y desde ese
+    automatico de sesiones (job nocturno global, ver
+    settings.AUTO_CLOSE_SESSIONS_HOUR) y desde ese
     momento es inmutable: no hay recalculo retroactivo porque las sesiones
     de dias pasados no se pueden editar (permiso sessions_review.edit_today).
 

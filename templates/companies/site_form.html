@@ -9,6 +9,27 @@
   </div>
 </div>
 
+{% if mode == 'edit' %}
+  {% with unassigned_ok=site.unassigned_alert_schedules.exists %}
+  {% with high_risk_ok=site.alert_configs.all %}
+  {% if not unassigned_ok or not high_risk_ok %}
+    <div style="max-width:560px; margin:12px auto 0;">
+      <div class="ac-alert ac-alert-warn">
+        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+        <span style="font-size:12.5px;">
+          Esta obra tiene alertas por correo sin configurar todavía —
+          {% if not unassigned_ok %}"Activos sin partida"{% endif %}
+          {% if not unassigned_ok and not high_risk_ok %} y {% endif %}
+          {% if not high_risk_ok %}"Alto riesgo"{% endif %}.
+          No bloquea nada, pero revísalo más abajo cuando puedas.
+        </span>
+      </div>
+    </div>
+  {% endif %}
+  {% endwith %}
+  {% endwith %}
+{% endif %}
+
 <div style="max-width:560px; margin:0 auto; padding:20px 16px;">
   <form method="post">
     {% csrf_token %}
@@ -69,6 +90,70 @@
       </div>
     </div>
 
+    <div class="ac-card" style="margin-bottom:16px;">
+      <div class="ac-card-header">
+        <span class="ac-card-title">Horario semanal <span style="color:var(--ac-danger);">*</span></span>
+      </div>
+      <div class="ac-card-body">
+        <p style="font-size:12px; color:var(--ac-text-sub); margin:0 0 14px;">
+          Obligatorio. Define, día por día, si la obra trabaja y en qué horario.
+          Esto es lo que usa el cierre automático de sesiones — sin esto configurado,
+          las sesiones abiertas de este día simplemente no se cierran solas.
+        </p>
+
+        {% if errors.workdays %}
+          <div class="ac-field-error" style="margin-bottom:12px;">{{ errors.workdays }}</div>
+        {% endif %}
+
+        {% for row in workday_rows %}
+        <div style="border:1px solid var(--ac-border); border-radius:10px; padding:12px; margin-bottom:10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:{% if row.mode == 'LABORABLE' %}10px{% else %}0{% endif %};">
+            <span style="font-size:13px; font-weight:600; color:var(--ac-text);">{{ row.label }}</span>
+            <select class="ac-select workday-mode-select" data-weekday="{{ row.weekday }}"
+                    name="workday_{{ row.weekday }}_mode" style="width:auto; min-width:150px;" required>
+              <option value="" {% if not row.mode %}selected{% endif %} disabled>-- Selecciona --</option>
+              <option value="LABORABLE" {% if row.mode == 'LABORABLE' %}selected{% endif %}>Laborable</option>
+              <option value="NO_LABORABLE" {% if row.mode == 'NO_LABORABLE' %}selected{% endif %}>No laborable</option>
+            </select>
+          </div>
+
+          <div class="workday-detail-{{ row.weekday }}" style="display:{% if row.mode == 'LABORABLE' %}block{% else %}none{% endif %};">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+              <div class="ac-field" style="margin-bottom:0;">
+                <label class="ac-label" style="font-size:11px;">Hora entrada</label>
+                <input class="ac-input" type="time" name="workday_{{ row.weekday }}_start" value="{{ row.work_start_time }}">
+              </div>
+              <div class="ac-field" style="margin-bottom:0;">
+                <label class="ac-label" style="font-size:11px;">Hora salida</label>
+                <input class="ac-input" type="time" name="workday_{{ row.weekday }}_end" value="{{ row.work_end_time }}">
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+              <div class="ac-field" style="margin-bottom:0;">
+                <label class="ac-label" style="font-size:11px;">Colación desde (opcional)</label>
+                <input class="ac-input" type="time" name="workday_{{ row.weekday }}_lunch_start" value="{{ row.lunch_start_time }}">
+              </div>
+              <div class="ac-field" style="margin-bottom:0;">
+                <label class="ac-label" style="font-size:11px;">Colación hasta (opcional)</label>
+                <input class="ac-input" type="time" name="workday_{{ row.weekday }}_lunch_end" value="{{ row.lunch_end_time }}">
+              </div>
+            </div>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ac-text-sub); margin-bottom:4px;">
+              <input type="checkbox" name="workday_{{ row.weekday }}_deduct_lunch" {% if row.deduct_lunch %}checked{% endif %}
+                     style="accent-color:var(--ac-blue); width:14px; height:14px;">
+              Descontar colación de las HH (índice de cumplimiento)
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ac-text-sub);">
+              <input type="checkbox" name="workday_{{ row.weekday }}_overtime" {% if row.all_day_overtime %}checked{% endif %}
+                     style="accent-color:var(--ac-blue); width:14px; height:14px;">
+              Todo el día es hora extra (sin cierre automático)
+            </label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
     <div class="ac-card" style="margin-bottom:20px;">
       <div class="ac-card-header"><span class="ac-card-title">Módulos habilitados en esta obra</span></div>
       <div class="ac-card-body">
@@ -85,6 +170,34 @@
       </div>
     </div>
 
+    {% if mode == 'edit' %}
+    <div class="ac-card" style="margin-bottom:20px;">
+      <div class="ac-card-header"><span class="ac-card-title">Alertas por correo (opcional)</span></div>
+      <div class="ac-card-body">
+        <a href="{% url 'provider:unassigned_alert_list' site.id %}"
+           style="display:flex; align-items:center; justify-content:space-between; text-decoration:none; padding:8px 0; border-bottom:1px solid var(--ac-border);">
+          <span style="font-size:13px; color:var(--ac-text);">
+            Activos sin partida asignada
+            {% if not site.unassigned_alert_schedules.exists %}
+              <span class="ac-badge" style="background:#fdf3e0; color:#a56b00; margin-left:6px;">Sin configurar</span>
+            {% endif %}
+          </span>
+          <i class="ti ti-chevron-right" style="color:var(--ac-text-hint);" aria-hidden="true"></i>
+        </a>
+        <a href="{% url 'provider:high_risk_alert_config' site.id %}"
+           style="display:flex; align-items:center; justify-content:space-between; text-decoration:none; padding:8px 0;">
+          <span style="font-size:13px; color:var(--ac-text);">
+            Alto riesgo — correo acumulado
+            {% if not site.alert_configs.all %}
+              <span class="ac-badge" style="background:#fdf3e0; color:#a56b00; margin-left:6px;">Sin configurar</span>
+            {% endif %}
+          </span>
+          <i class="ti ti-chevron-right" style="color:var(--ac-text-hint);" aria-hidden="true"></i>
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
     <div style="display:flex; flex-direction:column; gap:10px;">
       <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
         <i class="ti ti-{% if mode == 'create' %}plus{% else %}check{% endif %}" aria-hidden="true"></i>
@@ -95,4 +208,15 @@
     </div>
   </form>
 </div>
+
+<script>
+  document.querySelectorAll('.workday-mode-select').forEach(function(select) {
+    select.addEventListener('change', function() {
+      var weekday = this.dataset.weekday;
+      var detail  = document.querySelector('.workday-detail-' + weekday);
+      if (!detail) return;
+      detail.style.display = this.value === 'LABORABLE' ? 'block' : 'none';
+    });
+  });
+</script>
 {% endblock %}

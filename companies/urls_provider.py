@@ -39,4 +39,17 @@ urlpatterns = [
     path('rra/<int:site_id>/cargo-valor/',           views_rra.rra_cargo_valor_save,   name='rra_cargo_valor_save'),
     path('rra/cargo-valor/<int:valor_id>/eliminar/', views_rra.rra_cargo_valor_delete, name='rra_cargo_valor_delete'),
     path('rra/<int:site_id>/exportar/',              views_rra.rra_export,             name='rra_export'),
+
+    # Alertas — activos sin partida asignada (multiples horarios por obra)
+    path('obra/<int:site_id>/alertas/sin-partida/',                 views_provider.unassigned_alert_list,   name='unassigned_alert_list'),
+    path('obra/<int:site_id>/alertas/sin-partida/guardar/',         views_provider.unassigned_alert_save,   name='unassigned_alert_save'),
+    path('alertas/sin-partida/<int:schedule_id>/eliminar/',         views_provider.unassigned_alert_delete, name='unassigned_alert_delete'),
+
+    # Alertas — alto riesgo (correo acumulado, opcional)
+    path('obra/<int:site_id>/alertas/alto-riesgo/', views_provider.high_risk_alert_config, name='high_risk_alert_config'),
+
+    # Bandeja de revisión — cierres manuales fuera de horario
+    path('empresa/<int:company_id>/revision-cierres/', views_provider.session_review_queue, name='session_review_queue'),
+    path('revision-cierres/<int:session_id>/ajustar/',  views_provider.session_review_adjust, name='session_review_adjust'),
+    path('revision-cierres/ajustar-masivo/',             views_provider.session_review_bulk_adjust, name='session_review_bulk_adjust'),
 ]

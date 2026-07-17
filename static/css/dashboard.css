@@ -25,10 +25,10 @@
    bug se repetía pantalla por pantalla. Con un solo lugar, se arregla
    una vez y aplica a todas.
    ============================================================ */
-.home-screen, .wk-screen, .assign-screen{
+.home-screen, .wk-screen, .assign-screen, .rf-screen{
   min-height: 100vh; width: 100%; background: var(--ac-white); display: flex; flex-direction: column;
 }
-.home-view, .wk-view, .assign-view{ flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.home-view, .wk-view, .assign-view, .rf-view{ flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
 /* ---------- Top bar (solo mobile/tablet) ---------- */
 .home-top{
@@ -233,10 +233,10 @@
      de que el navegador calcule bien el crecimiento del panel flex.
      Mismo patron que usan Gmail, Notion, Linear: una columna de ancho
      comodo, centrada, no de borde a borde en monitores anchos. */
-  .home-screen, .wk-screen, .assign-screen{
+  .home-screen, .wk-screen, .assign-screen, .rf-screen{
     flex-direction: row; width: 100%; max-width: 1600px; margin: 0 auto;
   }
-  .home-view, .wk-view, .assign-view{ min-width: 0; flex: 1; height: 100vh; display: flex; flex-direction: column; }
+  .home-view, .wk-view, .assign-view, .rf-view{ min-width: 0; flex: 1; height: 100vh; display: flex; flex-direction: column; }
   .home-top{ display: none; }
   .dash-site-title{
     display: block; font-family: var(--font-brand); font-weight: 400; font-size: 32px;

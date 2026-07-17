@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="ac-page-header">
+  <div>
+    <h1 class="ac-page-title">Activos sin partida</h1>
+    <p class="ac-page-sub">{{ site.name }}</p>
+  </div>
+  <a href="{% url 'provider:site_edit' site.id %}" class="ac-btn ac-btn-secondary ac-btn-sm">
+    <i class="ti ti-arrow-left" aria-hidden="true"></i> Volver a la obra
+  </a>
+</div>
+
+<div style="max-width:640px; margin:0 auto; padding:20px 16px;">
+
+  <div class="ac-alert ac-alert-info" style="margin-bottom:16px;">
+    <i class="ti ti-info-circle" aria-hidden="true"></i>
+    <span style="font-size:12px;">
+      Opcional. Puedes definir varios horarios — cada uno revisa si hay trabajadores activos
+      sin partida asignada a esa hora, y solo manda correo si encuentra a alguien.
+      Si todos tienen partida asignada, no se envía nada.
+    </span>
+  </div>
+
+  {% if schedules %}
+    <div class="ac-card" style="margin-bottom:20px;">
+      <div class="ac-card-header"><span class="ac-card-title">Horarios configurados</span></div>
+      <div class="ac-card-body" style="padding:0;">
+        {% for s in schedules %}
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--ac-border);">
+          <div>
+            <div style="font-size:14px; font-weight:600; color:var(--ac-text);">
+              {{ s.send_time|time:"H:i" }}
+              {% if not s.is_enabled %}
+                <span class="ac-badge" style="background:#eee; color:#888; margin-left:6px;">Desactivado</span>
+              {% endif %}
+            </div>
+            <div style="font-size:12px; color:var(--ac-text-sub); margin-top:2px;">
+              TO: {{ s.to_emails|join:", " }}
+              {% if s.cc_emails %}<br>CC: {{ s.cc_emails|join:", " }}{% endif %}
+            </div>
+          </div>
+          <form method="post" action="{% url 'provider:unassigned_alert_delete' s.id %}"
+                onsubmit="return confirm('¿Eliminar el horario {{ s.send_time|time:"H:i" }}?');">
+            {% csrf_token %}
+            <button type="submit" class="ac-btn ac-btn-danger ac-btn-sm">
+              <i class="ti ti-trash" aria-hidden="true"></i>
+            </button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="ac-card">
+    <div class="ac-card-header"><span class="ac-card-title">Agregar horario</span></div>
+    <div class="ac-card-body">
+      <form method="post" action="{% url 'provider:unassigned_alert_save' site.id %}">
+        {% csrf_token %}
+
+        <div class="ac-field">
+          <label class="ac-label">Hora de revisión</label>
+          <input class="ac-input" type="time" name="send_time" required>
+        </div>
+
+        <div class="ac-field">
+          <label class="ac-label">Destinatarios (TO)</label>
+          <textarea class="ac-input" name="to_emails" rows="2"
+                    placeholder="uno@novusimperium.cl, otro@novusimperium.cl" required></textarea>
+          <div class="ac-field-hint">Separados por coma, punto y coma o salto de línea.</div>
+        </div>
+
+        <div class="ac-field">
+          <label class="ac-label">Destinatarios en copia (CC, opcional)</label>
+          <textarea class="ac-input" name="cc_emails" rows="2"
+                    placeholder="supervisor@constructora.cl"></textarea>
+        </div>
+
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ac-text); margin-bottom:16px;">
+          <input type="checkbox" name="is_enabled" checked
+                 style="accent-color:var(--ac-blue); width:16px; height:16px;">
+          Activo
+        </label>
+
+        <button type="submit" class="ac-btn ac-btn-primary ac-btn-full">
+          <i class="ti ti-plus" aria-hidden="true"></i> Guardar horario
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

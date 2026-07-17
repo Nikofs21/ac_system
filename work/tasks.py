@@ -3,6 +3,13 @@
 Tasks de Celery para el modulo work.
 Cierre automatico de sesiones al fin de jornada.
 Respeta feriados nacionales y dias extra por obra.
+
+Disparo: Celery Beat ejecuta esta tarea UNA VEZ AL DIA, a la hora fija
+definida en settings.AUTO_CLOSE_SESSIONS_HOUR/MINUTE (ver
+ac_system/settings.py, CELERY_BEAT_SCHEDULE). Es un valor global para
+todo el sistema, no configurable por obra — el solo hecho de que esta
+tarea se ejecute es la señal de "hay que cerrar lo que quedo abierto",
+no hace falta que cada obra compare su propia hora de cierre.
 """
 import logging
 import pytz
@@ -18,7 +25,7 @@ logger = logging.getLogger(__name__)
 @shared_task(name='work.auto_close_sessions')
 def auto_close_sessions_task():
     """
-    Cierra sesiones de trabajo abiertas cuyo auto_close_time ya paso.
+    Cierra todas las sesiones de trabajo que hayan quedado abiertas del dia.
     Salta obras si el dia es feriado nacional o dia no laborable de la obra.
     """
     from companies.models import Site, SiteWorkdayConfig
@@ -78,16 +85,7 @@ def auto_close_sessions_task():
             if workday.all_day_overtime:
                 continue
 
-            if not workday.auto_close_time or not workday.work_end_time:
-                continue
-
-            # ── Verificar si ya paso la hora de cierre automatico ─────────
-            auto_close_dt_local = site_tz.localize(
-                datetime.combine(today, workday.auto_close_time)
-            )
-            auto_close_dt_utc = auto_close_dt_local.astimezone(pytz.utc)
-
-            if now_utc < auto_close_dt_utc:
+            if not workday.work_end_time:
                 continue
 
             # ── Hora oficial de fin de jornada (lo que se escribe) ────────
@@ -123,11 +121,10 @@ def auto_close_sessions_task():
                             'status':          'AUTO_CLOSED',
                             'ended_at':        normal_end_dt_utc.isoformat(),
                             'work_end_time':   str(workday.work_end_time),
-                            'auto_close_time': str(workday.auto_close_time),
                         },
                         reason = (
-                            f'Cierre automatico. Jornada oficial: {workday.work_end_time}. '
-                            f'Cierre configurado a las: {workday.auto_close_time}.'
+                            f'Cierre automatico (job nocturno). '
+                            f'Jornada oficial: {workday.work_end_time}.'
                         ),
                     )
                     closed_sessions += 1
@@ -158,16 +155,16 @@ def auto_close_sessions_task():
                         after_json  = {
                             'ended_at':        normal_end_dt_utc.isoformat(),
                             'work_end_time':   str(workday.work_end_time),
-                            'auto_close_time': str(workday.auto_close_time),
-                            'reason':          'Cierre automatico por fin de jornada',
+                            'reason':          'Cierre automatico por fin de jornada (job nocturno)',
                         },
                     )
                     closed_sub_sessions += 1
 
             # ── Generar el snapshot diario del Informe de Productividad ────
             # Una vez que llegamos aca, el dia de esta obra ya esta cerrado
-            # (auto_close_time paso). Si ya existe snapshot para site+today
-            # no se regenera — los dias pasados son inmutables por diseño.
+            # (la tarea nocturna ya paso). Si ya existe snapshot para
+            # site+today no se regenera — los dias pasados son inmutables
+            # por diseño.
             already_exists = DailyProductivitySnapshot.objects.filter(
                 site=site, date=today
             ).exists()
@@ -195,3 +192,4 @@ def auto_close_sessions_task():
         'skipped_holiday':     skipped_holiday,
         'snapshots_triggered': snapshots_triggered,
     }
+

@@ -167,12 +167,6 @@ class SiteWorkdayConfig(models.Model):
         help_text='Hora oficial de fin de jornada. Define las HH pagadas del dia '
                   'y se escribe como ended_at en los cierres automaticos.'
     )
-    auto_close_time = models.TimeField(
-        null=True, blank=True,
-        help_text='Hora en que Celery cierra sesiones abiertas automaticamente. '
-                  'Debe ser posterior a work_end_time (buffer recomendado: 1-2 hrs). '
-                  'Si se deja vacio, esta jornada no tiene cierre automatico.'
-    )
     lunch_start_time = models.TimeField(null=True, blank=True)
     lunch_end_time = models.TimeField(null=True, blank=True)
     deduct_lunch_from_icc = models.BooleanField(default=True)
@@ -203,11 +197,6 @@ class SiteWorkdayConfig(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
-        if self.auto_close_time and self.work_end_time:
-            if self.auto_close_time <= self.work_end_time:
-                raise ValidationError(
-                    'La hora de cierre automatico debe ser posterior a la hora de fin de jornada.'
-                )
         if self.effective_to and self.effective_from and self.effective_to < self.effective_from:
             raise ValidationError(
                 'La fecha de termino de vigencia no puede ser anterior a la de inicio.'

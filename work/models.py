@@ -326,6 +326,12 @@ class WorkSession(models.Model):
         choices=ClosureOrigin.choices,
         null=True, blank=True
     )
+    needs_review = models.BooleanField(
+        default=False,
+        help_text='Cierre manual/masivo/por partida cuya hora real se aleja del '
+                  'work_end_time oficial mas alla de settings.REVIEW_CLOSE_THRESHOLD_MINUTES. '
+                  'No bloquea nada — es solo para la bandeja de revision del prestador.'
+    )
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -355,6 +361,7 @@ class WorkSessionChangeLog(models.Model):
         OVERTIME_SPLIT = 'OVERTIME_SPLIT', 'Division hora extra'
         VOID           = 'VOID',           'Anulacion'
         AUTO_CLOSE     = 'AUTO_CLOSE',     'Cierre automatico'
+        PROVIDER_ADJUST = 'PROVIDER_ADJUST', 'Ajuste del prestador (bandeja de revision)'
 
     session = models.ForeignKey(
         WorkSession,

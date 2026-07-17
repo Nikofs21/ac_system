@@ -14,16 +14,182 @@ from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 from django.utils import timezone
 from django.urls import reverse
+from django.conf import settings
 
 from .models import (
     Company, CompanyConfig, CompanyMembership,
-    Site, SiteConfig, SiteMembership,
+    Site, SiteConfig, SiteMembership, SiteWorkdayConfig,
 )
+from notifications.models import SiteUnassignedAlertSchedule, SiteAlertConfig
+from notifications.services import ensure_unassigned_check_periodic_task
 from access.models import Role, Permission, RolePermission, SiteMembershipPermissionOverride, ManagementTitle
 from core.permissions import is_novus_super, is_provider_actor, MOI_EXCLUDED_ROLE_CODES
 from core.rut_utils import find_rut_conflict
 
 User = get_user_model()
+
+
+def _build_workday_rows(site=None, post_data=None):
+    """
+    Arma las 7 filas (Lunes..Domingo) para la seccion "Horario semanal" del
+    formulario de obra. Cada fila trae 'mode' en LABORABLE/NO_LABORABLE/None
+    — None significa "sin decision tomada todavia", que es justamente lo
+    que la validacion de _handle_site_save no deja pasar al guardar.
+
+    Con post_data (reintento tras error de validacion): relee lo que el
+    usuario habia tipeado, para no hacerlo repetir todo.
+    Sin post_data pero con site (pantalla de edicion): prellena con la
+    jornada vigente hoy de cada dia, si existe. Una obra creada antes de
+    este formulario (o cuyo dia nunca se configuro) simplemente aparece
+    con mode=None — fuerza a decidir de nuevo, no asume nada en su nombre.
+    """
+    rows = []
+    existing_by_weekday = {}
+    if site is not None and post_data is None:
+        hoy = timezone.localdate()
+        for weekday in range(7):
+            existing_by_weekday[weekday] = SiteWorkdayConfig.objects.filter(
+                site=site, weekday=weekday, is_active=True,
+            ).order_by('-effective_from').first()
+
+    for weekday, label in SiteWorkdayConfig.Weekday.choices:
+        if post_data is not None:
+            prefix = f'workday_{weekday}_'
+            rows.append({
+                'weekday':          weekday,
+                'label':            label,
+                'mode':             post_data.get(prefix + 'mode', ''),
+                'work_start_time':  post_data.get(prefix + 'start', ''),
+                'work_end_time':    post_data.get(prefix + 'end', ''),
+                'lunch_start_time': post_data.get(prefix + 'lunch_start', ''),
+                'lunch_end_time':   post_data.get(prefix + 'lunch_end', ''),
+                'deduct_lunch':     post_data.get(prefix + 'deduct_lunch') == 'on',
+                'all_day_overtime': post_data.get(prefix + 'overtime') == 'on',
+            })
+        else:
+            cfg = existing_by_weekday.get(weekday)
+            rows.append({
+                'weekday':          weekday,
+                'label':            label,
+                'mode':             'LABORABLE' if cfg else '',
+                'work_start_time':  cfg.work_start_time.strftime('%H:%M') if cfg else '',
+                'work_end_time':    cfg.work_end_time.strftime('%H:%M') if cfg else '',
+                'lunch_start_time': cfg.lunch_start_time.strftime('%H:%M') if cfg and cfg.lunch_start_time else '',
+                'lunch_end_time':   cfg.lunch_end_time.strftime('%H:%M') if cfg and cfg.lunch_end_time else '',
+                'deduct_lunch':     cfg.deduct_lunch_from_icc if cfg else True,
+                'all_day_overtime': cfg.all_day_overtime if cfg else False,
+            })
+    return rows
+
+
+def _validate_and_parse_workdays(post_data):
+    """
+    Valida las 7 filas de horario semanal. Devuelve (parsed, error) donde
+    error es un string listo para mostrar, o None si todo esta correcto.
+    parsed es una lista de dicts solo con los datos ya convertidos a time(),
+    lista para pasar directo a SiteWorkdayConfig.objects.update_or_create.
+
+    Regla no negociable: las 7 filas deben tener una decision explicita
+    (LABORABLE o NO_LABORABLE). No hay default silencioso — si al usuario
+    se le olvida un dia, se le dice cual falta en vez de asumir algo.
+    """
+    from datetime import datetime as dt
+
+    parsed = []
+    dias_sin_decidir = []
+
+    for weekday, label in SiteWorkdayConfig.Weekday.choices:
+        prefix = f'workday_{weekday}_'
+        mode = post_data.get(prefix + 'mode', '')
+
+        if mode not in ('LABORABLE', 'NO_LABORABLE'):
+            dias_sin_decidir.append(label)
+            continue
+
+        if mode == 'NO_LABORABLE':
+            parsed.append({'weekday': weekday, 'mode': 'NO_LABORABLE'})
+            continue
+
+        start_str = post_data.get(prefix + 'start', '').strip()
+        end_str   = post_data.get(prefix + 'end', '').strip()
+
+        if not start_str or not end_str:
+            return None, f'Falta la hora de entrada o salida para {label}.'
+
+        try:
+            work_start = dt.strptime(start_str, '%H:%M').time()
+            work_end   = dt.strptime(end_str, '%H:%M').time()
+        except ValueError:
+            return None, f'Hora invalida en {label}.'
+
+        if work_end <= work_start:
+            return None, f'{label}: la hora de salida debe ser posterior a la de entrada.'
+
+        lunch_start_str = post_data.get(prefix + 'lunch_start', '').strip()
+        lunch_end_str   = post_data.get(prefix + 'lunch_end', '').strip()
+        lunch_start = lunch_end = None
+
+        if lunch_start_str or lunch_end_str:
+            if not (lunch_start_str and lunch_end_str):
+                return None, f'{label}: si defines colación, indica ambas horas (inicio y término).'
+            try:
+                lunch_start = dt.strptime(lunch_start_str, '%H:%M').time()
+                lunch_end   = dt.strptime(lunch_end_str, '%H:%M').time()
+            except ValueError:
+                return None, f'Hora de colación inválida en {label}.'
+            if lunch_end <= lunch_start:
+                return None, f'{label}: el término de colación debe ser posterior al inicio.'
+
+        parsed.append({
+            'weekday':           weekday,
+            'mode':              'LABORABLE',
+            'work_start_time':   work_start,
+            'work_end_time':     work_end,
+            'lunch_start_time':  lunch_start,
+            'lunch_end_time':    lunch_end,
+            'deduct_lunch_from_icc': post_data.get(prefix + 'deduct_lunch') == 'on',
+            'all_day_overtime':      post_data.get(prefix + 'overtime') == 'on',
+        })
+
+    if dias_sin_decidir:
+        return None, (
+            'Debes indicar si estos días son laborables o no: '
+            + ', '.join(dias_sin_decidir) + '.'
+        )
+
+    return parsed, None
+
+
+def _save_workdays(site, parsed_workdays):
+    """
+    Aplica las 7 filas ya validadas a SiteWorkdayConfig. Reemplazo completo
+    por dia: se borran las filas vigentes de ese weekday y se crea una
+    nueva — este formulario es "la config actual", no un historial de
+    excepciones por fecha (eso, si hace falta a futuro, es una pantalla
+    aparte para ajustes puntuales, no esta).
+    """
+    effective_from = site.start_date or timezone.localdate()
+
+    for row in parsed_workdays:
+        SiteWorkdayConfig.objects.filter(
+            site=site, weekday=row['weekday'],
+        ).delete()
+
+        if row['mode'] == 'NO_LABORABLE':
+            continue
+
+        SiteWorkdayConfig.objects.create(
+            site=site,
+            weekday=row['weekday'],
+            work_start_time=row['work_start_time'],
+            work_end_time=row['work_end_time'],
+            lunch_start_time=row['lunch_start_time'],
+            lunch_end_time=row['lunch_end_time'],
+            deduct_lunch_from_icc=row['deduct_lunch_from_icc'],
+            all_day_overtime=row['all_day_overtime'],
+            is_active=True,
+            effective_from=effective_from,
+        )
 
 
 def require_provider(view_func):
@@ -98,30 +264,54 @@ def provider_panel(request):
     selected_company = None
     sites = []
     company_config = None
+    pending_review_count = 0
 
     if company_id:
         selected_company = get_object_or_404(Company, id=company_id)
         if not _check_company_access(request, selected_company):
             return redirect('access_denied')
-        sites = Site.objects.filter(
-            company=selected_company
-        ).exclude(status='ARCHIVED').order_by('name')
+        sites = list(
+            Site.objects.filter(company=selected_company)
+            .exclude(status='ARCHIVED')
+            .prefetch_related('unassigned_alert_schedules', 'alert_configs')
+            .order_by('name')
+        )
+
+        # Indicadores "sin configurar" — solo lo que se puede detectar sin
+        # ambigüedad (existe la fila o no existe). El horario semanal
+        # queda fuera a propósito: SiteWorkdayConfig no distingue "día
+        # marcado explícitamente como no laborable" de "día nunca tocado",
+        # así que no hay forma confiable de avisar sin falsos positivos.
+        for site in sites:
+            gaps = []
+            if not site.unassigned_alert_schedules.all():
+                gaps.append('Activos sin partida')
+            if not any(ac.alert_type == 'HIGH_RISK_START' for ac in site.alert_configs.all()):
+                gaps.append('Alto riesgo')
+            site.config_gaps = gaps
+
         try:
             company_config = selected_company.config
         except CompanyConfig.DoesNotExist:
             company_config = None
+
+        from work.models import WorkSession
+        pending_review_count = WorkSession.objects.filter(
+            site__company=selected_company, needs_review=True,
+        ).count()
     elif companies.exists():
         selected_company = companies.first()
         return redirect(f'/prestador/?company={selected_company.id}')
 
     return render(request, 'companies/provider_panel.html', {
-        'companies':        companies,
-        'selected_company': selected_company,
-        'sites':            sites,
-        'company_config':   company_config,
-        'page_title':       'Panel del prestador',
-        'active_tab':       request.GET.get('tab', 'obras'),
-        'is_novus_super':   is_novus_super(request.user),
+        'companies':            companies,
+        'selected_company':     selected_company,
+        'sites':                sites,
+        'company_config':       company_config,
+        'page_title':           'Panel del prestador',
+        'active_tab':           request.GET.get('tab', 'obras'),
+        'is_novus_super':       is_novus_super(request.user),
+        'pending_review_count': pending_review_count,
     })
 
 
@@ -283,10 +473,11 @@ def site_create(request, company_id):
         return _handle_site_save(request, company, None)
 
     return render(request, 'companies/site_form.html', {
-        'mode':       'create',
-        'company':    company,
-        'page_title': f'Nueva obra — {company.name}',
-        'site_flags': _site_module_flags(),
+        'mode':         'create',
+        'company':      company,
+        'page_title':   f'Nueva obra — {company.name}',
+        'site_flags':   _site_module_flags(),
+        'workday_rows': _build_workday_rows(),
     })
 
 
@@ -306,12 +497,13 @@ def site_edit(request, site_id):
         return _handle_site_save(request, site.company, site)
 
     return render(request, 'companies/site_form.html', {
-        'mode':       'edit',
-        'company':    site.company,
-        'site':       site,
-        'config':     config,
-        'page_title': f'Editar — {site.name}',
-        'site_flags': _site_module_flags(config),
+        'mode':         'edit',
+        'company':      site.company,
+        'site':         site,
+        'config':       config,
+        'page_title':   f'Editar — {site.name}',
+        'site_flags':   _site_module_flags(config),
+        'workday_rows': _build_workday_rows(site=site),
     })
 
 
@@ -337,19 +529,24 @@ def _handle_site_save(request, company, site):
     elif site and Site.objects.filter(company=company, code=code).exclude(id=site.id).exists():
         errors['code'] = 'Ya existe una obra con ese código en esta empresa.'
 
+    parsed_workdays, workday_error = _validate_and_parse_workdays(request.POST)
+    if workday_error:
+        errors['workdays'] = workday_error
+
     if errors:
         try:
             config = site.config if site else None
         except Exception:
             config = None
         return render(request, 'companies/site_form.html', {
-            'mode':       'create' if site is None else 'edit',
-            'company':    company,
-            'site':       site,
-            'errors':     errors,
-            'post_data':  request.POST,
-            'page_title': f'Nueva obra — {company.name}' if site is None else f'Editar — {site.name}',
-            'site_flags': _site_module_flags(config),
+            'mode':         'create' if site is None else 'edit',
+            'company':      company,
+            'site':         site,
+            'errors':       errors,
+            'post_data':    request.POST,
+            'page_title':   f'Nueva obra — {company.name}' if site is None else f'Editar — {site.name}',
+            'site_flags':   _site_module_flags(config),
+            'workday_rows': _build_workday_rows(post_data=request.POST),
         })
 
     with transaction.atomic():
@@ -380,6 +577,8 @@ def _handle_site_save(request, company, site):
         config.use_orgchart               = use_orgchart
         config.enable_no_on_site_tracking = enable_no_on_site
         config.save()
+
+        _save_workdays(site, parsed_workdays)
 
         # Si quien crea la obra NO es novus_super, igual necesita su propio
         # acceso operativo (la señal solo cubre a los novus_super existentes).
@@ -912,3 +1111,333 @@ def management_user_edit(request, user_id, company_id):
         'current_management_title_id': company_membership.management_title_id if company_membership else None,
         'page_title':                  f'Editar obras — {target_user.get_full_name()}',
     })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ALERTAS — ACTIVOS SIN PARTIDA ASIGNADA
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _parse_email_list(raw):
+    """
+    Convierte un textarea (correos separados por coma, punto y coma o
+    salto de linea) en una lista limpia. Devuelve (lista, error) — error
+    es None si todo esta bien formado.
+    """
+    import re
+    if not raw or not raw.strip():
+        return [], None
+
+    items  = re.split(r'[,\n;]+', raw)
+    emails = [e.strip() for e in items if e.strip()]
+    email_re = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+    invalidos = [e for e in emails if not email_re.match(e)]
+
+    if invalidos:
+        return None, f'Correo(s) con formato invalido: {", ".join(invalidos)}'
+    return emails, None
+
+
+@require_provider
+def unassigned_alert_list(request, site_id):
+    """
+    Lista + formulario de alta para los horarios de alerta "activos sin
+    partida" de una obra. Opcional — una obra puede no tener ninguno.
+    """
+    site = get_object_or_404(Site, id=site_id)
+    if not _check_company_access(request, site.company):
+        return redirect('access_denied')
+
+    schedules = SiteUnassignedAlertSchedule.objects.filter(site=site).order_by('send_time')
+
+    return render(request, 'companies/unassigned_alert_list.html', {
+        'site':        site,
+        'schedules':   schedules,
+        'page_title':  f'Alertas — Activos sin partida — {site.name}',
+    })
+
+
+@require_provider
+@require_POST
+def unassigned_alert_save(request, site_id):
+    """
+    Crea o actualiza un horario de alerta. update_or_create por
+    (site, send_time) — si ya existe un horario a esa hora, lo actualiza
+    en vez de duplicar (coincide con la UniqueConstraint del modelo).
+    """
+    site = get_object_or_404(Site, id=site_id)
+    if not _check_company_access(request, site.company):
+        return redirect('access_denied')
+
+    send_time_str = request.POST.get('send_time', '').strip()
+    to_raw        = request.POST.get('to_emails', '')
+    cc_raw        = request.POST.get('cc_emails', '')
+    is_enabled    = request.POST.get('is_enabled') == 'on'
+
+    if not send_time_str:
+        messages.error(request, 'Debes indicar una hora.')
+        return redirect('provider:unassigned_alert_list', site_id=site.id)
+
+    from datetime import datetime as dt
+    try:
+        send_time = dt.strptime(send_time_str, '%H:%M').time()
+    except ValueError:
+        messages.error(request, 'Hora invalida.')
+        return redirect('provider:unassigned_alert_list', site_id=site.id)
+
+    to_emails, to_error = _parse_email_list(to_raw)
+    if to_error:
+        messages.error(request, f'Destinatarios (TO): {to_error}')
+        return redirect('provider:unassigned_alert_list', site_id=site.id)
+    if not to_emails:
+        messages.error(request, 'Debes indicar al menos un destinatario (TO).')
+        return redirect('provider:unassigned_alert_list', site_id=site.id)
+
+    cc_emails, cc_error = _parse_email_list(cc_raw)
+    if cc_error:
+        messages.error(request, f'Destinatarios (CC): {cc_error}')
+        return redirect('provider:unassigned_alert_list', site_id=site.id)
+
+    SiteUnassignedAlertSchedule.objects.update_or_create(
+        site=site, send_time=send_time,
+        defaults={
+            'to_emails':  to_emails,
+            'cc_emails':  cc_emails,
+            'is_enabled': is_enabled,
+        }
+    )
+
+    # Sincroniza el crontab exacto de Celery Beat para esta hora — si ya
+    # existia (otra obra la usa, o se estaba editando), no duplica nada.
+    ensure_unassigned_check_periodic_task(send_time.hour, send_time.minute)
+
+    messages.success(request, f'Horario {send_time.strftime("%H:%M")} guardado.')
+    return redirect('provider:unassigned_alert_list', site_id=site.id)
+
+
+@require_provider
+@require_POST
+def unassigned_alert_delete(request, schedule_id):
+    schedule = get_object_or_404(SiteUnassignedAlertSchedule, id=schedule_id)
+    site = schedule.site
+    if not _check_company_access(request, site.company):
+        return redirect('access_denied')
+
+    schedule.delete()
+    messages.success(request, 'Horario eliminado.')
+    return redirect('provider:unassigned_alert_list', site_id=site.id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ALERTAS — ALTO RIESGO (correo acumulado, opcional)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_provider
+def high_risk_alert_config(request, site_id):
+    """
+    Interruptor + destinatarios del correo acumulado de alto riesgo. La
+    confirmacion en pantalla (checkbox EPP) NO se toca aca — esto solo
+    prende/apaga el correo adicional. Un solo registro por obra (a
+    diferencia de "activos sin partida", que admite varios horarios).
+    """
+    site = get_object_or_404(Site, id=site_id)
+    if not _check_company_access(request, site.company):
+        return redirect('access_denied')
+
+    config = SiteAlertConfig.objects.filter(site=site, alert_type='HIGH_RISK_START').first()
+
+    if request.method == 'POST':
+        is_enabled = request.POST.get('is_enabled') == 'on'
+        to_raw     = request.POST.get('to_emails', '')
+        cc_raw     = request.POST.get('cc_emails', '')
+
+        to_emails, to_error = _parse_email_list(to_raw)
+        if to_error:
+            messages.error(request, f'Destinatarios (TO): {to_error}')
+            return redirect('provider:high_risk_alert_config', site_id=site.id)
+
+        if is_enabled and not to_emails:
+            messages.error(request, 'Si activas la alerta, debes indicar al menos un destinatario (TO).')
+            return redirect('provider:high_risk_alert_config', site_id=site.id)
+
+        cc_emails, cc_error = _parse_email_list(cc_raw)
+        if cc_error:
+            messages.error(request, f'Destinatarios (CC): {cc_error}')
+            return redirect('provider:high_risk_alert_config', site_id=site.id)
+
+        SiteAlertConfig.objects.update_or_create(
+            site=site, alert_type='HIGH_RISK_START',
+            defaults={
+                'is_enabled': is_enabled,
+                'to_emails':  to_emails,
+                'cc_emails':  cc_emails,
+            }
+        )
+        messages.success(request, 'Configuración de alerta de alto riesgo guardada.')
+        return redirect('provider:high_risk_alert_config', site_id=site.id)
+
+    return render(request, 'companies/high_risk_alert_config.html', {
+        'site':        site,
+        'config':      config,
+        'batch_minutes': getattr(site.config, 'high_risk_email_batch_minutes', 30) if hasattr(site, 'config') else 30,
+        'page_title':  f'Alertas — Alto riesgo — {site.name}',
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BANDEJA DE REVISIÓN — CIERRES MANUALES FUERA DE HORARIO
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_provider
+def session_review_queue(request, company_id):
+    """
+    Lista las sesiones marcadas needs_review=True, agrupadas por obra.
+
+    Dentro de cada obra:
+    - Cierres MASS_CLOSE / TASK_CLOSE (varias personas cerradas de un
+      golpe) se agrupan por partida — un solo formulario con un solo
+      horario resuelve todo el grupo, en vez de ir persona por persona.
+    - Cierres MANUAL (uno a la vez) se muestran individuales, porque no
+      hay garantía de que compartan el mismo motivo real.
+
+    No es una cola de "errores" — muchas de estas van a tener una
+    justificación real (hora extra, por ejemplo) y no requieren ningún
+    cambio. Es solo visibilidad.
+    """
+    from work.models import WorkSession
+
+    company = get_object_or_404(Company, id=company_id)
+    if not _check_company_access(request, company):
+        return redirect('access_denied')
+
+    sessions = WorkSession.objects.filter(
+        site__company=company, needs_review=True,
+    ).select_related('site', 'resource', 'ended_by').order_by(
+        'site__name', 'task_name_snapshot', '-ended_at'
+    )
+
+    # site -> {'individual': [sesiones MANUAL], 'by_task': {partida: [sesiones]}}
+    grouped = {}
+    for s in sessions:
+        bucket = grouped.setdefault(s.site, {'individual': [], 'by_task': {}})
+        if s.closure_origin in ('MASS_CLOSE', 'TASK_CLOSE'):
+            bucket['by_task'].setdefault(s.task_name_snapshot, []).append(s)
+        else:
+            bucket['individual'].append(s)
+
+    return render(request, 'companies/session_review_queue.html', {
+        'company':     company,
+        'grouped':     grouped,
+        'threshold':   getattr(settings, 'REVIEW_CLOSE_THRESHOLD_MINUTES', 45),
+        'page_title':  f'Revisión de cierres — {company.name}',
+    })
+
+
+def _apply_session_review_adjust(session, new_time_str, reason, user):
+    """
+    Aplica el ajuste a UNA sesión — lo comparten la vista individual y la
+    masiva para no duplicar el cálculo de hora/timezone. Devuelve None si
+    salió bien, o un string de error si la hora venía mal formada.
+    """
+    from work.models import WorkSessionChangeLog
+    from datetime import datetime as dt
+    import pytz
+
+    before = {
+        'ended_at':         session.ended_at.isoformat() if session.ended_at else None,
+        'duration_minutes': session.duration_minutes,
+    }
+
+    if new_time_str:
+        try:
+            site_tz = pytz.timezone(session.site.timezone or 'America/Santiago')
+            local_date = timezone.localtime(session.ended_at, site_tz).date() if session.ended_at else timezone.localdate()
+            new_time = dt.strptime(new_time_str, '%H:%M').time()
+            new_ended_at_local = site_tz.localize(dt.combine(local_date, new_time))
+            session.ended_at = new_ended_at_local.astimezone(pytz.utc)
+            if session.started_at:
+                session.duration_minutes = int((session.ended_at - session.started_at).total_seconds() / 60)
+        except ValueError:
+            return 'Hora inválida.'
+
+    session.needs_review = False
+    session.save()
+
+    WorkSessionChangeLog.objects.create(
+        session=session,
+        changed_by=user,
+        change_type='PROVIDER_ADJUST',
+        before_json=before,
+        after_json={
+            'ended_at':         session.ended_at.isoformat() if session.ended_at else None,
+            'duration_minutes': session.duration_minutes,
+        },
+        reason=reason,
+    )
+    return None
+
+
+@require_provider
+@require_POST
+def session_review_adjust(request, session_id):
+    """Ajusta UNA sesión (caso MANUAL, uno a la vez)."""
+    from work.models import WorkSession
+
+    session = get_object_or_404(WorkSession, id=session_id)
+    if not _check_company_access(request, session.site.company):
+        return redirect('access_denied')
+
+    reason = request.POST.get('reason', '').strip()
+    if not reason:
+        messages.error(request, 'El motivo es obligatorio para ajustar un cierre.')
+        return redirect('provider:session_review_queue', company_id=session.site.company.id)
+
+    error = _apply_session_review_adjust(
+        session, request.POST.get('new_ended_at', '').strip(), reason, request.user
+    )
+    if error:
+        messages.error(request, error)
+    else:
+        messages.success(request, f'Cierre de {session.resource.display_name} revisado.')
+
+    return redirect('provider:session_review_queue', company_id=session.site.company.id)
+
+
+@require_provider
+@require_POST
+def session_review_bulk_adjust(request):
+    """
+    Ajusta VARIAS sesiones a la vez, con el mismo horario y motivo — para
+    resolver de un golpe un grupo de cierre masivo agrupado por partida
+    (botón "Usar mismo horario para todos" en la bandeja).
+    """
+    from work.models import WorkSession
+
+    session_ids = request.POST.getlist('session_ids')
+    reason      = request.POST.get('reason', '').strip()
+    new_time    = request.POST.get('new_ended_at', '').strip()
+
+    if not session_ids:
+        messages.error(request, 'No se seleccionó ninguna sesión.')
+        return redirect('provider:panel')
+
+    sessions = list(WorkSession.objects.filter(id__in=session_ids).select_related('site__company', 'resource'))
+    if not sessions:
+        messages.error(request, 'No se encontraron las sesiones.')
+        return redirect('provider:panel')
+
+    company = sessions[0].site.company
+    if not _check_company_access(request, company):
+        return redirect('access_denied')
+
+    if not reason:
+        messages.error(request, 'El motivo es obligatorio para ajustar un cierre.')
+        return redirect('provider:session_review_queue', company_id=company.id)
+
+    resolved = 0
+    for session in sessions:
+        error = _apply_session_review_adjust(session, new_time, reason, request.user)
+        if not error:
+            resolved += 1
+
+    messages.success(request, f'{resolved} sesion{"es" if resolved != 1 else ""} revisada{"s" if resolved != 1 else ""}.')
+    return redirect('provider:session_review_queue', company_id=company.id)

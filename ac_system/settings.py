@@ -7,6 +7,27 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = []
 
+# ── Email (Gmail SMTP) ──────────────────────────────────────────────────────
+# Credenciales en .env, nunca en el código. EMAIL_HOST_PASSWORD debe ser una
+# "contraseña de aplicación" de Google (16 caracteres, sin espacios) — no la
+# contraseña normal de la cuenta. Se genera en:
+# https://myaccount.google.com/apppasswords (requiere verificacion en 2 pasos
+# activada en la cuenta). Ver instrucciones completas en README/notas del proyecto.
+EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST          = 'smtp.gmail.com'
+EMAIL_PORT          = 465
+EMAIL_USE_SSL       = True
+EMAIL_USE_TLS       = False
+EMAIL_HOST_USER     = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL  = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+
+# Si las credenciales no estan configuradas (.env vacio), los correos caen a
+# la consola en vez de fallar con un error de conexion — util en desarrollo
+# si alguien clona el repo sin tener aun una cuenta Gmail para pruebas.
+if DEBUG and not EMAIL_HOST_USER:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 DJANGO_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -133,10 +154,24 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 from celery.schedules import crontab
 
+# Hora global de cierre automatico de sesiones — unica para todo el sistema
+# (decision de diseño: no configurable por obra, ver companies/models.py
+# SiteWorkdayConfig). Vive aca porque es la unica fuente de verdad de
+# "cuando corre el crontab" — work/tasks.py ya no la vuelve a leer, el
+# solo hecho de que la tarea se ejecute a esta hora es la señal de cierre.
+AUTO_CLOSE_SESSIONS_HOUR   = 2
+AUTO_CLOSE_SESSIONS_MINUTE = 0
+
+# Umbral global (no configurable por obra, mismo criterio que lo anterior)
+# para marcar un cierre MANUAL/TASK_CLOSE/MASS_CLOSE como "revisar" cuando
+# se aleja demasiado del work_end_time oficial del dia. Ver
+# work/session_review_utils.py::mark_needs_review_if_late.
+REVIEW_CLOSE_THRESHOLD_MINUTES = 45
+
 CELERY_BEAT_SCHEDULE = {
     'auto-close-sessions': {
         'task': 'work.auto_close_sessions',
-        'schedule': 15 * 60,  # cada 15 minutos
+        'schedule': crontab(hour=AUTO_CLOSE_SESSIONS_HOUR, minute=AUTO_CLOSE_SESSIONS_MINUTE),
     },
 }
 
