@@ -38,57 +38,44 @@ def _build_unassigned_email_html(site, schedule, trabajadores):
     """
     Arma el cuerpo HTML de la alerta "activos sin partida" — mismo formato
     visual que la funcion de App Script que reemplaza (tabla con
-    Trabajador/RUT/Cargo), agrupado por supervisor para lectura mas comoda.
+    Trabajador/RUT/Cargo). Lista plana, SIN agrupar por supervisor — eso
+    es solo para el correo de alto riesgo (ver _build_high_risk_email_html).
     trabajadores es una lista de dicts {'nombre', 'rut', 'cargo', 'supervisor'}.
     """
-    grupos = _agrupar_por_supervisor(trabajadores)
-    bloques = []
-
-    for supervisor, lista in grupos.items():
-        filas = []
-        for w in lista:
-            filas.append(
-                '<tr>'
-                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["nombre"])}</td>'
-                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["rut"])}</td>'
-                f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["cargo"])}</td>'
-                '</tr>'
-            )
-        bloques.append(
-            f'<p style="margin:16px 0 6px;font-weight:bold;">{escape(supervisor)} '
-            f'<span style="font-weight:normal;color:#666;">({len(lista)})</span></p>'
-            '<table style="border-collapse:collapse;width:100%;max-width:900px;">'
-            '<tr style="background:#f2f2f2;">'
-            '<th style="border:1px solid #ddd;padding:8px;">Trabajador</th>'
-            '<th style="border:1px solid #ddd;padding:8px;">RUT</th>'
-            '<th style="border:1px solid #ddd;padding:8px;">Cargo</th>'
+    filas = []
+    for w in trabajadores:
+        filas.append(
+            '<tr>'
+            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["nombre"])}</td>'
+            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["rut"])}</td>'
+            f'<td style="border:1px solid #ddd;padding:8px;">{escape(w["cargo"])}</td>'
             '</tr>'
-            + ''.join(filas) +
-            '</table>'
         )
 
     return (
         '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">'
         f'<p>Revisión de las {schedule.send_time.strftime("%H:%M")} hrs — {escape(site.name)}.</p>'
         '<p>Los siguientes trabajadores se encuentran activos pero no poseen una partida abierta:</p>'
-        + ''.join(bloques) +
+        '<table style="border-collapse:collapse;width:100%;max-width:900px;">'
+        '<tr style="background:#f2f2f2;">'
+        '<th style="border:1px solid #ddd;padding:8px;">Trabajador</th>'
+        '<th style="border:1px solid #ddd;padding:8px;">RUT</th>'
+        '<th style="border:1px solid #ddd;padding:8px;">Cargo</th>'
+        '</tr>'
+        + ''.join(filas) +
+        '</table>'
         '</div>'
     )
 
 
 def _build_unassigned_email_text(site, schedule, trabajadores):
-    """Version texto plano, agrupada por supervisor igual que la HTML."""
-    grupos = _agrupar_por_supervisor(trabajadores)
-    bloques = []
-    for supervisor, lista in grupos.items():
-        lineas = [f'  - {w["nombre"]} (RUT: {w["rut"] or "s/i"}, Cargo: {w["cargo"] or "s/i"})' for w in lista]
-        bloques.append(f'{supervisor} ({len(lista)}):\n' + '\n'.join(lineas))
-
+    """Version texto plano, lista plana igual que la HTML."""
+    lineas = [f'- {w["nombre"]} (RUT: {w["rut"] or "s/i"}, Cargo: {w["cargo"] or "s/i"})' for w in trabajadores]
     return (
         f'Revision de las {schedule.send_time.strftime("%H:%M")} hrs — {site.name}\n\n'
         f'Los siguientes trabajadores estan activos en la obra pero no tienen '
         f'una partida asignada en este momento:\n\n'
-        + '\n\n'.join(bloques)
+        + '\n'.join(lineas)
     )
 
 
